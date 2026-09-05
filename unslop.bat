@@ -1,0 +1,100 @@
+@echo off
+setlocal enabledelayedexpansion
+title unslop-windows Launcher
+
+:: Change directory to script directory
+cd /d "%~dp0"
+
+:: ------------------------------------------------------------
+:: CLI PASS-THROUGH MODE
+:: If arguments are passed via command-line, bypass menu
+:: ------------------------------------------------------------
+if not "%~1"=="" (
+    echo "%*" | findstr /i /c:"-DryRun" /c:"-WhatIf" >nul
+    if !errorlevel! equ 0 (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" %*
+        exit /b !errorlevel!
+    )
+
+    net session >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo Requesting Administrator privileges...
+        powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" %* && pause\"'"
+        exit /b
+    )
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" %*
+    exit /b !errorlevel!
+)
+
+:: ------------------------------------------------------------
+:: INTERACTIVE MENU MODE (Double-click)
+:: ------------------------------------------------------------
+:menu
+cls
+echo ============================================================
+echo   unslop-windows (v1.0.0) - PyPie Studio
+echo   Universal Windows 11 24H2 / 25H2 Debloat ^& Privacy Hardener
+echo ============================================================
+echo.
+echo   [1] Full Debloat (Purge OneDrive, telemetry ^& bloatware)
+echo   [2] Dry-Run Audit (Inspect changes safely, no modifications)
+echo   [3] Debloat, but Keep Microsoft To-Do
+echo   [4] Debloat, but Keep Xbox ^& Gaming Services
+echo   [5] Debloat, but Keep OneDrive
+echo   [6] Debloat + Enable Classic Context Menu
+echo   [7] Custom Flags (Enter custom parameter combinations)
+echo   [8] Full Restore / Undo (Revert all changes back to defaults)
+echo   [0] Exit
+echo.
+echo ============================================================
+set /p "choice=Select an option [0-8]: "
+
+if "%choice%"=="0" exit /b
+if "%choice%"=="1" set "ARGS=" & goto :run
+if "%choice%"=="2" set "ARGS=-DryRun" & goto :run_dry
+if "%choice%"=="3" set "ARGS=-KeepTodos" & goto :run
+if "%choice%"=="4" set "ARGS=-KeepXbox" & goto :run
+if "%choice%"=="5" set "ARGS=-KeepOneDrive" & goto :run
+if "%choice%"=="6" set "ARGS=-ClassicContextMenu" & goto :run
+if "%choice%"=="7" goto :custom
+if "%choice%"=="8" set "ARGS=-Undo" & goto :run
+
+echo Invalid selection.
+timeout /t 2 >nul
+goto :menu
+
+:custom
+echo.
+echo Examples: -KeepTodos -KeepXbox
+echo           -KeepTodos -ClassicContextMenu
+echo           -Undo -DryRun
+echo.
+set /p "ARGS=Enter parameter flags: "
+if "%ARGS%"=="" goto :menu
+echo "%ARGS%" | findstr /i /c:"-DryRun" /c:"-WhatIf" >nul
+if !errorlevel! equ 0 goto :run_dry
+goto :run
+
+:run_dry
+echo.
+echo Starting Dry-Run Audit (Non-Elevated)...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" !ARGS!
+echo.
+pause
+goto :menu
+
+:run
+net session >nul 2>&1
+if !errorlevel! neq 0 (
+    echo.
+    echo Administrator privileges required. Prompting for UAC elevation...
+    powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" !ARGS! && echo. && pause\"'"
+    exit /b
+)
+
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" !ARGS!
+echo.
+pause
+goto :menu

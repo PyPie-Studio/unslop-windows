@@ -36,10 +36,28 @@ Most Windows debloaters break future Windows updates or leave background service
 
 ## Quickstart
 
-Run PowerShell as Administrator.
+### Option A: Interactive Launcher (Recommended)
+Double-click **`unslop.bat`** from File Explorer. It automatically bypasses Execution Policy, requests Administrator elevation if needed, and presents a numbered menu:
 
-### 1. Default Run (Full Debloat)
-Removes consumer bloat, purges OneDrive, disables telemetry, and applies privacy baselines:
+* `[1]` Full Debloat (Default: Purge OneDrive, telemetry, and consumer bloat)
+* `[2]` Dry-Run Audit (Inspect all planned changes safely without modifying system)
+* `[3]` Debloat, but Keep Microsoft To-Do (`-KeepTodos`)
+* `[4]` Debloat, but Keep Xbox & Gaming Services (`-KeepXbox`)
+* `[5]` Debloat, but Keep OneDrive (`-KeepOneDrive`)
+* `[6]` Debloat + Enable Classic Context Menu (`-ClassicContextMenu`)
+* `[7]` Custom Flags (Prompt for custom parameter combinations)
+* `[8]` Full Restore / Undo (`-Undo`: Revert all changes back to defaults)
+* `[0]` Exit
+
+### Option B: Command-Line (PowerShell or CMD)
+You can call `unslop.bat` with flags directly from Command Prompt:
+```cmd
+unslop.bat -DryRun
+unslop.bat -KeepTodos
+unslop.bat -Undo
+```
+
+Or run `unslop.ps1` directly from an elevated PowerShell terminal:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1
