@@ -1,0 +1,21 @@
+# Logs
+logs/
+*.log
+debloat_logs/
+unslop_logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# IDE / Editor configuration
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS artifacts
+Thumbs.db
+Desktop.ini
+.DS_Store

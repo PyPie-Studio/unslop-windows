@@ -1,0 +1,30 @@
+name: Lint PowerShell
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  psscriptanalyzer:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./ -Recurse -Severity Error, Warning
+          if ($results) {
+              $results | Format-Table -AutoSize
+              $errors = $results | Where-Object { $_.Severity -eq 'Error' }
+              if ($errors) {
+                  Write-Error "PSScriptAnalyzer found blocking errors."
+                  exit 1
+              }
+          } else {
+              Write-Host "PSScriptAnalyzer: Clean scan, zero issues found."
+          }
