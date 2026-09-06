@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish-release:
+    name: Build & Publish Release Assets
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Package Zip Bundle
+        shell: pwsh
+        run: |
+          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE -DestinationPath "unslop-windows-$($env:GITHUB_REF_NAME).zip" -Force
+
+      - name: Upload Assets to GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
+          gh release create $env:GITHUB_REF_NAME unslop.bat unslop.ps1 $zipName --generate-notes
