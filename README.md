@@ -39,11 +39,10 @@ Most Windows debloaters break future Windows updates or leave background service
 ### Method 1: Direct Download (Non-Technical / 1-Click)
 No Git or terminal experience needed:
 
-1. Open the [Latest GitHub Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
-2. Under **Assets**, download either:
-   * **[`unslop-windows-v1.0.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip)** (Recommended): Extract the zip file and double-click `unslop.bat`.
-   * **[`unslop.bat`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop.bat)**: Double-click it anywhere. It will automatically download the companion `unslop.ps1` file if missing.
-3. In the console menu, type your choice (e.g. `1` for Full Debloat) and press Enter. If Windows prompts for Administrator elevation (UAC), click **Yes**.
+1. Download **[`unslop-windows-v1.0.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+2. Extract the zip file to any folder.
+3. Double-click **`unslop.bat`**.
+4. In the console menu, type your choice (e.g. `1` for Full Debloat) and press Enter. If Windows prompts for Administrator elevation (UAC), click **Yes**.
 
 ### Method 2: PowerShell One-Liner (Terminal Users)
 Open PowerShell and run:

@@ -26,4 +26,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          gh release create $env:GITHUB_REF_NAME unslop.bat unslop.ps1 $zipName --generate-notes
+          gh release create $env:GITHUB_REF_NAME $zipName --generate-notes
