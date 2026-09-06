@@ -34,10 +34,19 @@ Most Windows debloaters break future Windows updates or leave background service
 
 ---
 
-## Quickstart
+## Download & Quickstart
 
-### Option A: Interactive Launcher (Recommended)
-Double-click **`unslop.bat`** from File Explorer. It automatically bypasses Execution Policy, requests Administrator elevation if needed, and presents a numbered menu:
+### 1. Direct Download (Easiest / Non-Technical)
+No Git or terminal experience needed:
+
+1. Open the [Latest GitHub Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+2. Under **Assets**, download either:
+   * **[`unslop-windows-v1.0.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip)** (Recommended): Extract the zip file and double-click `unslop.bat`.
+   * **[`unslop.bat`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop.bat)**: Double-click it anywhere. It will automatically download the companion `unslop.ps1` file if missing.
+3. In the console menu, type your choice (e.g. `1` for Full Debloat) and press Enter. If Windows prompts for Administrator elevation (UAC), click **Yes**.
+
+### 2. Interactive Launcher Menu
+When launched, `unslop.bat` presents a numbered menu:
 
 * `[1]` Full Debloat (Default: Purge OneDrive, telemetry, and consumer bloat)
 * `[2]` Dry-Run Audit (Inspect all planned changes safely without modifying system)
@@ -49,8 +58,15 @@ Double-click **`unslop.bat`** from File Explorer. It automatically bypasses Exec
 * `[8]` Full Restore / Undo (`-Undo`: Revert all changes back to defaults)
 * `[0]` Exit
 
-### Option B: Command-Line (PowerShell or CMD)
-You can call `unslop.bat` with flags directly from Command Prompt:
+### 3. PowerShell One-Liner (Terminal Users)
+Open PowerShell and run:
+
+```powershell
+irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.bat -OutFile unslop.bat; .\unslop.bat
+```
+
+### 4. Direct Command-Line Execution
+Call `unslop.bat` with flags directly from CMD:
 ```cmd
 unslop.bat -DryRun
 unslop.bat -KeepTodos
@@ -58,7 +74,6 @@ unslop.bat -Undo
 ```
 
 Or run `unslop.ps1` directly from an elevated PowerShell terminal:
-
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1
 ```

@@ -5,6 +5,20 @@ title unslop-windows Launcher
 :: Change directory to script directory
 cd /d "%~dp0"
 
+:: Ensure unslop.ps1 exists locally; auto-download from GitHub if standalone
+if not exist "%~dp0unslop.ps1" (
+    echo [unslop] unslop.ps1 not found locally.
+    echo [unslop] Downloading latest unslop.ps1 from PyPie-Studio/unslop-windows...
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.ps1' -OutFile '%~dp0unslop.ps1'"
+    if not exist "%~dp0unslop.ps1" (
+        echo [ERROR] Failed to download unslop.ps1. Check your internet connection.
+        pause
+        exit /b 1
+    )
+    echo [unslop] Download complete.
+    echo.
+)
+
 :: ------------------------------------------------------------
 :: CLI PASS-THROUGH MODE
 :: If arguments are passed via command-line, bypass menu

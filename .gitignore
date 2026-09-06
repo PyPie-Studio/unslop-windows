@@ -8,6 +8,7 @@ unslop_logs/
 *.tmp
 *.bak
 *.swp
+*.zip
 
 # IDE / Editor configuration
 .vscode/
