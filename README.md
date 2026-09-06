@@ -145,7 +145,7 @@ The script explicitly preserves core applications and critical desktop infrastru
 * **System Tools**: Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`).
 * **Essential Desktop Utilities**: Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`).
 * **Hardware & Audio**: AMD Noise Suppression / NVIDIA Broadcast, microphone access, and webcam access (never breaks Discord, OBS, or Teams).
-* **Developer Tools**: VS Code, Docker Desktop, Ollama, Git, and browser update tasks.
+* **Developer Tools**: VS Code, Visual Studio, Your already existent stack and browser update tasks.
 * **WebView2 / Edge Engine**: Runtime engines are preserved so desktop apps relying on web views function normally.
 
 ---
