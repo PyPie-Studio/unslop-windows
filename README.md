@@ -1,51 +1,63 @@
-# unslop-windows
+<div align="center">
 
-Universal Windows 11 debloat, telemetry removal, and privacy hardening script for 23H2, 24H2, and 25H2 (Builds 26100 to 26200+).
+# 🧹 unslop-windows
 
-Single-file PowerShell script. Zero external runtime dependencies. 100% reversible.
+### Stop Microsoft from turning your PC into an ad-riddled, AI-telemetry terminal.
+**The Safe-Tier Universal Windows 11 23H2, 24H2 & 25H2 Debloater and Privacy Hardener.**
 
----
+[![GitHub stars](https://img.shields.io/github/stars/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/network/members)
+[![GitHub release](https://img.shields.io/github/v/release/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=green)](https://github.com/PyPie-Studio/unslop-windows/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/PyPie-Studio/unslop-windows/lint.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/PyPie-Studio/unslop-windows/actions)
+[![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-## Design Principles
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
-Most Windows debloaters break future Windows updates or leave background services in unstable states. `unslop-windows` follows a strict safe-tier architecture:
-
-1. **Servicing Stack Integrity**: Never strips WinSxS packages or modifies DISM system components. Cumulative updates and security patches install without `0x800f0922` failures.
-2. **Dual-Stage AppX Removal**: Removes provisioned package bundles from the OS image in addition to installed user apps. Bloatware does not regenerate when creating new accounts or installing feature updates.
-3. **Safe Delivery Optimization**: Sets `DODownloadMode = 0` (HTTP only) via Group Policy to stop local and internet peer-to-peer update seeding. The `DoSvc` service stays intact, preventing `0x80d03805` errors in the Microsoft Store.
-4. **Symmetrical Restoration**: Every policy, registry key, service state, scheduled task, and firewall rule has an inverse `-Undo` mapping.
-5. **Auditable**: `-DryRun` / `-WhatIf` runs in non-elevated user mode to inspect all intended actions before executing with administrator rights.
-
----
-
-## Comparison Matrix
-
-| Feature | unslop-windows | Chris Titus WinUtil | Sophia Script | Tron Script |
-| :--- | :--- | :--- | :--- | :--- |
-| **Windows 11 25H2 / 24H2 Support** | Full native support | Partial / lagging | Broken / lagging | Deprecated |
-| **Windows Recall & Copilot Killswitch** | GPO + Registry | Registry only | Partial | No |
-| **Servicing Stack Safe (No WinSxS cuts)** | Yes | Mixed | Mixed | No (strips components) |
-| **Single-File Zero Dependency** | Yes (`unslop.ps1`) | No (GUI / multi-file) | No (Module suite) | No (multi-GB archive) |
-| **Symmetrical 1-Click Undo Engine** | Yes (`-Undo`) | Partial | Partial | No |
-| **Safe Non-Elevated Dry-Run** | Yes (`-DryRun`) | No | No | No |
-| **Untouchable Whitelist Enforced** | Yes (Store/Terminal safe) | User-configured | User-configured | High break risk |
-| **Safe Delivery Optimization (No Store breaks)** | GPO `DODownloadMode=0` | Often stops service | Mixed | Disables service |
-| **Decoupled Autonomous Logging** | Local `logs/` or `$TEMP` | GUI logs | Local file | Flat text file |
+</div>
 
 ---
 
-## Download & Quickstart
+> [!TIP]
+> ⭐ **Reclaiming your system from Windows 11 bloat?**
+> Give this repository a star on GitHub! It helps more users find a clean, open-source alternative that doesn't break Cumulative Updates or the Microsoft Store.
 
-### Method 1: Direct Download (Non-Technical / 1-Click)
-No Git or terminal experience needed:
+---
+
+```text
+============================================================
+  unslop-windows (v1.0.0) - PyPie Studio
+  Universal Windows 11 24H2 / 25H2 Debloat & Privacy Hardener
+============================================================
+
+  [1] Full Debloat (Purge OneDrive, telemetry & bloatware)
+  [2] Dry-Run Audit (Inspect changes safely, no modifications)
+  [3] Debloat, but Keep Microsoft To-Do
+  [4] Debloat, but Keep Xbox & Gaming Services
+  [5] Debloat, but Keep OneDrive
+  [6] Debloat + Enable Classic Context Menu
+  [7] Custom Flags (Enter custom parameter combinations)
+  [8] Full Restore / Undo (Revert all changes back to defaults)
+  [0] Exit
+
+============================================================
+Select an option [0-8]: 
+```
+
+---
+
+## ⚡ Download & Quickstart
+
+### Method 1: Direct Download (1-Click / Non-Technical)
+No Git, terminal commands, or PowerShell knowledge needed:
 
 1. Download **[`unslop-windows-v1.0.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
-2. Extract the zip file to any folder.
+2. Extract the `.zip` archive to any folder.
 3. Double-click **`unslop.bat`**.
-4. In the console menu, type your choice (e.g. `1` for Full Debloat) and press Enter. If Windows prompts for Administrator elevation (UAC), click **Yes**.
+4. In the console menu, type `1` (or your preferred option) and press Enter. Click **Yes** if prompted for Administrator elevation (UAC).
 
 ### Method 2: PowerShell One-Liner (Terminal Users)
-Open PowerShell and run:
+Launch the interactive menu straight from PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.bat -OutFile unslop.bat; .\unslop.bat
@@ -54,7 +66,7 @@ irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.ba
 ### Method 3: Direct Command-Line Execution
 Run directly from Command Prompt or an elevated PowerShell terminal:
 
-**Command Prompt:**
+**Command Prompt (CMD):**
 ```cmd
 unslop.bat -DryRun
 unslop.bat -KeepTodos
@@ -66,56 +78,46 @@ unslop.bat -Undo
 # Full default debloat
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1
 
-# Dry-run audit (safe inspection, no elevation needed)
+# Dry-run audit (safe inspection, zero changes written)
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
 
-# Full restore / undo back to Windows defaults
+# Full restore back to Windows defaults
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
 ```
 
 ---
 
-### Interactive Menu Reference (`unslop.bat`)
-When double-clicked without arguments, `unslop.bat` presents this menu:
+## 📊 Comparison Matrix
 
-* `[1]` Full Debloat (Default: Purge OneDrive, telemetry, and consumer bloat)
-* `[2]` Dry-Run Audit (Inspect all planned changes safely without modifying system)
-* `[3]` Debloat, but Keep Microsoft To-Do (`-KeepTodos`)
-* `[4]` Debloat, but Keep Xbox & Gaming Services (`-KeepXbox`)
-* `[5]` Debloat, but Keep OneDrive (`-KeepOneDrive`)
-* `[6]` Debloat + Enable Classic Context Menu (`-ClassicContextMenu`)
-* `[7]` Custom Flags (Prompt for custom parameter combinations)
-* `[8]` Full Restore / Undo (`-Undo`: Revert all changes back to defaults)
-* `[0]` Exit
+How `unslop-windows` compares to other popular debloaters:
 
----
-
-## Optional Parameters
-
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `-DryRun` | Switch | `False` | Audits planned modifications without writing changes. Runs without admin rights. |
-| `-Undo` | Switch | `False` | Restores all disabled services, scheduled tasks, and policies. |
-| `-KeepOneDrive` | Switch | `False` | Skips OneDrive uninstallation, registry unpinning, and sync blocking policies. |
-| `-KeepTodos` | Switch | `False` | Preserves Microsoft To-Do (`Microsoft.Todos`) during AppX cleanup. |
-| `-KeepXbox` | Switch | `False` | Preserves Xbox app and Gaming Services for Game Pass users. |
-| `-ClassicContextMenu`| Switch | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
-
-### Parameter Examples
-
-**Preserve Gaming Services and OneDrive:**
-```powershell
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -KeepXbox -KeepOneDrive
-```
-
-**Apply Full Debloat and Enable Classic Context Menu:**
-```powershell
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -ClassicContextMenu
-```
+| Feature / Capability | unslop-windows | Chris Titus WinUtil | Sophia Script | Tron Script |
+| :--- | :---: | :---: | :---: | :---: |
+| **Windows 11 25H2 / 24H2 Support** | ✅ Full Native | ⚠️ Partial / Lagging | ❌ Broken / Lagging | ❌ Deprecated |
+| **Windows Recall & Copilot Killswitch** | ✅ Full GPO + Registry | ⚠️ Registry Only | ⚠️ Partial | ❌ No |
+| **Servicing Stack Safe (No WinSxS cuts)** | ✅ 100% Safe | ⚠️ Mixed | ⚠️ Mixed | ❌ Strips Components |
+| **Single-File Zero Dependency** | ✅ Yes (`unslop.ps1`) | ❌ GUI / Multi-file | ❌ Module Suite | ❌ Multi-GB Archive |
+| **Symmetrical 1-Click Undo Engine** | ✅ Yes (`-Undo`) | ⚠️ Partial | ⚠️ Partial | ❌ No |
+| **Safe Non-Elevated Dry-Run** | ✅ Yes (`-DryRun`) | ❌ No | ❌ No | ❌ No |
+| **Untouchable Whitelist Enforced** | ✅ Guaranteed | ⚠️ User Config | ⚠️ User Config | ❌ High Break Risk |
+| **Safe Delivery Optimization (No Store breaks)** | ✅ GPO `DODownloadMode=0` | ❌ Disables Service | ⚠️ Mixed | ❌ Disables Service |
+| **Decoupled Autonomous Logging** | ✅ Local `logs/` or `$TEMP` | ⚠️ GUI Logs | ⚠️ Flat File | ⚠️ Flat Text |
 
 ---
 
-## What Gets Hardened (18 Modules)
+## 🛡️ Safe-Tier Design Principles
+
+Most debloaters break future Windows updates or leave background services in unstable states. `unslop-windows` follows five non-negotiable engineering mandates:
+
+1. **Servicing Stack Integrity**: Never strips WinSxS packages or tampers with DISM manifests. Monthly Cumulative Updates install cleanly without `0x800f0922` error rollbacks.
+2. **Dual-Stage AppX Removal**: Strips provisioned packages from the system image in addition to installed user profile apps. Bloatware does not regenerate when creating new accounts or installing Windows feature updates.
+3. **Safe Delivery Optimization**: Uses GPO policy `DODownloadMode = 0` (HTTP only) to kill background local and internet P2P seeding. The `DoSvc` service stays intact, preventing error `0x80d03805` in the Microsoft Store.
+4. **100% Symmetrical Restoration**: Every policy, registry key, service state, scheduled task, and firewall rule has an exact inverse `-Undo` mapping.
+5. **Auditable Non-Elevated Inspection**: `-DryRun` runs in standard user mode, allowing sysadmins to audit every single proposed change before granting administrative privileges.
+
+---
+
+## ⚙️ What Gets Hardened (18 Modules)
 
 1. **Services (6)**: Disables `SysMain`, `WSearch`, `dmwappushservice`, `DiagTrack`, `TrkWks`, and `lfsvc`. Start Menu app search remains functional via shell in-memory index.
 2. **Windows Recall & Copilot**: Sets `DisableAIDataAnalysis = 1`, `AllowRecall = 0`, `TurnOffWindowsCopilot = 1`, and removes the Copilot taskbar button.
@@ -138,24 +140,58 @@ powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -ClassicContextMenu
 
 ---
 
-## Untouchable Safety Whitelist
+## 🔒 Untouchable Safety Whitelist
 
-The script explicitly preserves core applications and critical desktop infrastructure:
+`unslop-windows` explicitly protects core system applications and daily desktop tools:
 
-* **System Tools**: Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`).
-* **Essential Desktop Utilities**: Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`).
-* **Hardware & Audio**: AMD Noise Suppression / NVIDIA Broadcast, microphone access, and webcam access (never breaks Discord, OBS, or Teams).
-* **Developer Tools**: VS Code, Visual Studio, Your already existent stack and browser update tasks.
-* **WebView2 / Edge Engine**: Runtime engines are preserved so desktop apps relying on web views function normally.
-
----
-
-## Logs
-
-Execution logs are saved automatically to `.\logs\unslop_25h2_<timestamp>.log` relative to the script, or to `$env:TEMP\unslop_logs` when executed via remote streams.
+| Component Category | Preserved Items | Why It Is Untouched |
+| :--- | :--- | :--- |
+| **System Package Tools** | Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`) | Required for software installation and package management |
+| **Essential Desktop Apps** | Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`) | Daily workflow tools with zero telemetry overhead |
+| **Audio & Video Hardware** | Microphone access, Webcam access, AMD Noise Suppression / NVIDIA Broadcast | Prevents breaking Discord, OBS, Teams, and voice chat |
+| **Developer Environments** | Visual Studio, VS Code, Git, Docker Desktop, Ollama, existing toolchains, browsers | Developer toolchains and container runtimes |
+| **Application Runtimes** | WebView2, Edge Rendering Engine | Required by modern desktop applications to display web views |
 
 ---
 
-## License
+## 🎛️ Optional Parameters
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `-DryRun` | Switch | `False` | Audits planned modifications without writing changes. Runs without admin rights. |
+| `-Undo` | Switch | `False` | Restores all disabled services, scheduled tasks, and policies back to Windows defaults. |
+| `-KeepOneDrive` | Switch | `False` | Skips OneDrive uninstallation, registry unpinning, and sync blocking policies. |
+| `-KeepTodos` | Switch | `False` | Preserves Microsoft To-Do (`Microsoft.Todos`) during AppX cleanup. |
+| `-KeepXbox` | Switch | `False` | Preserves Xbox app and Gaming Services for Game Pass users. |
+| `-ClassicContextMenu`| Switch | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
+
+### Parameter Examples
+
+```powershell
+# Keep Xbox gaming services and OneDrive
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -KeepXbox -KeepOneDrive
+
+# Debloat and restore the Windows 10 right-click context menu
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -ClassicContextMenu
+```
+
+---
+
+## 📈 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=PyPie-Studio/unslop-windows&type=Date)](https://star-history.com/#PyPie-Studio/unslop-windows&Date)
+
+---
+
+## 🤝 Community & Contributing
+
+Contributions are welcome! Please review our [Contributing Guidelines](CONTRIBUTING.md) and [Security Policy](SECURITY.md) before submitting a pull request.
+
+* **Found a bug?** Open an issue using the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md).
+* **Found new 25H2 bloatware or telemetry tasks?** Submit a [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md).
+
+---
+
+## 📄 License
 
 MIT License. Copyright (c) 2026 PyPie Studio.
