@@ -36,7 +36,7 @@ Most Windows debloaters break future Windows updates or leave background service
 
 ## Download & Quickstart
 
-### 1. Direct Download (Easiest / Non-Technical)
+### Method 1: Direct Download (Non-Technical / 1-Click)
 No Git or terminal experience needed:
 
 1. Open the [Latest GitHub Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
@@ -45,8 +45,39 @@ No Git or terminal experience needed:
    * **[`unslop.bat`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop.bat)**: Double-click it anywhere. It will automatically download the companion `unslop.ps1` file if missing.
 3. In the console menu, type your choice (e.g. `1` for Full Debloat) and press Enter. If Windows prompts for Administrator elevation (UAC), click **Yes**.
 
-### 2. Interactive Launcher Menu
-When launched, `unslop.bat` presents a numbered menu:
+### Method 2: PowerShell One-Liner (Terminal Users)
+Open PowerShell and run:
+
+```powershell
+irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.bat -OutFile unslop.bat; .\unslop.bat
+```
+
+### Method 3: Direct Command-Line Execution
+Run directly from Command Prompt or an elevated PowerShell terminal:
+
+**Command Prompt:**
+```cmd
+unslop.bat -DryRun
+unslop.bat -KeepTodos
+unslop.bat -Undo
+```
+
+**PowerShell:**
+```powershell
+# Full default debloat
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1
+
+# Dry-run audit (safe inspection, no elevation needed)
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
+
+# Full restore / undo back to Windows defaults
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
+```
+
+---
+
+### Interactive Menu Reference (`unslop.bat`)
+When double-clicked without arguments, `unslop.bat` presents this menu:
 
 * `[1]` Full Debloat (Default: Purge OneDrive, telemetry, and consumer bloat)
 * `[2]` Dry-Run Audit (Inspect all planned changes safely without modifying system)
@@ -57,40 +88,6 @@ When launched, `unslop.bat` presents a numbered menu:
 * `[7]` Custom Flags (Prompt for custom parameter combinations)
 * `[8]` Full Restore / Undo (`-Undo`: Revert all changes back to defaults)
 * `[0]` Exit
-
-### 3. PowerShell One-Liner (Terminal Users)
-Open PowerShell and run:
-
-```powershell
-irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.bat -OutFile unslop.bat; .\unslop.bat
-```
-
-### 4. Direct Command-Line Execution
-Call `unslop.bat` with flags directly from CMD:
-```cmd
-unslop.bat -DryRun
-unslop.bat -KeepTodos
-unslop.bat -Undo
-```
-
-Or run `unslop.ps1` directly from an elevated PowerShell terminal:
-```powershell
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1
-```
-
-### 2. Dry-Run / Audit (No Elevation Required)
-Inspects what would change without modifying system state:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
-```
-
-### 3. Restore / Undo All Changes
-Reverts all services, scheduled tasks, firewall rules, and policies back to Windows defaults:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
-```
 
 ---
 
