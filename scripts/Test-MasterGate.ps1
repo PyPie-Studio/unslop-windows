@@ -128,6 +128,17 @@ if (Test-Path $unslopBat) {
     } else {
         Write-Host "  PASSED: unslop.bat line endings normalized (CRLF)." -ForegroundColor Green
     }
+
+    # Verify unslop.bat syntax validity under cmd.exe
+    $batSyntaxOut = & cmd.exe /c "call `"$unslopBat`" -DryRun" 2>&1
+    $batExit = $LASTEXITCODE
+    if ($batExit -ne 0 -or ($batSyntaxOut -match 'unexpected at this time|syntax of the command is incorrect')) {
+        $lineEndingFail = $true
+        Write-Host "  FAILED: unslop.bat failed batch syntax verification under cmd.exe (code $batExit):" -ForegroundColor Red
+        Write-Host ($batSyntaxOut | Select-Object -Last 5 | Out-String) -ForegroundColor Red
+    } else {
+        Write-Host "  PASSED: unslop.bat batch syntax verified under cmd.exe (code 0)." -ForegroundColor Green
+    }
 }
 
 # Check for merge conflict markers across text files

@@ -1,4 +1,4 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.2)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.3)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier — no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -19,26 +19,6 @@ param(
 $ErrorActionPreference = "SilentlyContinue"
 $IsUndo = $Undo.IsPresent
 $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
-
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    if ($IsDryRun) {
-        Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
-    } else {
-        Write-Host ""
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
-        Write-Host "  system policies, manage services, and configure group policy." -ForegroundColor Red
-        Write-Host ""
-        Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
-        Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host ""
-        exit 1
-    }
-}
 
 $log = @()
 
@@ -177,10 +157,39 @@ $allRunKeys = @(
     "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
 )
 
+# ------------------------------------------------------------
+# Dot-Source Guard: If script is being dot-sourced (e.g. Pester test harness),
+# return immediately so functions are exported without executing the debloat payload.
+# ------------------------------------------------------------
+if ($MyInvocation.InvocationName -eq '.') {
+    return
+}
+
+# Verify Administrator Privileges (enforced unless -DryRun)
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    if ($IsDryRun) {
+        Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
+    } else {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
+        Write-Host "  system policies, manage services, and configure group policy." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
+        Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host ""
+        exit 1
+    }
+}
+
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "UNIVERSAL 25H2 DEBLOAT & PRIVACY HARDEN" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.0.2: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.0.3: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================

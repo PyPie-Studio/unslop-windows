@@ -9,8 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.0.3] - 2026-09-08
+
+### Fixed
+- **UAC Elevation Batch Syntax Crash (`unslop.bat`)**: Resolved an issue where nested `cmd.exe` quote escaping inside delayed expansion caused `\"'" was unexpected at this time.` syntax errors, crashing `unslop.bat` immediately upon launch. Replaced with clean, native PowerShell process elevation (`Start-Process -FilePath '%~f0' -Verb RunAs`).
+
 ### Added
-- **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: 5-pillar verification suite combining AST syntax parsing, PSScriptAnalyzer static analysis, CRLF/merge-conflict audits, non-elevated `-DryRun` execution, and symmetrical `-Undo -DryRun` restoration. Includes `-Fast` mode for rapid iteration.
+- **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: 5-pillar verification suite combining AST syntax parsing, PSScriptAnalyzer static analysis, CRLF audits, `cmd.exe` batch syntax validation, non-elevated `-DryRun` execution, and symmetrical `-Undo -DryRun` restoration. Includes `-Fast` mode for rapid iteration.
 - **Git Pre-Push Hook (`.githooks/pre-push` & `scripts/Install-GitHooks.ps1`)**: Automatic pre-push hook enforcing the 5-pillar quality gate prior to publishing to `main` or `master`.
 - **System State Diagnostic Auditor (`scripts/Measure-SystemState.ps1`)**: Standalone tool measuring physical RAM, commit charge, process/thread counts, telemetry services, and AppX packages. Supports `-Snapshot`, `-Baseline`, `-Target`, and `-ExportMarkdown` (`docs/benchmarks.md`).
 - **Cryptographic Release Hashes**: Updated `.github/workflows/release.yml` to automatically generate and upload standard GNU-compatible `SHA256SUMS.txt` alongside release bundles.
@@ -18,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI Agent Harness & Modular Skills**: Added [`AGENTS.md`](AGENTS.md), [`SKILLS.md`](SKILLS.md), and 4 domain skills in [`.agents/skills/`](.agents/skills/) (`unslop-safetier-engine`, `unslop-windows-internals`, `unslop-quality-gate`, `unslop-agent-workflow`).
 - **Architecture Decision Records (`docs/decisions.md`)**: Formal ledger tracking `ADR-001` through `ADR-007` covering safe-tier invariants, symmetry, non-elevated auditing, restart UX, quality gate, agent harness, and benchmarking.
 - **Repository Governance**: Added `.gitattributes`, `.editorconfig`, `.github/PULL_REQUEST_TEMPLATE.md`, and `ROADMAP.md`.
+
+### Security & Hardening
+- **Batch Syntax Gate Hardening**: Upgraded `scripts/Test-MasterGate.ps1` to directly test `cmd.exe /c "call unslop.bat -DryRun"` in Step 3 to ensure batch syntax corruptions or quote-escaping bugs can never pass local pre-push or CI/CD gates again.
 
 ---
 
@@ -79,7 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/PyPie-Studio/unslop-windows/releases/tag/v1.0.0
