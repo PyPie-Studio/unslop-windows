@@ -55,11 +55,15 @@ jobs:
 1. Download **``unslop-windows-$tag.zip``** from Assets below.
 2. Extract the archive to any directory.
 3. Right-click **``unslop.bat``** and choose **Run as administrator** (or double-click and accept the UAC elevation prompt).
-4. Select your preferred option from the interactive menu:
-   - Option **1**: Full debloat & telemetry neutralization.
-   - Option **2**: Conservative privacy & telemetry only (keeps Copilot, Edge, Bing).
-   - Option **3**: Non-elevated audit dry-run.
-   - Option **4**: Symmetrical full restoration (reverts all changes).
+4. Select an option from the interactive menu:
+   - **[1] Full Debloat**: Purge OneDrive, telemetry, diagnostics & provisioned bloatware.
+   - **[2] Dry-Run Audit**: Inspect all changes safely with zero system modifications.
+   - **[3] Debloat, Keep Microsoft To-Do**: Full debloat preserving To-Do.
+   - **[4] Debloat, Keep Xbox**: Full debloat preserving Xbox Identity Provider & gaming services.
+   - **[5] Debloat, Keep OneDrive**: Full debloat preserving Microsoft OneDrive sync.
+   - **[6] Debloat + Classic Context Menu**: Full debloat and restore Windows 10 classic context menu.
+   - **[7] Custom Flags**: Supply custom switch combinations (e.g. ``-KeepTodos -KeepXbox -NoRestart``).
+   - **[8] Full Restore / Undo**: Symmetrically revert all tweaks, services, tasks, and policies back to Windows defaults.
 
 ---
 
