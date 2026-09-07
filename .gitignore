@@ -25,3 +25,7 @@ Desktop.ini
 videos/
 *.mp4
 
+# Test Results & Reports
+test-results/
+testResults.xml
+

@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-09-08
+
+### Added
+- **Pester 5 Unit & Mocking Test Suite (`tests/unslop.Tests.ps1`)**: Introduced 17 isolated unit and integration tests mocking native cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Disable-ScheduledTask`, `Enable-ScheduledTask`), parameter flags (`-KeepXbox`, `-KeepOneDrive`), and non-elevated exit contracts with 100% test pass rate.
+- **Dedicated Dot-Source Test Guard (`unslop.ps1`)**: Added early top-level exit guard (`if ($MyInvocation.InvocationName -eq '.') { return }`) allowing the engine to export its helper functions into test harnesses without triggering elevation checks or executing debloat logic.
+- **Dual PowerShell Runtime Matrix in CI (`.github/workflows/lint.yml`)**: Multi-runtime matrix testing across both `pwsh` (PowerShell 7 Core) and `powershell` (Windows PowerShell 5.1 Desktop) on `windows-latest` with automated Pester 5 module provisioning.
+- **7-Pillar Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: Expanded the gate to 7 verification pillars by decoupling the batch launcher smoke test (`cmd.exe /c ".\unslop.bat -DryRun"`) into dedicated Pillar 7, restoring sub-second (`0.1s`) execution speed to `-Fast` checks. Added `-TestResultsPath` for NUnit XML export.
+- **Gated Production Releases (`.github/workflows/release.yml`)**: Release builds now strictly require the `verify` job to pass all 7 pillars (`needs: verify`) before packaging and publishing assets. Added `tests/` directory to release archive distribution bundles.
+- **CI Concurrency, Test Reporting & Step Summary Annotations**: Added PR-aware `concurrency: cancel-in-progress: true`, zero-dependency Markdown step summaries (`$env:GITHUB_STEP_SUMMARY`), inline GitHub Actions workflow annotations (`::error`), and artifact archiving via `actions/upload-artifact@v4`.
+- **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-008` (Pester 5 Unit Suite), `ADR-009` (Dual PS Runtime Matrix), `ADR-010` (Gated Releases), `ADR-011` (Dedicated Batch Smoke Test), and `ADR-012` (CI Concurrency & Annotations).
+
+### Fixed
+- **Helper Function Parameter Binding & Switch Scope Collisions (`unslop.ps1`)**: Fixed PowerShell parameter binding collisions where `-Undo` was interpreted as a partial prefix match for `-undoValue` by adding explicit `[switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun` switches across all helper functions.
+
+---
+
 ## [1.0.3] - 2026-09-08
 
 ### Fixed
@@ -89,7 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.0...v1.0.1

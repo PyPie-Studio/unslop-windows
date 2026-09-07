@@ -3,18 +3,26 @@
 .SYNOPSIS
     Local quality gate for unslop-windows developers and AI agents.
     Runs:
-      [1/5] AST Syntax & Parser Verification (unslop.ps1 + scripts/*.ps1)
-      [2/5] Static Code Analysis (PSScriptAnalyzer error/warning scan)
-      [3/5] Line-Ending & File Integrity Audit (CRLF for .bat/.ps1, merge conflicts)
-      [4/5] Safe Non-Elevated Dry-Run Execution Test (.\unslop.ps1 -DryRun)
-      [5/5] Symmetrical Restoration Dry-Run Execution Test (.\unslop.ps1 -Undo -DryRun)
+      [1/7] AST Syntax & Parser Verification (unslop.ps1 + scripts/*.ps1 + tests/*.ps1)
+      [2/7] Static Code Analysis (PSScriptAnalyzer error/warning scan)
+      [3/7] Line-Ending & File Integrity Audit (CRLF for .bat/.ps1, merge conflicts)
+      [4/7] Pester Unit & Mocking Test Suite (tests/unslop.Tests.ps1)
+      [5/7] Safe Non-Elevated Dry-Run Execution Test (.\unslop.ps1 -DryRun)
+      [6/7] Symmetrical Restoration Dry-Run Execution Test (.\unslop.ps1 -Undo -DryRun)
+      [7/7] Batch Launcher CLI Parameter Passthrough Audit (cmd.exe /c ".\unslop.bat -DryRun")
     Exit code 0 = Safe to push to main, 1+ = Gate blocked; fix reported findings first.
 
 .PARAMETER Fast
-    Skips the execution-based DryRun tests (runs syntax, analyzer, and file integrity only).
+    Skips the execution-based unit, DryRun, and batch launcher tests (runs syntax, analyzer, and file integrity only).
 
 .PARAMETER SkipAnalyzer
     Bypasses PSScriptAnalyzer if the module is not installed locally.
+
+.PARAMETER SkipUnitTests
+    Bypasses Pester unit tests if Pester 5 is not installed locally.
+
+.PARAMETER TestResultsPath
+    Optional file path to export Pester unit test results in NUnit XML format.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1
@@ -23,20 +31,26 @@
 [CmdletBinding()]
 param(
     [switch]$Fast,
-    [switch]$SkipAnalyzer
+    [switch]$SkipAnalyzer,
+    [switch]$SkipUnitTests,
+    [string]$TestResultsPath
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $fail = $false
-$totalSteps = if ($Fast) { 3 } else { 5 }
+$totalSteps = if ($Fast) { 3 } else { 7 }
 
-# Resolve best PowerShell executable for subprocess execution
-$psExec = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell.exe" }
+# Resolve matching PowerShell executable for subprocess execution based on current host runtime
+$psExec = if ($PSVersionTable.PSEdition -eq 'Desktop' -or -not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+    "powershell.exe"
+} else {
+    "pwsh"
+}
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  unslop-windows: Local Master Quality Gate" -ForegroundColor Cyan
+Write-Host "  unslop-windows: Master Quality Gate ($($PSVersionTable.PSEdition) Edition - PS $($PSVersionTable.PSVersion))" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # ------------------------------------------------------------
@@ -128,17 +142,6 @@ if (Test-Path $unslopBat) {
     } else {
         Write-Host "  PASSED: unslop.bat line endings normalized (CRLF)." -ForegroundColor Green
     }
-
-    # Verify unslop.bat syntax validity under cmd.exe
-    $batSyntaxOut = & cmd.exe /c "call `"$unslopBat`" -DryRun" 2>&1
-    $batExit = $LASTEXITCODE
-    if ($batExit -ne 0 -or ($batSyntaxOut -match 'unexpected at this time|syntax of the command is incorrect')) {
-        $lineEndingFail = $true
-        Write-Host "  FAILED: unslop.bat failed batch syntax verification under cmd.exe (code $batExit):" -ForegroundColor Red
-        Write-Host ($batSyntaxOut | Select-Object -Last 5 | Out-String) -ForegroundColor Red
-    } else {
-        Write-Host "  PASSED: unslop.bat batch syntax verified under cmd.exe (code 0)." -ForegroundColor Green
-    }
 }
 
 # Check for merge conflict markers across text files
@@ -163,10 +166,59 @@ if ($conflictMarkers.Count -gt 0) {
 if ($lineEndingFail) { $fail = $true }
 
 # ------------------------------------------------------------
-# STEP 4: Safe Non-Elevated Dry-Run Execution Test
+# STEP 4: Pester Unit & Mocking Test Suite
 # ------------------------------------------------------------
 if (-not $Fast) {
-    Write-Host "`n[4/$totalSteps] Safe non-elevated Dry-Run execution test..." -ForegroundColor Yellow
+    if (-not $SkipUnitTests) {
+        Write-Host "`n[4/$totalSteps] Pester unit & mocking test suite..." -ForegroundColor Yellow
+        $testScript = Join-Path $root "tests\unslop.Tests.ps1"
+        if (Test-Path $testScript) {
+            $pesterModule = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
+            if ($pesterModule -and $pesterModule.Version.Major -ge 5) {
+                Push-Location $root
+                try {
+                    $xmlConfig = ""
+                    if ($TestResultsPath) {
+                        $targetXml = if ([System.IO.Path]::IsPathRooted($TestResultsPath)) {
+                            $TestResultsPath
+                        } else {
+                            Join-Path $root $TestResultsPath
+                        }
+                        $xmlDir = Split-Path -Parent $targetXml
+                        if ($xmlDir -and -not (Test-Path $xmlDir)) {
+                            New-Item -ItemType Directory -Path $xmlDir -Force | Out-Null
+                        }
+                        $xmlConfig = "`$cfg.TestResult.Enabled = `$true; `$cfg.TestResult.OutputFormat = 'NUnitXml'; `$cfg.TestResult.OutputPath = '$targetXml';"
+                    }
+                    $pesterCmd = "Import-Module Pester -MinimumVersion 5.0.0; `$cfg = New-PesterConfiguration; `$cfg.Run.Path = '$testScript'; `$cfg.Output.Verbosity = 'Detailed'; $xmlConfig `$res = Invoke-Pester -Configuration `$cfg; if (`$res.FailedCount -gt 0) { exit 1 }"
+                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterCmd 2>&1
+                    $pesterExit = $LASTEXITCODE
+                    if ($pesterExit -ne 0) {
+                        $fail = $true
+                        Write-Host "  FAILED: Pester unit tests failed with exit code $pesterExit" -ForegroundColor Red
+                        Write-Host ($pesterOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
+                    } else {
+                        Write-Host "  PASSED: All Pester unit tests passed clean (0 failures)." -ForegroundColor Green
+                    }
+                } catch {
+                    $fail = $true
+                    Write-Host "  FAILED: Error invoking Pester test suite: $_" -ForegroundColor Red
+                } finally { Pop-Location }
+            } else {
+                Write-Host "  SKIPPED: Pester 5.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
+                Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 5.0.0)" -ForegroundColor DarkGray
+            }
+        } else {
+            Write-Host "  SKIPPED: tests/unslop.Tests.ps1 not found." -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Host "`n[4/$totalSteps] SKIPPED: -SkipUnitTests parameter supplied." -ForegroundColor DarkGray
+    }
+
+    # ------------------------------------------------------------
+    # STEP 5: Safe Non-Elevated Dry-Run Execution Test
+    # ------------------------------------------------------------
+    Write-Host "`n[5/$totalSteps] Safe non-elevated Dry-Run execution test..." -ForegroundColor Yellow
     Push-Location $root
     try {
         $dryRunOut = & $psExec -NoProfile -ExecutionPolicy Bypass -File ".\unslop.ps1" -DryRun 2>&1
@@ -187,9 +239,9 @@ if (-not $Fast) {
     } finally { Pop-Location }
 
     # ------------------------------------------------------------
-    # STEP 5: Symmetrical Restoration Dry-Run Execution Test
+    # STEP 6: Symmetrical Restoration Dry-Run Execution Test
     # ------------------------------------------------------------
-    Write-Host "`n[5/$totalSteps] Symmetrical restoration Dry-Run execution test..." -ForegroundColor Yellow
+    Write-Host "`n[6/$totalSteps] Symmetrical restoration Dry-Run execution test..." -ForegroundColor Yellow
     Push-Location $root
     try {
         $undoOut = & $psExec -NoProfile -ExecutionPolicy Bypass -File ".\unslop.ps1" -Undo -DryRun 2>&1
@@ -208,8 +260,25 @@ if (-not $Fast) {
             }
         }
     } finally { Pop-Location }
+
+    # ------------------------------------------------------------
+    # STEP 7: Batch Launcher CLI Parameter Passthrough Audit
+    # ------------------------------------------------------------
+    Write-Host "`n[7/$totalSteps] Batch launcher CLI parameter passthrough audit..." -ForegroundColor Yellow
+    Push-Location $root
+    try {
+        $batOut = & cmd.exe /c ".\unslop.bat -DryRun" 2>&1
+        $batExit = $LASTEXITCODE
+        if ($batExit -ne 0 -or ($batOut -match 'unexpected at this time|syntax of the command is incorrect')) {
+            $fail = $true
+            Write-Host "  FAILED: unslop.bat -DryRun exited with code $batExit" -ForegroundColor Red
+            Write-Host ($batOut | Select-Object -Last 10 | Out-String) -ForegroundColor Red
+        } else {
+            Write-Host "  PASSED: unslop.bat headless execution verified in cmd.exe (code 0)." -ForegroundColor Green
+        }
+    } finally { Pop-Location }
 } else {
-    Write-Host "`n[4-5/$totalSteps] Skipped DryRun tests (-Fast flag specified)." -ForegroundColor DarkGray
+    Write-Host "`n[4-7/$totalSteps] Skipped Unit, DryRun, and Batch Launcher tests (-Fast flag specified)." -ForegroundColor DarkGray
 }
 
 $sw.Stop()

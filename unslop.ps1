@@ -1,4 +1,4 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.3)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.4)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier — no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -22,117 +22,117 @@ $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.Contai
 
 $log = @()
 
-function Log($msg) {
+function Log($msg, [switch]$DryRun = $IsDryRun) {
     $ts = Get-Date -Format "HH:mm:ss"
-    $prefix = if ($IsDryRun) { "[DRY-RUN] " } else { "" }
+    $prefix = if ($DryRun) { "[DRY-RUN] " } else { "" }
     $entry = "[$ts] $prefix$msg"
     Write-Host $entry
     $script:log += $entry
 }
 
-function Set-SvcState($name, $desc, $undoStartupType = "Automatic") {
+function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $s = Get-Service -Name $name -ErrorAction SilentlyContinue
     if ($s) {
-        if ($IsUndo) {
-            if ($IsDryRun) {
-                Log "  [WOULD RESTORE]: $name -> $undoStartupType and Start-Service"
+        if ($Undo) {
+            if ($DryRun) {
+                Log "  [WOULD RESTORE]: $name -> $undoStartupType and Start-Service" -DryRun:$DryRun
             } else {
                 Set-Service -Name $name -StartupType $undoStartupType -ErrorAction SilentlyContinue
                 Start-Service -Name $name -ErrorAction SilentlyContinue
-                Log "  RESTORED: $name (Startup: $undoStartupType)"
+                Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
             }
         } else {
-            if ($IsDryRun) {
-                Log "  [WOULD DISABLE]: $name ($desc)"
+            if ($DryRun) {
+                Log "  [WOULD DISABLE]: $name ($desc)" -DryRun:$DryRun
             } else {
                 if ($s.Status -eq "Running") { Stop-Service -Name $name -Force -ErrorAction SilentlyContinue }
                 Set-Service -Name $name -StartupType Disabled -ErrorAction SilentlyContinue
-                Log "  DISABLED: $name ($desc)"
+                Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
             }
         }
     } else {
-        Log "  SKIP: $name not found"
+        Log "  SKIP: $name not found" -DryRun:$DryRun
     }
 }
 
-function Set-TaskState($path, $name) {
+function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $t = Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue
     if ($t) {
-        if ($IsUndo) {
-            if ($IsDryRun) {
-                Log "  [WOULD ENABLE]: $name ($path)"
+        if ($Undo) {
+            if ($DryRun) {
+                Log "  [WOULD ENABLE]: $name ($path)" -DryRun:$DryRun
             } else {
                 Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue | Out-Null
-                Log "  ENABLED: $name"
+                Log "  ENABLED: $name" -DryRun:$DryRun
             }
         } else {
-            if ($IsDryRun) {
-                Log "  [WOULD DISABLE]: $name ($path)"
+            if ($DryRun) {
+                Log "  [WOULD DISABLE]: $name ($path)" -DryRun:$DryRun
             } else {
                 Disable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue | Out-Null
-                Log "  DISABLED: $name"
+                Log "  DISABLED: $name" -DryRun:$DryRun
             }
         }
     } else {
-        Log "  SKIP: $name not found"
+        Log "  SKIP: $name not found" -DryRun:$DryRun
     }
 }
 
-function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo = $false) {
-    if ($IsUndo) {
+function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo = $false, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
+    if ($Undo) {
         if ($removeOnUndo) {
             if (Test-Path $path) {
-                if ($IsDryRun) {
-                    Log "  [WOULD REMOVE REG]: $path\$name"
+                if ($DryRun) {
+                    Log "  [WOULD REMOVE REG]: $path\$name" -DryRun:$DryRun
                 } else {
                     Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction SilentlyContinue
-                    Log "  REMOVED: $name from $path"
+                    Log "  REMOVED: $name from $path" -DryRun:$DryRun
                 }
             }
         } else {
-            if ($IsDryRun) {
-                Log "  [WOULD SET REG]: $path\$name = $undoValue"
+            if ($DryRun) {
+                Log "  [WOULD SET REG]: $path\$name = $undoValue" -DryRun:$DryRun
             } else {
                 if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction SilentlyContinue | Out-Null }
                 Set-ItemProperty -Path $path -Name $name -Value $undoValue -Type DWord -ErrorAction SilentlyContinue
-                Log "  RESTORED: $name = $undoValue in $path"
+                Log "  RESTORED: $name = $undoValue in $path" -DryRun:$DryRun
             }
         }
     } else {
-        if ($IsDryRun) {
-            Log "  [WOULD SET REG]: $path\$name = $debloatValue"
+        if ($DryRun) {
+            Log "  [WOULD SET REG]: $path\$name = $debloatValue" -DryRun:$DryRun
         } else {
             if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction SilentlyContinue | Out-Null }
             Set-ItemProperty -Path $path -Name $name -Value $debloatValue -Type DWord -ErrorAction SilentlyContinue
-            Log "  SET: $name = $debloatValue"
+            Log "  SET: $name = $debloatValue" -DryRun:$DryRun
         }
     }
 }
 
-function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", $undoValue = "Allow") {
+function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", $undoValue = "Allow", [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $locPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\$capability"
-    if ($IsUndo) {
-        if ($IsDryRun) {
-            Log "  [WOULD SET CONSENT]: $capability -> $undoValue"
+    if ($Undo) {
+        if ($DryRun) {
+            Log "  [WOULD SET CONSENT]: $capability -> $undoValue" -DryRun:$DryRun
         } else {
             if (-not (Test-Path $locPath)) { New-Item -Path $locPath -Force -ErrorAction SilentlyContinue | Out-Null }
             Set-ItemProperty -Path $locPath -Name "Value" -Value $undoValue -EA 0
-            Log "  RESTORED CONSENT: $capability = $undoValue"
+            Log "  RESTORED CONSENT: $capability = $undoValue" -DryRun:$DryRun
         }
     } else {
-        if ($IsDryRun) {
-            Log "  [WOULD SET CONSENT]: $capability -> $debloatValue ($desc)"
+        if ($DryRun) {
+            Log "  [WOULD SET CONSENT]: $capability -> $debloatValue ($desc)" -DryRun:$DryRun
         } else {
             if (-not (Test-Path $locPath)) { New-Item -Path $locPath -Force -ErrorAction SilentlyContinue | Out-Null }
             Set-ItemProperty -Path $locPath -Name "Value" -Value $debloatValue -EA 0
-            Log "  BLOCKED CONSENT: $capability = $debloatValue ($desc)"
+            Log "  BLOCKED CONSENT: $capability = $debloatValue ($desc)" -DryRun:$DryRun
         }
     }
 }
 
-function Remove-StartupEntry($pattern, $runKeys) {
-    if ($IsUndo) {
-        Log "  INFO: Startup entry for '$pattern' can be re-enabled in Task Manager > Startup Apps"
+function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
+    if ($Undo) {
+        Log "  INFO: Startup entry for '$pattern' can be re-enabled in Task Manager > Startup Apps" -DryRun:$DryRun
         return
     }
     foreach ($runKey in $runKeys) {
@@ -140,11 +140,11 @@ function Remove-StartupEntry($pattern, $runKeys) {
         if ($props) {
             $matches = $props.PSObject.Properties | Where-Object { $_.Name -match $pattern -or $_.Value -match $pattern }
             foreach ($entry in $matches) {
-                if ($IsDryRun) {
-                    Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey"
+                if ($DryRun) {
+                    Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey" -DryRun:$DryRun
                 } else {
                     Remove-ItemProperty -Path $runKey -Name $entry.Name -Force -ErrorAction SilentlyContinue
-                    Log "  REMOVED: $($entry.Name) from $runKey"
+                    Log "  REMOVED: $($entry.Name) from $runKey" -DryRun:$DryRun
                 }
             }
         }
@@ -189,7 +189,7 @@ if (-not $isAdmin) {
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "UNIVERSAL 25H2 DEBLOAT & PRIVACY HARDEN" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.0.3: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.0.4: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================

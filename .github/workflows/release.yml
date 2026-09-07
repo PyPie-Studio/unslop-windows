@@ -5,9 +5,82 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  verify:
+    name: Verify Release Quality Gate
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Ensure Pester 5 Module Available
+        shell: pwsh
+        run: |
+          $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
+          if (-not $pester) {
+            Write-Host "Installing Pester 5..."
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          }
+
+      - name: Run 7-Pillar Master Quality Gate
+        shell: pwsh
+        run: |
+          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-release.xml"
+
+      - name: Publish Test Summary to GitHub Actions
+        if: always()
+        shell: pwsh
+        run: |
+          $xmlPath = "test-results/pester-release.xml"
+          if (Test-Path $xmlPath) {
+            [xml]$xml = Get-Content $xmlPath
+            $total = $xml.'test-results'.total
+            $failures = $xml.'test-results'.failures
+            $notRun = $xml.'test-results'.'not-run'
+            $passed = [int]$total - [int]$failures - [int]$notRun
+            $suiteTime = $xml.'test-results'.'test-suite'.time
+            
+            $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
+            $summary = @"
+          ## 🛡️ Release Pre-Flight Pester Test Results ($statusEmoji)
+
+          | Metric | Value |
+          | :--- | :--- |
+          | **Total Tests** | $total |
+          | **Passed** | $passed |
+          | **Failed** | $failures |
+          | **Skipped / Not Run** | $notRun |
+          | **Duration** | ${suiteTime}s |
+          "@
+            if ($env:GITHUB_STEP_SUMMARY) {
+              $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            }
+
+            if ([int]$failures -gt 0) {
+              foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
+                $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
+                Write-Host "::error file=tests/unslop.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+              }
+            }
+          }
+
+      - name: Upload Pester Test Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results-release
+          path: test-results/
+          if-no-files-found: ignore
+
   publish-release:
     name: Build & Publish Release Assets
+    needs: verify
     runs-on: windows-latest
     permissions:
       contents: write
@@ -19,7 +92,7 @@ jobs:
         shell: pwsh
         run: |
           $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE, scripts, docs -DestinationPath $zipName -Force
+          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE, scripts, docs, tests -DestinationPath $zipName -Force
 
       - name: Generate Cryptographic SHA-256 Checksums
         shell: pwsh

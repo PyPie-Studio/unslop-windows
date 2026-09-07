@@ -34,22 +34,22 @@ This skill governs the Antigravity AI agent workflow, engineering philosophy, an
 
 ---
 
-## 🏷 Release & Versioning Workflow
+## 🏷 Release & Versioning Workflow (Mandatory Post-Verification Rule)
 
-When releasing a new version of `unslop-windows`:
+After **every verified change** made to the codebase (confirmed clean by `Test-MasterGate.ps1`), the agent must immediately execute the release sequence so the repository is continuously up to date:
 
 1. **Version Alignment:**
-   - Update `$version` variable in `unslop.ps1`.
-   - Update version string in `unslop.bat` header.
+   - Bump version header and log strings in [`unslop.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.ps1).
+   - Bump version string in [`unslop.bat`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.bat) (maintain CRLF).
+   - Bump download links and ASCII menu in [`README.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/README.md).
 2. **Changelog Maintenance:**
    - Add a new version block with current date in [`CHANGELOG.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/CHANGELOG.md).
    - Document all Added, Changed, Fixed, and Security items following Keep a Changelog standard.
-3. **Roadmap Sync:**
-   - Update [`ROADMAP.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/ROADMAP.md) milestones.
-4. **Master Gate Verification:**
+   - Update comparison links at the bottom of the changelog.
+3. **Master Gate Verification:**
    - Run `pwsh -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1`.
-5. **Git Tag & GitHub Release:**
-   - Commit changes: `git commit -m "chore(release): vX.Y.Z"`
-   - Create annotated tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
-   - Push to origin: `git push origin main --tags`
-   - Publish release notes via GitHub CLI: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."`
+4. **Git Commit, Tag & Push:**
+   - Stage all files: `git add .`
+   - Commit changes: `git commit -m "feat/fix(...): <summary>"`
+   - Create annotated tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z: <summary>"`
+   - Push to origin: `git push origin main --tags` (triggers automated GitHub Actions release build).
