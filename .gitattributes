@@ -1,0 +1,34 @@
+###############################################################################
+# Set default behavior to automatically normalize line endings.
+###############################################################################
+* text=auto
+
+###############################################################################
+# Windows Batch & PowerShell Scripts
+# .bat and .cmd files MUST have CRLF line endings on Windows.
+###############################################################################
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+###############################################################################
+# Documentation and configuration
+###############################################################################
+*.md text
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+
+###############################################################################
+# Binary formats
+###############################################################################
+*.zip binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.mp4 binary
