@@ -30,10 +30,18 @@ if not "%~1"=="" (
         exit /b !errorlevel!
     )
 
+    if "%~1"=="-RunDirect" (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1"
+        if !errorlevel! equ 100 exit /b 0
+        echo.
+        pause
+        goto :menu
+    )
+
     net session >nul 2>&1
     if !errorlevel! neq 0 (
         echo Requesting Administrator privileges...
-        powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/v:on /c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" %* & if not !errorlevel! equ 100 (echo. & pause)\"'"
+        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '%*' -Verb RunAs"
         exit /b
     )
 
@@ -105,7 +113,11 @@ net session >nul 2>&1
 if !errorlevel! neq 0 (
     echo.
     echo Administrator privileges required. Prompting for UAC elevation...
-    powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/v:on /c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" !ARGS! & if not !errorlevel! equ 100 (echo. & pause)\"'"
+    if defined ARGS (
+        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '!ARGS!' -Verb RunAs"
+    ) else (
+        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '-RunDirect' -Verb RunAs"
+    )
     exit /b
 )
 
