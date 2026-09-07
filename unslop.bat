@@ -33,11 +33,12 @@ if not "%~1"=="" (
     net session >nul 2>&1
     if !errorlevel! neq 0 (
         echo Requesting Administrator privileges...
-        powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" %* && pause\"'"
+        powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/v:on /c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" %* & if not !errorlevel! equ 100 (echo. & pause)\"'"
         exit /b
     )
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" %*
+    if !errorlevel! equ 100 exit /b 0
     exit /b !errorlevel!
 )
 
@@ -104,12 +105,13 @@ net session >nul 2>&1
 if !errorlevel! neq 0 (
     echo.
     echo Administrator privileges required. Prompting for UAC elevation...
-    powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" !ARGS! && echo. && pause\"'"
+    powershell.exe -NoProfile -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/v:on /c \"cd /d \"\"%~dp0\"\" && powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"\"%~dp0unslop.ps1\"\" !ARGS! & if not !errorlevel! equ 100 (echo. & pause)\"'"
     exit /b
 )
 
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" !ARGS!
+if !errorlevel! equ 100 exit /b 0
 echo.
 pause
 goto :menu

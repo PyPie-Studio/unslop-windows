@@ -927,18 +927,11 @@ if (-not $IsDryRun) {
         Write-Host "  to finalize debloating and apply all policy modifications." -ForegroundColor Yellow
         Write-Host "============================================================" -ForegroundColor Yellow
         Write-Host ""
-    } elseif ($ForceRestart) {
-        Write-Host ""
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  [!] ACTION: SYSTEM RESTART SCHEDULED IN 30 SECONDS" -ForegroundColor Red
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  PLEASE SAVE ALL OPEN WORK IMMEDIATELY!" -ForegroundColor Yellow
-        Write-Host "  Your computer will restart in 30 seconds." -ForegroundColor Yellow
-        Write-Host "  To abort the restart, open a command prompt and run: shutdown /a" -ForegroundColor Gray
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host ""
-        & shutdown.exe /r /t 30 /d p:2:4 /c "unslop-windows: System restart in 30 seconds to apply changes. Please save all open work immediately!"
-    } else {
+        exit 0
+    }
+
+    $shouldInitiate = $ForceRestart
+    if (-not $ForceRestart) {
         Write-Host ""
         Write-Host "============================================================" -ForegroundColor Yellow
         Write-Host "  [!] ACTION REQUIRED: SYSTEM RESTART NEEDED" -ForegroundColor Yellow
@@ -948,34 +941,100 @@ if (-not $IsDryRun) {
         Write-Host "============================================================" -ForegroundColor Yellow
         Write-Host ""
 
-        $shouldRestart = $false
         try {
             $response = Read-Host "Restart computer now? [Y/n] (Press Enter for Yes)"
             if ([string]::IsNullOrWhiteSpace($response) -or $response.Trim() -match '^(y|yes)$') {
-                $shouldRestart = $true
+                $shouldInitiate = $true
             }
         } catch {
-            $shouldRestart = $false
+            $shouldInitiate = $false
             Write-Host "Non-interactive session detected. Skipping automatic restart." -ForegroundColor Cyan
             Write-Host "Please restart your computer manually to apply changes." -ForegroundColor Cyan
         }
+    }
 
-        if ($shouldRestart) {
+    if ($shouldInitiate) {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  [!] ACTION: RESTARTING COMPUTER IN 30 SECONDS" -ForegroundColor Red
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  PLEASE SAVE ALL OPEN WORK IMMEDIATELY!" -ForegroundColor Yellow
+        Write-Host "  Your machine will restart in 30 seconds." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  [SHORTCUT] Press 'A' to Abort restart | Press 'R' to Restart Now" -ForegroundColor Cyan
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host ""
+
+        # Schedule 30-second shutdown with Windows OS
+        & shutdown.exe /r /t 30 /d p:2:4 /c "unslop-windows: System restart in 30 seconds to apply debloat changes. Please save all open work immediately!" 2>$null
+
+        $aborted = $false
+        $restartNow = $false
+        $secondsLeft = 30
+
+        try {
+            while ($secondsLeft -gt 0) {
+                Write-Host -NoNewline ("`r  Restarting in {0,2}s... [Press 'A' to Abort | 'R' to Restart Now]   " -f $secondsLeft)
+                $keyHit = $false
+                for ($sub = 0; $sub -lt 10; $sub++) {
+                    Start-Sleep -Milliseconds 100
+                    try {
+                        if ($Host.UI.RawUI.KeyAvailable) {
+                            $k = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown,AllowCtrlC")
+                            if ($k.Character -eq 'a' -or $k.Character -eq 'A') {
+                                $aborted = $true
+                                $keyHit = $true
+                                break
+                            }
+                            if ($k.Character -eq 'r' -or $k.Character -eq 'R' -or $k.VirtualKeyCode -eq 13) {
+                                $restartNow = $true
+                                $keyHit = $true
+                                break
+                            }
+                        }
+                    } catch {
+                        # Host does not support raw console keys
+                    }
+                }
+                if ($keyHit) { break }
+                $secondsLeft--
+            }
+        } catch {
+            # Interrupted (e.g. Ctrl+C) -> treat as abort
+            $aborted = $true
+        }
+
+        if ($aborted) {
+            & shutdown.exe /a 2>$null
             Write-Host ""
-            Write-Host "============================================================" -ForegroundColor Red
-            Write-Host "  [!] ACTION: RESTARTING COMPUTER IN 30 SECONDS" -ForegroundColor Red
-            Write-Host "============================================================" -ForegroundColor Red
-            Write-Host "  PLEASE SAVE ALL OPEN WORK IMMEDIATELY!" -ForegroundColor Yellow
-            Write-Host "  Your machine will restart in 30 seconds." -ForegroundColor Yellow
-            Write-Host "  To abort restart, open a command prompt and run: shutdown /a" -ForegroundColor Gray
-            Write-Host "============================================================" -ForegroundColor Red
             Write-Host ""
-            & shutdown.exe /r /t 30 /d p:2:4 /c "unslop-windows: System restart in 30 seconds to apply debloat changes. Please save all open work immediately!"
+            Write-Host "============================================================" -ForegroundColor Yellow
+            Write-Host "  [!] SYSTEM RESTART CANCELLED" -ForegroundColor Yellow
+            Write-Host "============================================================" -ForegroundColor Yellow
+            Write-Host "  Automatic restart has been aborted." -ForegroundColor Yellow
+            Write-Host "  Please save your work and manually restart your computer" -ForegroundColor Yellow
+            Write-Host "  when you are ready to apply all changes." -ForegroundColor Yellow
+            Write-Host "============================================================" -ForegroundColor Yellow
+            Write-Host ""
+            exit 0
+        } elseif ($restartNow) {
+            Write-Host ""
+            Write-Host ""
+            Write-Host "Restarting system immediately..." -ForegroundColor Green
+            & shutdown.exe /a 2>$null
+            & shutdown.exe /r /t 0 /d p:2:4 /c "unslop-windows: Restarting immediately." 2>$null
+            exit 100
         } else {
             Write-Host ""
-            Write-Host "Restart postponed." -ForegroundColor Cyan
-            Write-Host "Remember to save your work and restart your computer soon to apply all changes." -ForegroundColor Cyan
             Write-Host ""
+            Write-Host "Restarting system now..." -ForegroundColor Green
+            exit 100
         }
+    } else {
+        Write-Host ""
+        Write-Host "Restart postponed." -ForegroundColor Cyan
+        Write-Host "Remember to save your work and restart your computer soon to apply all changes." -ForegroundColor Cyan
+        Write-Host ""
+        exit 0
     }
 }

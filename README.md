@@ -52,7 +52,7 @@ Select an option [0-8]:
 > ### ⚠️ Mandatory Requirements: Administrator Rights & System Restart
 > 1. **Run as Administrator**: `unslop-windows` configures system-level Group Policies, Services, Registry trees, and de-provisions AppX packages. The script **must be executed as an Administrator** (except `-DryRun`, which safely audits changes without elevation).
 > 2. **System Restart Required**: Windows caches service states, group policies, and background telemetry threads in memory. A **full system restart is required** after the script is done to finalize all debloat, privacy, and performance optimizations.
-> 3. **Save Your Work**: Please save all open documents and close sensitive applications before running. Upon completion, the script will notify you to save your work and prompt to safely restart your machine.
+> 3. **Save Your Work & In-Place Abort Shortcut**: Please save all open documents before running. Upon completion, the script notifies you to save your work and initiates a 30-second restart countdown with an in-place shortcut: press **`A`** to abort the restart at any time, or **`R`** to reboot immediately. If not aborted, the restart proceeds and the launcher window closes automatically.
 
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
@@ -61,7 +61,7 @@ No Git, terminal commands, or PowerShell knowledge needed:
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
 4. In the console menu, type `1` (or your preferred option) and press Enter.
-5. When the script completes, ensure your work is saved and press **Enter** (or `Y`) when prompted to restart your computer.
+5. When the script completes, ensure your work is saved and press **Enter** (or `Y`) to initiate the 30-second restart countdown (press **`A`** to abort or **`R`** to reboot immediately; if allowed to finish, the window closes automatically).
 
 ### Method 2: PowerShell One-Liner (Terminal Users)
 Launch the interactive menu straight from an elevated PowerShell terminal:
