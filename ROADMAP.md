@@ -13,8 +13,8 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 - [x] Repository normalization (`.gitattributes`, `.editorconfig`).
 - [x] Contributor pull request template (`.github/PULL_REQUEST_TEMPLATE.md`).
 - [x] Release history tracking (`CHANGELOG.md`).
-- [ ] **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`):** Unified AST parse, PSScriptAnalyzer, DryRun, and Undo DryRun check.
-- [ ] **Git Pre-Push Hook (`.githooks/pre-push`):** Blocks pushes to `main` if the local Master Gate fails.
+- [x] **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`):** Unified AST parse, PSScriptAnalyzer, DryRun, and Undo DryRun check.
+- [x] **Git Pre-Push Hook (`.githooks/pre-push`):** Blocks pushes to `main` if the local Master Gate fails.
 - [ ] **Agent Governance (`AGENTS.md` & `SKILLS.md`):** System harness and specialized rules for AI pair programming.
 
 ---

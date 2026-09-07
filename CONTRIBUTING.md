@@ -38,26 +38,26 @@ The following components must remain functional and un-targeted:
 
 ## Local Development & Testing Workflow
 
-Before opening a Pull Request, verify your changes locally:
-
-### 1. Syntax & AST Verification
-Run the PowerShell parser to confirm zero syntax errors:
+### 1. Automated Master Quality Gate
+Run the unified 5-pillar verification gate locally:
 
 ```powershell
-$errors = $null
-[System.Management.Automation.Language.Parser]::ParseFile(".\unslop.ps1", [ref]$null, [ref]$errors)
-if ($errors.Length -eq 0) { "Syntax Clean" } else { $errors }
+# Full gate: AST syntax, PSScriptAnalyzer, line-endings/conflict check, and dry-run tests
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
+
+# Rapid lint mode (skips dry-run execution):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 ```
 
-### 2. Linting (PSScriptAnalyzer)
-Run `PSScriptAnalyzer` to match the GitHub Actions CI rules:
+### 2. Git Pre-Push Hook Setup
+Install the local pre-push hook to automatically block accidental pushes with failing tests:
 
 ```powershell
-Invoke-ScriptAnalyzer -Path .\ -Recurse -Severity Error, Warning
+powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Test
 ```
 
 ### 3. Dry-Run Execution Test
-Run both standard and undo dry-run modes:
+Run both standard debloat and symmetrical restoration dry-run modes:
 
 ```powershell
 # Verify audit output for your feature

@@ -1,0 +1,69 @@
+#!/usr/bin/env sh
+# ==============================================================================
+# Git Pre-Push Hook for unslop-windows
+# Runs local Master Quality Gate before pushing to protected branches.
+# ==============================================================================
+
+remote="$1"
+url="$2"
+
+zero_oid="0000000000000000000000000000000000000000"
+should_run_gate=0
+
+# If run interactively from terminal without git piping stdin, run gate directly
+if [ -t 0 ]; then
+    echo "  [pre-push] Running in interactive terminal mode..."
+    should_run_gate=1
+else
+    # Invoked by git push: inspect incoming push references from stdin
+    while read -r local_ref local_oid remote_ref remote_oid
+    do
+        # Skip branch deletion
+        if [ "$local_oid" = "$zero_oid" ] || [ "$local_ref" = "(delete)" ]; then
+            continue
+        fi
+
+        # Trigger gate when pushing to protected branches
+        case "$remote_ref" in
+            refs/heads/main|refs/heads/master)
+                should_run_gate=1
+                ;;
+        esac
+    done
+fi
+
+if [ "$should_run_gate" -eq 1 ]; then
+    echo "============================================================"
+    echo "  [pre-push] Push to protected branch detected."
+    echo "  [pre-push] Running unslop-windows Local Master Quality Gate..."
+    echo "============================================================"
+
+    # Determine best PowerShell executable
+    if command -v pwsh >/dev/null 2>&1; then
+        PS_CMD="pwsh"
+    elif command -v powershell.exe >/dev/null 2>&1; then
+        PS_CMD="powershell.exe"
+    elif command -v powershell >/dev/null 2>&1; then
+        PS_CMD="powershell"
+    else
+        echo "[pre-push] ERROR: Neither pwsh nor powershell.exe found in PATH." >&2
+        exit 1
+    fi
+
+    # Locate repo root
+    REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+    "$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File "$REPO_ROOT/scripts/Test-MasterGate.ps1"
+    GATE_STATUS=$?
+
+    if [ $GATE_STATUS -ne 0 ]; then
+        echo "" >&2
+        echo "============================================================" >&2
+        echo "  [pre-push] GATE BLOCKED: Master Quality Gate failed.      " >&2
+        echo "  Resolve errors before pushing to protected branches.      " >&2
+        echo "  (Bypass if urgent with: git push --no-verify)             " >&2
+        echo "============================================================" >&2
+        exit 1
+    fi
+fi
+
+exit 0
