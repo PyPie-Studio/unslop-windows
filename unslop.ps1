@@ -1,4 +1,4 @@
-﻿# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.1)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier — no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -11,7 +11,9 @@ param(
     [switch]$KeepXbox,
     [switch]$KeepOneDrive,
     [switch]$KeepTodos,
-    [switch]$ClassicContextMenu
+    [switch]$ClassicContextMenu,
+    [switch]$NoRestart,
+    [switch]$ForceRestart
 )
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -21,9 +23,19 @@ $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.Contai
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     if ($IsDryRun) {
-        Write-Warning "Running in non-elevated mode. Dry-run inspection only."
+        Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
     } else {
-        Write-Error "Administrator privileges required to apply changes. Please re-run from an elevated PowerShell prompt."
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
+        Write-Host "  system policies, manage services, and configure group policy." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
+        Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host ""
         exit 1
     }
 }
@@ -168,7 +180,7 @@ $allRunKeys = @(
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "UNIVERSAL 25H2 DEBLOAT & PRIVACY HARDEN" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.0.1: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -878,7 +890,7 @@ Log "  AMDNoiseSuppression (Discord mic)"
 Log "  Edge rendering engine (startup behavior only suppressed; WebView2 preserved)"
 Log "  VS Code, Firefox, Docker, Ollama auto-updates"
 Log ""
-Log "REBOOT RECOMMENDED for full effect."
+Log "REBOOT REQUIRED for all changes to take full effect."
 Log ""
 
 # ============================================================
@@ -900,3 +912,70 @@ $logPath = Join-Path $logDir "$($prefixName)_25h2$($modeTag)_$(Get-Date -Format 
 
 $log | Out-File -FilePath $logPath -Encoding UTF8
 Log "Log saved to: $logPath"
+
+# ============================================================
+# SYSTEM RESTART HANDLING
+# ============================================================
+if (-not $IsDryRun) {
+    if ($NoRestart) {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host "  [!] NOTICE: SYSTEM RESTART REQUIRED" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host "  -NoRestart flag was specified." -ForegroundColor Yellow
+        Write-Host "  Please save all open work and restart your computer manually" -ForegroundColor Yellow
+        Write-Host "  to finalize debloating and apply all policy modifications." -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host ""
+    } elseif ($ForceRestart) {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  [!] ACTION: SYSTEM RESTART SCHEDULED IN 30 SECONDS" -ForegroundColor Red
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  PLEASE SAVE ALL OPEN WORK IMMEDIATELY!" -ForegroundColor Yellow
+        Write-Host "  Your computer will restart in 30 seconds." -ForegroundColor Yellow
+        Write-Host "  To abort the restart, open a command prompt and run: shutdown /a" -ForegroundColor Gray
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host ""
+        & shutdown.exe /r /t 30 /d p:2:4 /c "unslop-windows: System restart in 30 seconds to apply changes. Please save all open work immediately!"
+    } else {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host "  [!] ACTION REQUIRED: SYSTEM RESTART NEEDED" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host "  A restart is required to finalize debloating and apply all changes." -ForegroundColor Yellow
+        Write-Host "  PLEASE SAVE ALL OPEN WORK BEFORE RESTARTING!" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host ""
+
+        $shouldRestart = $false
+        try {
+            $response = Read-Host "Restart computer now? [Y/n] (Press Enter for Yes)"
+            if ([string]::IsNullOrWhiteSpace($response) -or $response.Trim() -match '^(y|yes)$') {
+                $shouldRestart = $true
+            }
+        } catch {
+            $shouldRestart = $false
+            Write-Host "Non-interactive session detected. Skipping automatic restart." -ForegroundColor Cyan
+            Write-Host "Please restart your computer manually to apply changes." -ForegroundColor Cyan
+        }
+
+        if ($shouldRestart) {
+            Write-Host ""
+            Write-Host "============================================================" -ForegroundColor Red
+            Write-Host "  [!] ACTION: RESTARTING COMPUTER IN 30 SECONDS" -ForegroundColor Red
+            Write-Host "============================================================" -ForegroundColor Red
+            Write-Host "  PLEASE SAVE ALL OPEN WORK IMMEDIATELY!" -ForegroundColor Yellow
+            Write-Host "  Your machine will restart in 30 seconds." -ForegroundColor Yellow
+            Write-Host "  To abort restart, open a command prompt and run: shutdown /a" -ForegroundColor Gray
+            Write-Host "============================================================" -ForegroundColor Red
+            Write-Host ""
+            & shutdown.exe /r /t 30 /d p:2:4 /c "unslop-windows: System restart in 30 seconds to apply debloat changes. Please save all open work immediately!"
+        } else {
+            Write-Host ""
+            Write-Host "Restart postponed." -ForegroundColor Cyan
+            Write-Host "Remember to save your work and restart your computer soon to apply all changes." -ForegroundColor Cyan
+            Write-Host ""
+        }
+    }
+}

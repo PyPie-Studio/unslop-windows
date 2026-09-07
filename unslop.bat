@@ -47,7 +47,7 @@ if not "%~1"=="" (
 :menu
 cls
 echo ============================================================
-echo   unslop-windows (v1.0.0) - PyPie Studio
+echo   unslop-windows (v1.0.1) - PyPie Studio
 echo   Universal Windows 11 24H2 / 25H2 Debloat ^& Privacy Hardener
 echo ============================================================
 echo.
@@ -82,6 +82,7 @@ goto :menu
 echo.
 echo Examples: -KeepTodos -KeepXbox
 echo           -KeepTodos -ClassicContextMenu
+echo           -KeepTodos -NoRestart
 echo           -Undo -DryRun
 echo.
 set /p "ARGS=Enter parameter flags: "

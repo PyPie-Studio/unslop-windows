@@ -12,7 +12,7 @@
 [![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.1.zip) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.0.0) - PyPie Studio
+  unslop-windows (v1.0.1) - PyPie Studio
   Universal Windows 11 24H2 / 25H2 Debloat & Privacy Hardener
 ============================================================
 
@@ -48,40 +48,53 @@ Select an option [0-8]:
 
 ## ⚡ Download & Quickstart
 
+> [!IMPORTANT]
+> ### ⚠️ Mandatory Requirements: Administrator Rights & System Restart
+> 1. **Run as Administrator**: `unslop-windows` configures system-level Group Policies, Services, Registry trees, and de-provisions AppX packages. The script **must be executed as an Administrator** (except `-DryRun`, which safely audits changes without elevation).
+> 2. **System Restart Required**: Windows caches service states, group policies, and background telemetry threads in memory. A **full system restart is required** after the script is done to finalize all debloat, privacy, and performance optimizations.
+> 3. **Save Your Work**: Please save all open documents and close sensitive applications before running. Upon completion, the script will notify you to save your work and prompt to safely restart your machine.
+
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.0.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.0.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
-3. Double-click **`unslop.bat`**.
-4. In the console menu, type `1` (or your preferred option) and press Enter. Click **Yes** if prompted for Administrator elevation (UAC).
+3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
+4. In the console menu, type `1` (or your preferred option) and press Enter.
+5. When the script completes, ensure your work is saved and press **Enter** (or `Y`) when prompted to restart your computer.
 
 ### Method 2: PowerShell One-Liner (Terminal Users)
-Launch the interactive menu straight from PowerShell:
+Launch the interactive menu straight from an elevated PowerShell terminal:
 
 ```powershell
+# Run inside an elevated PowerShell prompt (Right-click Start -> Terminal (Admin) / PowerShell (Admin))
 irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.bat -OutFile unslop.bat; .\unslop.bat
 ```
 
 ### Method 3: Direct Command-Line Execution
-Run directly from Command Prompt or an elevated PowerShell terminal:
+Run directly from an **Administrator Command Prompt** or an **Elevated PowerShell** terminal:
 
-**Command Prompt (CMD):**
+**Command Prompt (CMD - Run as Administrator):**
 ```cmd
+unslop.bat
 unslop.bat -DryRun
 unslop.bat -KeepTodos
+unslop.bat -NoRestart
 unslop.bat -Undo
 ```
 
-**PowerShell:**
+**PowerShell (Run as Administrator):**
 ```powershell
-# Full default debloat
+# Full default debloat (notifies and prompts for reboot upon completion)
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1
 
-# Dry-run audit (safe inspection, zero changes written)
+# Full default debloat without automatic reboot prompt (restart manually later)
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -NoRestart
+
+# Dry-run audit (safe inspection, zero changes written, no elevation required)
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
 
-# Full restore back to Windows defaults
+# Full restore back to Windows defaults (prompts for reboot upon completion)
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
 ```
 
@@ -173,10 +186,15 @@ Most debloaters break future Windows updates or leave background services in uns
 | `-KeepTodos` | Switch | `False` | Preserves Microsoft To-Do (`Microsoft.Todos`) during AppX cleanup. |
 | `-KeepXbox` | Switch | `False` | Preserves Xbox app and Gaming Services for Game Pass users. |
 | `-ClassicContextMenu`| Switch | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
+| `-NoRestart` | Switch | `False` | Suppresses the post-execution restart prompt (user must manually restart computer). |
+| `-ForceRestart` | Switch | `False` | Automatically initiates a 30-second countdown restart without prompting for confirmation. |
 
 ### Parameter Examples
 
 ```powershell
+# Debloat without triggering automatic restart prompt
+powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -NoRestart
+
 # Keep Xbox gaming services and OneDrive
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -KeepXbox -KeepOneDrive
 

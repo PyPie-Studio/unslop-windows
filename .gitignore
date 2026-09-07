@@ -20,3 +20,8 @@ unslop_logs/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Video & Media Exports
+videos/
+*.mp4
+
