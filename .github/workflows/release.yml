@@ -34,16 +34,71 @@ jobs:
           Write-Host "Generated SHA256SUMS.txt:"
           Get-Content "SHA256SUMS.txt"
 
+      - name: Extract Release Notes from CHANGELOG
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $version = $tag -replace '^v', ''
+          $notesFile = "RELEASE_NOTES.md"
+          
+          if (Test-Path "CHANGELOG.md") {
+              $changelog = Get-Content "CHANGELOG.md" -Raw
+              $pattern = "(?s)## \[$version\].*?(?=(?:\r?\n## \[|\Z))"
+              if ($changelog -match $pattern) {
+                  $extracted = $matches[0].Trim()
+                  $notesBody = ($extracted -replace "^##\s+\[.*?\]\s*-\s*\d{4}-\d{2}-\d{2}", "" -replace "\r?\n---\s*$", "").Trim()
+                  
+                  $header = "# 🛡️ unslop-windows $tag`n`n$notesBody`n`n---`n`n"
+                  $footer = @"
+## 📦 Quick Installation & Usage
+
+1. Download **``unslop-windows-$tag.zip``** from Assets below.
+2. Extract the archive to any directory.
+3. Right-click **``unslop.bat``** and choose **Run as administrator** (or double-click and accept the UAC elevation prompt).
+4. Select your preferred option from the interactive menu:
+   - Option **1**: Full debloat & telemetry neutralization.
+   - Option **2**: Conservative privacy & telemetry only (keeps Copilot, Edge, Bing).
+   - Option **3**: Non-elevated audit dry-run.
+   - Option **4**: Symmetrical full restoration (reverts all changes).
+
+---
+
+## 🔒 Verification & Integrity
+Verify archive integrity using the published ``SHA256SUMS.txt``:
+````powershell
+Get-FileHash .\unslop-windows-$tag.zip -Algorithm SHA256
+````
+"@
+                  Set-Content -Path $notesFile -Value ($header + $footer) -Encoding utf8
+                  Write-Host "Successfully extracted release notes for $version"
+                  Get-Content $notesFile
+                  exit 0
+              }
+          }
+          
+          # Fallback if no matching changelog entry found
+          Set-Content -Path $notesFile -Value "# 🛡️ unslop-windows $tag`n`nAutomated release bundle." -Encoding utf8
+
       - name: Upload Assets to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          if (gh release view $env:GITHUB_REF_NAME 2>$null) {
-              Write-Host "Updating existing release $env:GITHUB_REF_NAME with assets and checksums..."
-              gh release upload $env:GITHUB_REF_NAME $zipName SHA256SUMS.txt --clobber
+          $tag = $env:GITHUB_REF_NAME
+          $zipName = "unslop-windows-$tag.zip"
+          $notesFile = "RELEASE_NOTES.md"
+          
+          if (gh release view $tag 2>$null) {
+              Write-Host "Updating existing release $tag with notes and assets..."
+              if (Test-Path $notesFile) {
+                  gh release edit $tag --notes-file $notesFile
+              }
+              gh release upload $tag $zipName SHA256SUMS.txt --clobber
           } else {
-              Write-Host "Creating new release $env:GITHUB_REF_NAME..."
-              gh release create $env:GITHUB_REF_NAME $zipName SHA256SUMS.txt --generate-notes
+              Write-Host "Creating new release $tag..."
+              if (Test-Path $notesFile) {
+                  gh release create $tag $zipName SHA256SUMS.txt --title "$tag" --notes-file $notesFile
+              } else {
+                  gh release create $tag $zipName SHA256SUMS.txt --title "$tag" --generate-notes
+              }
           }
