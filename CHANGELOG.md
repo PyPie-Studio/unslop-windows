@@ -9,10 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- Automated Windows Sandbox smoke test harness.
-- Expanded Windows 11 25H2/26H2 OneSettings telemetry blocklists.
-- SHA-256 cryptographic checksum files published with GitHub releases.
+### Added
+- **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: 5-pillar verification suite combining AST syntax parsing, PSScriptAnalyzer static analysis, CRLF/merge-conflict audits, non-elevated `-DryRun` execution, and symmetrical `-Undo -DryRun` restoration. Includes `-Fast` mode for rapid iteration.
+- **Git Pre-Push Hook (`.githooks/pre-push` & `scripts/Install-GitHooks.ps1`)**: Automatic pre-push hook enforcing the 5-pillar quality gate prior to publishing to `main` or `master`.
+- **System State Diagnostic Auditor (`scripts/Measure-SystemState.ps1`)**: Standalone tool measuring physical RAM, commit charge, process/thread counts, telemetry services, and AppX packages. Supports `-Snapshot`, `-Baseline`, `-Target`, and `-ExportMarkdown` (`docs/benchmarks.md`).
+- **Cryptographic Release Hashes**: Updated `.github/workflows/release.yml` to automatically generate and upload standard GNU-compatible `SHA256SUMS.txt` alongside release bundles.
+- **CI Quality Gate Parity**: Updated `.github/workflows/lint.yml` to execute `Test-MasterGate.ps1` and `Measure-SystemState.ps1` on `windows-latest` runners.
+- **AI Agent Harness & Modular Skills**: Added [`AGENTS.md`](AGENTS.md), [`SKILLS.md`](SKILLS.md), and 4 domain skills in [`.agents/skills/`](.agents/skills/) (`unslop-safetier-engine`, `unslop-windows-internals`, `unslop-quality-gate`, `unslop-agent-workflow`).
+- **Architecture Decision Records (`docs/decisions.md`)**: Formal ledger tracking `ADR-001` through `ADR-007` covering safe-tier invariants, symmetry, non-elevated auditing, restart UX, quality gate, agent harness, and benchmarking.
+- **Repository Governance**: Added `.gitattributes`, `.editorconfig`, `.github/PULL_REQUEST_TEMPLATE.md`, and `ROADMAP.md`.
 
 ---
 
