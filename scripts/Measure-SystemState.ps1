@@ -181,7 +181,7 @@ if ($isCompare) {
             "- **Baseline Snapshot:** ``$path1`` ($($s1.Timestamp))",
             "- **Debloated Snapshot:** ``$path2`` ($($s2.Timestamp))",
             "",
-            "## 📊 Resource Utilization Metrics",
+            "## Resource Utilization Metrics",
             "",
             "| Metric | Baseline | Post-Hardening | Delta / Reduction |",
             "| :--- | :--- | :--- | :--- |",
@@ -191,7 +191,7 @@ if ($isCompare) {
             "| **Active Threads** | $($s1.ThreadCount) | $($s2.ThreadCount) | **$threadDelta** |",
             "| **User AppX Packages** | $($s1.AppxUserPackages) | $($s2.AppxUserPackages) | **$appxDelta** |",
             "",
-            "## 🛡 Telemetry Services State",
+            "## Telemetry Services State",
             "",
             "| Service Name | Baseline State | Hardened State |",
             "| :--- | :--- | :--- |"
@@ -202,7 +202,7 @@ if ($isCompare) {
         $mdLines += @(
             "",
             "---",
-            "*Report generated automatically by ``scripts/Measure-SystemState.ps1`` — [unslop-windows](https://github.com/PyPie-Studio/unslop-windows)*"
+            "*Report generated automatically by ``scripts/Measure-SystemState.ps1`` - [unslop-windows](https://github.com/PyPie-Studio/unslop-windows)*"
         )
         $mdContent = $mdLines -join "`n"
         $targetPath = if ([System.IO.Path]::IsPathRooted($ExportMarkdown)) { $ExportMarkdown } else { Join-Path $root $ExportMarkdown }
