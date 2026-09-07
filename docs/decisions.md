@@ -71,3 +71,14 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Created [`SKILLS.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/SKILLS.md) as the skill discovery registry.
   - Configured 4 modular skills in [`.agents/skills/`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills) (`unslop-safetier-engine`, `unslop-windows-internals`, `unslop-quality-gate`, `unslop-agent-workflow`).
 - **Consequences:** Ensures AI assistants adhere to Safe-Tier invariants, Ponytail minimal-diff practices, and strict verification protocols across all coding sessions.
+
+---
+
+## ADR-007: Diagnostic State Auditor & CI/CD Cryptographic Verification (2026-09-07)
+- **Status:** Accepted
+- **Context:** Users and enterprise administrators require measurable empirical proof of system debloating (RAM delta, thread reduction, stopped telemetry services). Additionally, binary releases packaged in GitHub Actions require cryptographic integrity verification to protect against supply-chain tampering.
+- **Decision:**
+  - Implemented [`scripts/Measure-SystemState.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Measure-SystemState.ps1) to capture baseline metrics, perform comparative audits, and export Markdown reports (`docs/benchmarks.md`).
+  - Hardened [`.github/workflows/release.yml`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.github/workflows/release.yml) to generate standard GNU-compatible `SHA256SUMS.txt` and upload checksums as release assets alongside the release zip archive.
+  - Upgraded [`.github/workflows/lint.yml`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.github/workflows/lint.yml) to execute the complete local 5-pillar Master Gate (`Test-MasterGate.ps1`) including non-elevated `-DryRun` smoke testing, achieving 100% parity between local hooks and CI.
+- **Consequences:** Provides transparent before/after benchmarking, eliminates local vs CI test drift, and offers cryptographic verification for downstream users.

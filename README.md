@@ -204,6 +204,28 @@ powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -ClassicContextMenu
 
 ---
 
+## 📊 Benchmarking & Diagnostics
+
+Measure system resource footprint before and after debloating using the built-in system state auditor:
+
+```powershell
+# Display live system metrics (RAM, commit charge, threads, telemetry services)
+powershell -ExecutionPolicy Bypass -File .\scripts\Measure-SystemState.ps1
+
+# Capture before/after snapshots and generate comparative benchmark report
+powershell -ExecutionPolicy Bypass -File .\scripts\Measure-SystemState.ps1 -Snapshot "before"
+powershell -ExecutionPolicy Bypass -File .\scripts\Measure-SystemState.ps1 -Snapshot "after"
+powershell -ExecutionPolicy Bypass -File .\scripts\Measure-SystemState.ps1 -Baseline "logs/before.json" -Target "logs/after.json" -ExportMarkdown "docs/benchmarks.md"
+```
+
+### 🔒 Cryptographic Verification
+Official releases include `SHA256SUMS.txt`. Verify your release bundle locally:
+```powershell
+Get-FileHash unslop-windows-v*.zip -Algorithm SHA256
+```
+
+---
+
 ## 📈 Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PyPie-Studio/unslop-windows&type=Date)](https://star-history.com/#PyPie-Studio/unslop-windows&Date)

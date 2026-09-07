@@ -40,15 +40,15 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 ---
 
 ## ⚡ Milestone 4: Diagnostic Benchmarking & Automated Testing
-- [ ] **System State Auditor (`scripts/Measure-SystemState.ps1`):** Standalone before/after diagnostic tool measuring:
+- [x] **System State Auditor (`scripts/Measure-SystemState.ps1`):** Standalone before/after diagnostic tool measuring:
   - Real-time idle RAM and commit charge reduction.
   - Active telemetry services and background thread counts.
   - Uninstalled vs. provisioned AppX package totals.
   - Generates verifiable Markdown audit reports (`docs/benchmarks.md`).
 - [ ] **Automated Windows Sandbox Smoke Testing:** Launch `unslop.ps1 -DryRun` inside a clean Windows Sandbox instance via script.
-- [ ] **Cryptographic Release Hashes:** Automate SHA-256 checksum generation in `.github/workflows/release.yml`.
+- [x] **Cryptographic Release Hashes:** Automate SHA-256 checksum generation in `.github/workflows/release.yml`.
 
 ---
 
 ## 📄 Completed Architectural Decisions
-See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-006) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.
+See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-007) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.

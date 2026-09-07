@@ -18,7 +18,21 @@ jobs:
       - name: Package Zip Bundle
         shell: pwsh
         run: |
-          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE -DestinationPath "unslop-windows-$($env:GITHUB_REF_NAME).zip" -Force
+          $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
+          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE, scripts, docs -DestinationPath $zipName -Force
+
+      - name: Generate Cryptographic SHA-256 Checksums
+        shell: pwsh
+        run: |
+          $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
+          $files = @($zipName, "unslop.ps1", "unslop.bat")
+          $checksums = foreach ($file in $files) {
+              $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $file"
+          }
+          $checksums | Set-Content -Path "SHA256SUMS.txt" -Encoding utf8
+          Write-Host "Generated SHA256SUMS.txt:"
+          Get-Content "SHA256SUMS.txt"
 
       - name: Upload Assets to GitHub Release
         shell: pwsh
@@ -26,4 +40,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          gh release create $env:GITHUB_REF_NAME $zipName --generate-notes
+          if (gh release view $env:GITHUB_REF_NAME 2>$null) {
+              Write-Host "Updating existing release $env:GITHUB_REF_NAME with assets and checksums..."
+              gh release upload $env:GITHUB_REF_NAME $zipName SHA256SUMS.txt --clobber
+          } else {
+              Write-Host "Creating new release $env:GITHUB_REF_NAME..."
+              gh release create $env:GITHUB_REF_NAME $zipName SHA256SUMS.txt --generate-notes
+          }

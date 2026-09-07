@@ -1,4 +1,4 @@
-name: Lint PowerShell
+name: CI Quality Gate
 
 on:
   push:
@@ -14,17 +14,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Run PSScriptAnalyzer
+      - name: Run Master Quality Gate (AST, Lint, Line Endings, DryRun Smoke Test)
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path ./ -Recurse -Severity Error, Warning
-          if ($results) {
-              $results | Format-Table -AutoSize
-              $errors = $results | Where-Object { $_.Severity -eq 'Error' }
-              if ($errors) {
-                  Write-Error "PSScriptAnalyzer found blocking errors."
-                  exit 1
-              }
-          } else {
-              Write-Host "PSScriptAnalyzer: Clean scan, zero issues found."
-          }
+          ./scripts/Test-MasterGate.ps1
+
+      - name: Run Diagnostic System State Auditor
+        shell: pwsh
+        run: |
+          ./scripts/Measure-SystemState.ps1
