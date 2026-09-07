@@ -212,8 +212,9 @@ powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -ClassicContextMenu
 
 ## 🤝 Community & Contributing
 
-Contributions are welcome! Please review our [Contributing Guidelines](CONTRIBUTING.md), [Changelog](CHANGELOG.md), [Roadmap](ROADMAP.md), and [Security Policy](SECURITY.md) before submitting a pull request.
+Contributions are welcome! Please review our [Contributing Guidelines](CONTRIBUTING.md), [Changelog](CHANGELOG.md), [Roadmap](ROADMAP.md), [Architecture Decisions](docs/decisions.md), and [Security Policy](SECURITY.md) before submitting a pull request.
 
+* **AI Pair Programming:** See [AGENTS.md](AGENTS.md) and [SKILLS.md](SKILLS.md) for non-negotiable safe-tier engineering standards and automated skills.
 * **Found a bug?** Open an issue using the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md).
 * **Found new 25H2 bloatware or telemetry tasks?** Submit a [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md).
 

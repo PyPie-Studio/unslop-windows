@@ -15,7 +15,7 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 - [x] Release history tracking (`CHANGELOG.md`).
 - [x] **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`):** Unified AST parse, PSScriptAnalyzer, DryRun, and Undo DryRun check.
 - [x] **Git Pre-Push Hook (`.githooks/pre-push`):** Blocks pushes to `main` if the local Master Gate fails.
-- [ ] **Agent Governance (`AGENTS.md` & `SKILLS.md`):** System harness and specialized rules for AI pair programming.
+- [x] **Agent Governance (`AGENTS.md` & `SKILLS.md`):** System harness, skills registry, and `.agents/skills/` for AI pair programming.
 
 ---
 
@@ -51,4 +51,4 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 ---
 
 ## 📄 Completed Architectural Decisions
-See [`CONTRIBUTING.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.
+See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-006) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.

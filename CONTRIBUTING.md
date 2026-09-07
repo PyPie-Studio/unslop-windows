@@ -86,3 +86,12 @@ powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo -DryRun
    * Include the relevant excerpt from `.\logs\unslop_25h2_dryrun_*.log`.
    * Add a line under `[Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) summarizing your enhancement or fix.
    * If working towards an item on our [`ROADMAP.md`](ROADMAP.md), cite the corresponding milestone.
+
+---
+
+## AI Agent Governance & Architecture Decisions
+
+If using AI pair programming assistants (Antigravity, Claude, Copilot, etc.) to contribute:
+* Review [`AGENTS.md`](AGENTS.md) for master architecture standards and non-negotiable safe-tier guardrails.
+* Consult [`SKILLS.md`](SKILLS.md) and [`.agents/skills/`](.agents/skills/) for domain-specific automation skills.
+* Check [`docs/decisions.md`](docs/decisions.md) (Architecture Decision Records) before proposing behavioral changes to existing policies.
