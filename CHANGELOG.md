@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-09-08
+
+### Changed
+- **Leaner Release Zip**: Trimmed `scripts/`, `docs/`, and `tests/` from the release zip bundle. End users only receive the four essential files (`unslop.bat`, `unslop.ps1`, `README.md`, `LICENSE`). Developer tooling remains available in the source repository.
+
+---
+
 ## [1.0.5] - 2026-09-08
 
 ### Added
