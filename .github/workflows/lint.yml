@@ -22,7 +22,7 @@ jobs:
         shell: [pwsh, powershell]
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Ensure Pester 5 Module Available
         shell: ${{ matrix.shell }}
@@ -36,13 +36,14 @@ jobs:
       - name: Run 7-Pillar Master Quality Gate
         shell: ${{ matrix.shell }}
         run: |
-          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-${{ matrix.shell }}.xml"
+          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-${{ matrix.shell }}.xml" -CodeCoveragePath "test-results/coverage-${{ matrix.shell }}.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
         shell: ${{ matrix.shell }}
         run: |
           $xmlPath = "test-results/pester-${{ matrix.shell }}.xml"
+          $covPath = "test-results/coverage-${{ matrix.shell }}.xml"
           if (Test-Path $xmlPath) {
             [xml]$xml = Get-Content $xmlPath
             $total = $xml.'test-results'.total
@@ -63,6 +64,29 @@ jobs:
           | **Skipped / Not Run** | $notRun |
           | **Duration** | ${suiteTime}s |
           "@
+
+            if (Test-Path $covPath) {
+              [xml]$covXml = Get-Content $covPath
+              $lineNode = $covXml.report.counter | Where-Object { $_.type -eq 'LINE' }
+              $instNode = $covXml.report.counter | Where-Object { $_.type -eq 'INSTRUCTION' }
+              $lineCov = [int]$lineNode.covered
+              $lineTotal = $lineCov + [int]$lineNode.missed
+              $linePct = if ($lineTotal -gt 0) { [math]::Round(($lineCov / $lineTotal) * 100, 1) } else { 0 }
+              $instCov = [int]$instNode.covered
+              $instTotal = $instCov + [int]$instNode.missed
+              $instPct = if ($instTotal -gt 0) { [math]::Round(($instCov / $instTotal) * 100, 1) } else { 0 }
+
+              $summary += @"
+
+
+          ### 📊 Code Coverage: unslop.ps1
+          | Metric | Covered | Total | Coverage % |
+          | :--- | :--- | :--- | :--- |
+          | **Lines** | $lineCov | $lineTotal | ${linePct}% |
+          | **Instructions** | $instCov | $instTotal | ${instPct}% |
+          "@
+            }
+
             if ($env:GITHUB_STEP_SUMMARY) {
               $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
@@ -75,9 +99,9 @@ jobs:
             }
           }
 
-      - name: Upload Pester Test Results Artifact
+      - name: Upload Pester Test Results & Coverage Artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: pester-results-${{ matrix.shell }}
           path: test-results/

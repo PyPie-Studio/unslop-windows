@@ -10,8 +10,9 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - **Engine Architecture:**
   - [`unslop.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.ps1): Pure PowerShell 5.1 & PowerShell 7+ execution engine. Features 18 modular debloat and restoration stages, structured JSON/text logging (`.\logs\`), non-elevated read-only auditing (`-DryRun`), and 1-click restoration (`-Undo`). Verified across dual-runtime matrix in CI (Windows PowerShell 5.1 Desktop & PowerShell 7 Core).
   - [`unslop.bat`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.bat): Dual-mode launcher and UAC elevation wrapper. Auto-detects admin rights, enforces CRLF, invokes `unslop.ps1`, captures exit codes, and manages post-execution reboot lifecycle.
-  - [`scripts/Test-MasterGate.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Test-MasterGate.ps1): 7-pillar local quality gate (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests, DryRun test, Undo DryRun test, Batch launcher passthrough audit). Dynamically binds subprocess execution to the active host engine.
-  - [`tests/unslop.Tests.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/tests/unslop.Tests.ps1): Pester 5/6 unit & mocking test suite verifying registry/service/task helpers, parameter flags (-KeepXbox, -KeepOneDrive), and non-elevated exit contracts.
+  - [`scripts/Test-MasterGate.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Test-MasterGate.ps1): 7-pillar local quality gate (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun test, Undo DryRun test, Batch launcher passthrough audit). Dynamically binds subprocess execution to the active host engine and static rules to `PSScriptAnalyzerSettings.psd1`.
+  - [`PSScriptAnalyzerSettings.psd1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/PSScriptAnalyzerSettings.psd1): Version-controlled static analysis ruleset enforcing security and code quality standards across local and CI environments.
+  - [`tests/unslop.Tests.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/tests/unslop.Tests.ps1): Pester 5/6 unit, mocking & static AST parity test suite verifying registry/service/task helpers, parameter flags (-KeepXbox, -KeepOneDrive), non-elevated exit contracts, and 100% Symmetrical Restoration AST invariants.
   - [`scripts/Install-GitHooks.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Install-GitHooks.ps1): Git hook orchestrator configuring `.githooks/pre-push`.
 - **Zero Third-Party Dependencies:** Zero compiled `.exe` or `.dll` binaries, zero third-party packages, zero cloud API dependencies. All operations rely strictly on native Win32 APIs, Windows Registry hives (`HKCU`, `HKLM`), AppX cmdlets, and built-in service controllers.
 
@@ -82,8 +83,8 @@ powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
 # Run full local Master Quality Gate (AST + Analyzer + CRLF + Pester + DryRun + Undo + Batch)
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
 
-# Run Master Quality Gate and export Pester results to NUnit XML
-powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -TestResultsPath "test-results\pester.xml"
+# Run Master Quality Gate and export Pester results to NUnit XML & JaCoCo Code Coverage
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -TestResultsPath "test-results\pester.xml" -CodeCoveragePath "test-results\coverage.xml"
 
 # Run rapid quality gate (AST + Analyzer + CRLF only)
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast

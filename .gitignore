@@ -28,4 +28,5 @@ videos/
 # Test Results & Reports
 test-results/
 testResults.xml
+coverage*.xml
 

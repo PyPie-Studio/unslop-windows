@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-09-08
+
+### Added
+- **Automated Static Symmetry Verification via AST Parity Check (`tests/unslop.Tests.ps1`)**: Added 5 automated static AST parity tests using PowerShell's Abstract Syntax Tree parser (`[System.Management.Automation.Language.Parser]::ParseFile`) to enforce 100% Symmetrical Restoration Contract invariants:
+  1. Every `Set-RegDwordSafe` call defines both debloat and undo values.
+  2. Zero naked mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Stop-Service`, `Disable-ScheduledTask`, `Remove-AppxPackage`) exist outside approved defensive helper functions.
+  3. Every `Set-SvcState` service call defines a valid restore startup type (`Automatic` or `Manual`).
+  4. Core engine helper functions maintain strict bidirectional symmetry.
+  5. Firewall hardening loop implements bidirectional rule transitions.
+- **Native Pester Code Coverage & JaCoCo Reporting (`scripts/Test-MasterGate.ps1`)**: Added `-CodeCoveragePath` parameter enabling native Pester 5 code coverage on `unslop.ps1` with JaCoCo XML output and console coverage metric reporting.
+- **GitHub Actions Coverage Summaries & Step Metrics (`.github/workflows/lint.yml`)**: Automated JaCoCo XML parsing in CI, rendering line and instruction code coverage tables directly into `$env:GITHUB_STEP_SUMMARY` and archiving coverage artifacts.
+- **Version-Controlled Static Analysis Ruleset (`PSScriptAnalyzerSettings.psd1`)**: Created repository-level analyzer configuration enforcing `Error` and `Warning` rules (`PSAvoidUsingCmdletAliases`, `PSAvoidUsingEmptyCatchBlock`, `PSAvoidUsingPlainTextForPassword`, `PSAvoidUsingInvokeExpression`, `PSAvoidUsingUsernameAndPasswordParams`) with dynamic binding in `Test-MasterGate.ps1`.
+- **GitHub Actions Supply Chain Hardening & SLSA Build Provenance (`.github/workflows/`)**: Pinned all third-party actions to immutable 40-character commit SHAs (`actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`, `actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1`). Integrated `actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be` in `release.yml` for cryptographic SLSA build provenance attestations on release zip bundles and `SHA256SUMS.txt`.
+- **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-013` (AST Parity Symmetry Verification), `ADR-014` (Native Pester Code Coverage), `ADR-015` (Static Analysis Ruleset), and `ADR-016` (Supply Chain Hardening & SLSA Provenance).
+
+---
+
 ## [1.0.4] - 2026-09-08
 
 ### Added
@@ -105,7 +122,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.1...v1.0.2

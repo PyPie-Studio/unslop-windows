@@ -24,6 +24,9 @@
 .PARAMETER TestResultsPath
     Optional file path to export Pester unit test results in NUnit XML format.
 
+.PARAMETER CodeCoveragePath
+    Optional file path to export Pester code coverage metrics in JaCoCo XML format.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Fast
@@ -33,7 +36,8 @@ param(
     [switch]$Fast,
     [switch]$SkipAnalyzer,
     [switch]$SkipUnitTests,
-    [string]$TestResultsPath
+    [string]$TestResultsPath,
+    [string]$CodeCoveragePath
 )
 
 $ErrorActionPreference = "Stop"
@@ -88,7 +92,16 @@ if (-not $SkipAnalyzer) {
     $analyzerModule = Get-Module -ListAvailable -Name PSScriptAnalyzer -ErrorAction SilentlyContinue
     if ($analyzerModule) {
         try {
-            $analyzerResults = Invoke-ScriptAnalyzer -Path $root -Recurse -Severity Error, Warning |
+            $analyzerSettings = Join-Path $root "PSScriptAnalyzerSettings.psd1"
+            $analyzerParams = @{
+                Path     = $root
+                Recurse  = $true
+                Severity = @('Error', 'Warning')
+            }
+            if (Test-Path $analyzerSettings) {
+                $analyzerParams['Settings'] = $analyzerSettings
+            }
+            $analyzerResults = Invoke-ScriptAnalyzer @analyzerParams |
                 Where-Object { $_.ScriptPath -notmatch '\\(logs|\.git|videos)\\' }
 
             $errors = $analyzerResults | Where-Object { $_.Severity -eq 'Error' }
@@ -190,7 +203,21 @@ if (-not $Fast) {
                         }
                         $xmlConfig = "`$cfg.TestResult.Enabled = `$true; `$cfg.TestResult.OutputFormat = 'NUnitXml'; `$cfg.TestResult.OutputPath = '$targetXml';"
                     }
-                    $pesterCmd = "Import-Module Pester -MinimumVersion 5.0.0; `$cfg = New-PesterConfiguration; `$cfg.Run.Path = '$testScript'; `$cfg.Output.Verbosity = 'Detailed'; $xmlConfig `$res = Invoke-Pester -Configuration `$cfg; if (`$res.FailedCount -gt 0) { exit 1 }"
+                    $covConfig = ""
+                    if ($CodeCoveragePath) {
+                        $targetCovXml = if ([System.IO.Path]::IsPathRooted($CodeCoveragePath)) {
+                            $CodeCoveragePath
+                        } else {
+                            Join-Path $root $CodeCoveragePath
+                        }
+                        $covDir = Split-Path -Parent $targetCovXml
+                        if ($covDir -and -not (Test-Path $covDir)) {
+                            New-Item -ItemType Directory -Path $covDir -Force | Out-Null
+                        }
+                        $covFile = Join-Path $root "unslop.ps1"
+                        $covConfig = "`$cfg.CodeCoverage.Enabled = `$true; `$cfg.CodeCoverage.Path = '$covFile'; `$cfg.CodeCoverage.OutputFormat = 'JaCoCo'; `$cfg.CodeCoverage.OutputPath = '$targetCovXml';"
+                    }
+                    $pesterCmd = "Import-Module Pester -MinimumVersion 5.0.0; `$cfg = New-PesterConfiguration; `$cfg.Run.Path = '$testScript'; `$cfg.Output.Verbosity = 'Detailed'; $xmlConfig $covConfig `$cfg.Run.PassThru = `$true; `$res = Invoke-Pester -Configuration `$cfg; if (`$res.CodeCoverage) { Write-Host `"  Code Coverage: `$([math]::Round(`$res.CodeCoverage.CoveragePercent, 1))% (`$(`$res.CodeCoverage.CommandsExecutedCount)/`$(`$res.CodeCoverage.CommandsAnalyzedCount) commands)`" -ForegroundColor Cyan }; if (`$res.FailedCount -gt 0) { exit 1 }"
                     $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterCmd 2>&1
                     $pesterExit = $LASTEXITCODE
                     if ($pesterExit -ne 0) {

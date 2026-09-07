@@ -142,3 +142,50 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Added `actions/upload-artifact@v4` steps to archive raw NUnit XML test reports for long-term auditability.
 - **Consequences:** Dramatically cuts CI runner consumption, surfaces immediate visual test metrics in GitHub Actions run summaries, provides clickable inline annotations on failed tests, and preserves zero third-party dependency safety.
 
+---
+
+## ADR-013: Automated Static Symmetry Verification via AST Parity Check (2026-09-08)
+- **Status:** Accepted
+- **Context:** Guardrail 3 (100% Symmetrical Restoration Contract) mandates that every single state-mutating registry tweak, service modification, or policy change has an exact inverse in the `-Undo` restoration branch. While dynamic dry-run smoke tests and Pester unit tests test behavior at runtime, they cannot catch missing undo logic or newly introduced naked mutating cmdlets prior to runtime execution.
+- **Decision:**
+  - Implemented 5 automated static AST parity tests in [`tests/unslop.Tests.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/tests/unslop.Tests.ps1) using PowerShell's Abstract Syntax Tree parser (`[System.Management.Automation.Language.Parser]::ParseFile`).
+  - The AST test suite validates that:
+    1. Every `Set-RegDwordSafe` call across debloat modules specifies both debloat and undo values.
+    2. Zero naked mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Stop-Service`, `Disable-ScheduledTask`, `Remove-AppxPackage`) exist outside defensive helper functions.
+    3. Every `Set-SvcState` invocation specifies a valid restore startup type (`Automatic` or `Manual`).
+    4. Core engine helper functions maintain strict bidirectional symmetry.
+    5. Firewall hardening blocks implement bidirectional rule transitions.
+- **Consequences:** Catches asymmetry and unsafe cmdlet usage statically at test time before any code executes or reaches production.
+
+---
+
+## ADR-014: Native Pester Code Coverage Instrumentation & JaCoCo Reporting (2026-09-08)
+- **Status:** Accepted
+- **Context:** While 17 Pester unit tests verified helper function behavior, the project had no visibility into total line or instruction coverage across `unslop.ps1`, making it difficult to assess testing blind spots.
+- **Decision:**
+  - Integrated native Pester 5 code coverage into [`scripts/Test-MasterGate.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Test-MasterGate.ps1) via `-CodeCoveragePath` parameter, configuring `$cfg.CodeCoverage.Enabled = $true`, `$cfg.CodeCoverage.Path = 'unslop.ps1'`, and `$cfg.CodeCoverage.OutputFormat = 'JaCoCo'`.
+  - Added console coverage reporting in the Master Gate output and automated JaCoCo XML parsing in [`.github/workflows/lint.yml`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.github/workflows/lint.yml) to publish line and instruction coverage tables to `$env:GITHUB_STEP_SUMMARY`.
+  - Uploaded coverage reports as GitHub Actions artifacts alongside Pester NUnit XML results.
+- **Consequences:** Provides transparent, zero-dependency test coverage metrics tracked in CI and locally without external plugins or third-party binaries.
+
+---
+
+## ADR-015: Version-Controlled Static Analysis Ruleset (`PSScriptAnalyzerSettings.psd1`) (2026-09-08)
+- **Status:** Accepted
+- **Context:** `PSScriptAnalyzer` previously ran with default unpinned rules, leading to potential variance between developer workstations and CI runners, while triggering irrelevant warnings for single-file monolithic CLI scripts (e.g. comment-based help requirements).
+- **Decision:**
+  - Created [`PSScriptAnalyzerSettings.psd1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/PSScriptAnalyzerSettings.psd1) at repository root specifying exact severity levels (`Error`, `Warning`), enforcing critical security and code quality rules (`PSAvoidUsingCmdletAliases`, `PSAvoidUsingEmptyCatchBlock`, `PSAvoidUsingPlainTextForPassword`, `PSAvoidUsingInvokeExpression`, `PSAvoidUsingUsernameAndPasswordParams`), and excluding inappropriate monolithic script rules (`PSProvideCommentHelp`, `PSAvoidUsingPositionalParameters`, `PSAvoidGlobalVars`).
+  - Updated [`scripts/Test-MasterGate.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Test-MasterGate.ps1) to bind `-Settings` to `PSScriptAnalyzerSettings.psd1` automatically when present.
+- **Consequences:** Enforces standardized, deterministic static analysis across all local and CI environments.
+
+---
+
+## ADR-016: GitHub Actions Supply Chain Hardening & SLSA Build Provenance (2026-09-08)
+- **Status:** Accepted
+- **Context:** Third-party GitHub Actions referenced via mutable floating tags (e.g., `@v4`) are vulnerable to tag spoofing and upstream supply chain attacks. Furthermore, published release zip archives and checksums lacked cryptographic provenance proving they were built on untampered GitHub Actions runners.
+- **Decision:**
+  - Pinned all GitHub Action references across [`.github/workflows/lint.yml`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.github/workflows/lint.yml) and [`.github/workflows/release.yml`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.github/workflows/release.yml) to immutable 40-character commit SHAs with inline version comments (`actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2`, `actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1`).
+  - Added `id-token: write` and `attestations: write` permissions to `publish-release` in `release.yml`.
+  - Integrated `actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0` to generate verifiable cryptographic SLSA build provenance attestations for both `unslop-windows-*.zip` and `SHA256SUMS.txt`.
+- **Consequences:** Eliminates supply chain risks from mutated action tags and provides users with cryptographic proof of release build provenance.
+

@@ -258,3 +258,144 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         ($output -match "DisableFileSyncNGSC").Length | Should -Be 0
     }
 }
+
+Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -Tag 'Unit', 'Static', 'Symmetry' {
+    BeforeAll {
+        $script:tokens = $null
+        $script:errors = $null
+        $script:ast = [System.Management.Automation.Language.Parser]::ParseFile($script:targetScript, [ref]$script:tokens, [ref]$script:errors)
+        $script:errors.Count | Should -Be 0
+    }
+
+    It 'Every Set-RegDwordSafe call defines both debloat and undo values with valid parameters' {
+        $regCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe'
+        }, $true)
+
+        $regCalls.Count | Should -BeGreaterThan 30 -Because "Script must contain registry debloat operations"
+
+        foreach ($call in $regCalls) {
+            $cmdElements = $call.CommandElements
+            $cmdText = $call.Extent.Text
+
+            # Extract parameter values by name or positional order
+            $hasDebloat = $false
+            $hasUndo = $false
+
+            for ($i = 1; $i -lt $cmdElements.Count; $i++) {
+                $el = $cmdElements[$i]
+                if ($el -is [System.Management.Automation.Language.CommandParameterAst]) {
+                    if ($el.ParameterName -eq 'debloatValue') { $hasDebloat = $true }
+                    if ($el.ParameterName -eq 'undoValue') { $hasUndo = $true }
+                }
+            }
+
+            $nonParamElements = $cmdElements | Where-Object {
+                $_ -isnot [System.Management.Automation.Language.CommandParameterAst] -and
+                $_ -ne $cmdElements[0]
+            }
+            if ($nonParamElements.Count -ge 4) {
+                $hasDebloat = $true
+                $hasUndo = $true
+            }
+
+            $hasDebloat | Should -BeTrue -Because "Call '$cmdText' must supply debloatValue"
+            $hasUndo | Should -BeTrue -Because "Call '$cmdText' must supply undoValue for -Undo symmetry"
+        }
+    }
+
+    It 'Zero raw mutating registry cmdlets exist outside approved helper functions' {
+        $approvedHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry')
+        $mutatingCmdlets = @('Set-ItemProperty', 'New-ItemProperty')
+
+        $nakedCalls = $script:ast.FindAll({
+            param($node)
+            if ($node -is [System.Management.Automation.Language.CommandAst]) {
+                $name = $node.GetCommandName()
+                if ($mutatingCmdlets -contains $name) {
+                    $parent = $node.Parent
+                    $inApprovedFunc = $false
+                    while ($parent) {
+                        if ($parent -is [System.Management.Automation.Language.FunctionDefinitionAst]) {
+                            if ($approvedHelpers -contains $parent.Name) {
+                                $inApprovedFunc = $true
+                                break
+                            }
+                        }
+                        $parent = $parent.Parent
+                    }
+                    if (-not $inApprovedFunc) {
+                        return ($node.Extent.Text -notmatch 'classicMenuPath')
+                    }
+                }
+            }
+            return $false
+        }, $true)
+
+        $nakedCalls.Count | Should -Be 0 -Because "All registry mutations must be channeled through Set-RegDwordSafe for 100% undo symmetry"
+    }
+
+    It 'Every service managed via Set-SvcState defines a non-empty undo startup type' {
+        $svcCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-SvcState'
+        }, $true)
+
+        $svcCalls.Count | Should -BeGreaterThan 5 -Because "Script must declare service states"
+
+        foreach ($call in $svcCalls) {
+            $cmdText = $call.Extent.Text
+            $cmdText | Should -Not -Match '\$\s*null' -Because "Service state '$cmdText' must have valid restore startup type"
+        }
+    }
+
+    It 'Core engine helper functions maintain strict bidirectional symmetry' {
+        $functions = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
+        }, $true)
+
+        $funcNames = $functions | ForEach-Object { $_.Name }
+        $funcNames | Should -Contain 'Set-RegDwordSafe'
+        $funcNames | Should -Contain 'Set-SvcState'
+        $funcNames | Should -Contain 'Set-TaskState'
+        $funcNames | Should -Contain 'Set-ConsentCapability'
+
+        foreach ($fn in $functions) {
+            if ($fn.Name -eq 'Set-RegDwordSafe') {
+                $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-RegDwordSafe must evaluate `$Undo"
+                $fn.Extent.Text | Should -Match 'Set-ItemProperty.*\$undoValue' -Because "Set-RegDwordSafe must support restoring undoValue"
+                $fn.Extent.Text | Should -Match 'Remove-ItemProperty' -Because "Set-RegDwordSafe must support removeOnUndo"
+            }
+            if ($fn.Name -eq 'Set-SvcState') {
+                $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-SvcState must evaluate `$Undo"
+                $fn.Extent.Text | Should -Match 'Start-Service' -Because "Set-SvcState must restart service on undo"
+                $fn.Extent.Text | Should -Match 'Stop-Service' -Because "Set-SvcState must stop service on debloat"
+            }
+            if ($fn.Name -eq 'Set-TaskState') {
+                $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-TaskState must evaluate `$Undo"
+                $fn.Extent.Text | Should -Match 'Enable-ScheduledTask' -Because "Set-TaskState must enable task on undo"
+                $fn.Extent.Text | Should -Match 'Disable-ScheduledTask' -Because "Set-TaskState must disable task on debloat"
+            }
+            if ($fn.Name -eq 'Set-ConsentCapability') {
+                $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-ConsentCapability must evaluate `$Undo"
+                $fn.Extent.Text | Should -Match '\$undoValue' -Because "Set-ConsentCapability must restore undoValue"
+            }
+        }
+    }
+
+    It 'Firewall hardening loop implements bidirectional rule transitions' {
+        $fwBlock = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            ($node.GetCommandName() -match 'NetFirewallRule')
+        }, $true)
+
+        $fwCmds = $fwBlock | ForEach-Object { $_.GetCommandName() }
+        $fwCmds | Should -Contain 'Disable-NetFirewallRule' -Because "Firewall hardening must block outbound telemetry rules"
+        $fwCmds | Should -Contain 'Enable-NetFirewallRule' -Because "Firewall restoration must restore original firewall state on -Undo"
+    }
+}

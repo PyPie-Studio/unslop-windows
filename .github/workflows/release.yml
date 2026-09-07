@@ -17,7 +17,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Ensure Pester 5 Module Available
         shell: pwsh
@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload Pester Test Results Artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
           name: pester-results-release
           path: test-results/
@@ -84,9 +84,11 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Package Zip Bundle
         shell: pwsh
@@ -106,6 +108,13 @@ jobs:
           $checksums | Set-Content -Path "SHA256SUMS.txt" -Encoding utf8
           Write-Host "Generated SHA256SUMS.txt:"
           Get-Content "SHA256SUMS.txt"
+
+      - name: Generate Build Provenance Attestation
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: |
+            unslop-windows-${{ github.ref_name }}.zip
+            SHA256SUMS.txt
 
       - name: Extract Release Notes from CHANGELOG
         shell: pwsh
