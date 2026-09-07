@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2026-09-08
+
+### Removed
+- **`scripts/Publish-Release.ps1`**: Deleted redundant local release publisher. The GitHub Actions `release.yml` pipeline is the single source of truth for building release zips, SHA256 checksums, SLSA build provenance attestations, and publishing to GitHub Releases.
+
+---
+
 ## [1.0.6] - 2026-09-08
 
 ### Changed
