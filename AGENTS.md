@@ -55,13 +55,14 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - All code must pass the Local Master Quality Gate (`scripts/Test-MasterGate.ps1`) before being pushed to `main`.
 
 ### 7. Continuous Verified Release & Commit Invariant (Always Up-To-Date)
-- After **EVERY** verified change made to the codebase (confirmed clean by the Local Master Quality Gate `scripts/Test-MasterGate.ps1`), the agent MUST immediately:
+- Version bumps, annotated tags, and GitHub Releases are reserved for **verified code changes** to executable files (`*.ps1`, `*.bat`, `*.yml`, `*.psd1`). After a code change passes the Local Master Quality Gate, the agent MUST immediately:
   1. Bump the SemVer version across `unslop.ps1`, `unslop.bat`, and `README.md`.
   2. Document the release in `CHANGELOG.md` following Keep a Changelog standards.
-  3. Stage and commit all changes with a conventional commit message (`feat(...)`, `fix(...)`, `chore(...)`).
+  3. Stage and commit all changes with a conventional commit message (`feat(...)`, `fix(...)`).
   4. Create an annotated Git tag (`vX.Y.Z`).
   5. Push both `main` and the tag to `origin` (`git push origin main --tags`), triggering the automated release pipeline in GitHub Actions.
   6. NEVER leave verified code uncommitted or unreleased on local disk.
+- **Documentation-only changes** (`*.md`, `.gitignore`, `.editorconfig`, issue/PR templates) do NOT trigger a version bump or tag. Commit with `docs(...)` or `chore(...)` and push directly.
 
 ---
 

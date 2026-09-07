@@ -34,22 +34,28 @@ This skill governs the Antigravity AI agent workflow, engineering philosophy, an
 
 ---
 
-## 🏷 Release & Versioning Workflow (Mandatory Post-Verification Rule)
+## 🏷 Release & Versioning Workflow
 
-After **every verified change** made to the codebase (confirmed clean by `Test-MasterGate.ps1`), the agent must immediately execute the release sequence so the repository is continuously up to date:
+### What Triggers a Version Bump & Tagged Release
+Version bumps, changelog entries, annotated tags, and GitHub Releases are reserved for **verified code changes** — meaning changes to files that contain executable logic:
+- `unslop.ps1`, `unslop.bat` (core engine and launcher)
+- `scripts/*.ps1` (quality gate, benchmarking, git hooks)
+- `tests/*.ps1` (Pester unit tests)
+- `.github/workflows/*.yml` (CI/CD pipelines)
+- `PSScriptAnalyzerSettings.psd1` (static analysis rules)
 
-1. **Version Alignment:**
-   - Bump version header and log strings in [`unslop.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.ps1).
-   - Bump version string in [`unslop.bat`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.bat) (maintain CRLF).
-   - Bump download links and ASCII menu in [`README.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/README.md).
-2. **Changelog Maintenance:**
-   - Add a new version block with current date in [`CHANGELOG.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/CHANGELOG.md).
-   - Document all Added, Changed, Fixed, and Security items following Keep a Changelog standard.
-   - Update comparison links at the bottom of the changelog.
-3. **Master Gate Verification:**
-   - Run `pwsh -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1`.
-4. **Git Commit, Tag & Push:**
-   - Stage all files: `git add .`
-   - Commit changes: `git commit -m "feat/fix(...): <summary>"`
-   - Create annotated tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z: <summary>"`
-   - Push to origin: `git push origin main --tags` (triggers automated GitHub Actions release build).
+**Release sequence** (only for code changes confirmed clean by `Test-MasterGate.ps1`):
+1. **Version Alignment:** Bump version in `unslop.ps1` (header + log banner), `unslop.bat` (menu banner), and `README.md` (download links + ASCII menu).
+2. **Changelog:** Add a new version block with current date in `CHANGELOG.md` following Keep a Changelog standard.
+3. **Master Gate:** Run `pwsh -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1`.
+4. **Commit, Tag & Push:** `git add .` → `git commit -m "feat/fix(...): <summary>"` → `git tag -a vX.Y.Z -m "..."` → `git push origin main --tags`.
+
+### What Does NOT Trigger a Version Bump
+Documentation-only changes get committed and pushed directly — **no version bump, no tag, no release**:
+- `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `ROADMAP.md`
+- `AGENTS.md`, `SKILLS.md`, `.agents/skills/**/*.md`
+- `docs/*.md` (decisions, benchmarks)
+- `.github/ISSUE_TEMPLATE/*`, `.github/PULL_REQUEST_TEMPLATE.md`
+- `.gitignore`, `.gitattributes`, `.editorconfig`
+
+Commit these with a `docs(...)` or `chore(...)` conventional commit and push to `main` without tagging.
