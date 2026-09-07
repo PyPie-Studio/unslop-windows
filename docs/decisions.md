@@ -45,7 +45,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 - **Status:** Accepted
 - **Context:** Many Windows policy tweaks and service state changes require a system restart to take effect. However, abrupt restarts risk user data loss. Additionally, requiring the user to open a secondary terminal to run `shutdown /a` provides a poor user experience. Halting on `pause` after initiating a restart countdown leaves unnecessary windows open.
 - **Decision:**
-  - Implemented an interactive 60-second reboot countdown directly inside `unslop.ps1` using non-blocking raw console polling (`$Host.UI.RawUI.KeyAvailable`).
+  - Implemented an interactive 30-second reboot countdown directly inside `unslop.ps1` using non-blocking raw console polling (`$Host.UI.RawUI.KeyAvailable`).
   - Added in-place keyboard controls: press `A` to abort immediately (`shutdown.exe /a`), press `R` or `Enter` to reboot without waiting.
   - Added `Ctrl+C` interrupt handling inside a `finally` block to automatically call `shutdown.exe /a`.
   - Established an exit code contract: `unslop.ps1` exits with code `100` when a reboot is scheduled, prompting `unslop.bat` to terminate immediately without halting on `pause`.

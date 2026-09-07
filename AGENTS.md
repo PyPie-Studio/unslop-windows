@@ -42,7 +42,7 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - Audit inspection logs must accurately reflect what actions would be performed.
 
 ### 5. Reboot Lifecycle & Abort Safety
-- When a debloat or restoration pass completes, a 60-second reboot countdown is initiated.
+- When a debloat or restoration pass completes, a 30-second reboot countdown is initiated.
 - The lifecycle must provide an in-place keyboard shortcut:
   - Press `A` to immediately abort the scheduled reboot (`shutdown.exe /a`).
   - Press `R` or `Enter` to reboot immediately without waiting.
