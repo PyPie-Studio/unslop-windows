@@ -47,19 +47,19 @@ jobs:
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
             $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
-            $summary = @"
-          ## 🛡️ Release Pre-Flight Pester Test Results ($statusEmoji)
-
-          | Metric | Value |
-          | :--- | :--- |
-          | **Total Tests** | $total |
-          | **Passed** | $passed |
-          | **Failed** | $failures |
-          | **Skipped / Not Run** | $notRun |
-          | **Duration** | ${suiteTime}s |
-          "@
+            $summaryLines = @(
+              "## 🛡️ Release Pre-Flight Pester Test Results ($statusEmoji)",
+              "",
+              "| Metric | Value |",
+              "| :--- | :--- |",
+              "| **Total Tests** | $total |",
+              "| **Passed** | $passed |",
+              "| **Failed** | $failures |",
+              "| **Skipped / Not Run** | $notRun |",
+              "| **Duration** | ${suiteTime}s |"
+            )
             if ($env:GITHUB_STEP_SUMMARY) {
-              $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
 
             if ([int]$failures -gt 0) {
@@ -131,31 +131,32 @@ jobs:
                   $notesBody = ($extracted -replace "^##\s+\[.*?\]\s*-\s*\d{4}-\d{2}-\d{2}", "" -replace "\r?\n---\s*$", "").Trim()
                   
                   $header = "# 🛡️ unslop-windows $tag`n`n$notesBody`n`n---`n`n"
-                  $footer = @"
-
-                  ## 📦 Quick Installation & Usage
-
-                  1. Download **``unslop-windows-$tag.zip``** from Assets below.
-                  2. Extract the archive to any directory.
-                  3. Right-click **``unslop.bat``** and choose **Run as administrator** (or double-click and accept the UAC elevation prompt).
-                  4. Select an option from the interactive menu:
-                     - **[1] Full Debloat**: Purge OneDrive, telemetry, diagnostics & provisioned bloatware.
-                     - **[2] Dry-Run Audit**: Inspect all changes safely with zero system modifications.
-                     - **[3] Debloat, Keep Microsoft To-Do**: Full debloat preserving To-Do.
-                     - **[4] Debloat, Keep Xbox**: Full debloat preserving Xbox Identity Provider & gaming services.
-                     - **[5] Debloat, Keep OneDrive**: Full debloat preserving Microsoft OneDrive sync.
-                     - **[6] Debloat + Classic Context Menu**: Full debloat and restore Windows 10 classic context menu.
-                     - **[7] Custom Flags**: Supply custom switch combinations (e.g. ``-KeepTodos -KeepXbox -NoRestart``).
-                     - **[8] Full Restore / Undo**: Symmetrically revert all tweaks, services, tasks, and policies back to Windows defaults.
-
-                  ---
-
-                  ## 🔒 Verification & Integrity
-                  Verify archive integrity using the published ``SHA256SUMS.txt``:
-                  ````powershell
-                  Get-FileHash .\unslop-windows-$tag.zip -Algorithm SHA256
-                  ````
-                  "@
+                  $footerLines = @(
+                      "",
+                      "## 📦 Quick Installation & Usage",
+                      "",
+                      "1. Download **``unslop-windows-$tag.zip``** from Assets below.",
+                      "2. Extract the archive to any directory.",
+                      "3. Right-click **``unslop.bat``** and choose **Run as administrator** (or double-click and accept the UAC elevation prompt).",
+                      "4. Select an option from the interactive menu:",
+                      "   - **[1] Full Debloat**: Purge OneDrive, telemetry, diagnostics & provisioned bloatware.",
+                      "   - **[2] Dry-Run Audit**: Inspect all changes safely with zero system modifications.",
+                      "   - **[3] Debloat, Keep Microsoft To-Do**: Full debloat preserving To-Do.",
+                      "   - **[4] Debloat, Keep Xbox**: Full debloat preserving Xbox Identity Provider & gaming services.",
+                      "   - **[5] Debloat, Keep OneDrive**: Full debloat preserving Microsoft OneDrive sync.",
+                      "   - **[6] Debloat + Classic Context Menu**: Full debloat and restore Windows 10 classic context menu.",
+                      "   - **[7] Custom Flags**: Supply custom switch combinations (e.g. ``-KeepTodos -KeepXbox -NoRestart``).",
+                      "   - **[8] Full Restore / Undo**: Symmetrically revert all tweaks, services, tasks, and policies back to Windows defaults.",
+                      "",
+                      "---",
+                      "",
+                      "## 🔒 Verification & Integrity",
+                      "Verify archive integrity using the published ``SHA256SUMS.txt``:",
+                      "````powershell",
+                      "Get-FileHash .\unslop-windows-$tag.zip -Algorithm SHA256",
+                      "````"
+                  )
+                  $footer = $footerLines -join "`n"
                   Set-Content -Path $notesFile -Value ($header + $footer) -Encoding utf8
                   Write-Host "Successfully extracted release notes for $version"
                   Get-Content $notesFile
