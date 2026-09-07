@@ -53,17 +53,17 @@ jobs:
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
             $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
-            $summary = @"
-          ## 🧪 Pester Unit Test Results: ${{ matrix.shell }} ($statusEmoji)
-
-          | Metric | Value |
-          | :--- | :--- |
-          | **Total Tests** | $total |
-          | **Passed** | $passed |
-          | **Failed** | $failures |
-          | **Skipped / Not Run** | $notRun |
-          | **Duration** | ${suiteTime}s |
-          "@
+            $summaryLines = @(
+              "## 🧪 Pester Unit Test Results: ${{ matrix.shell }} ($statusEmoji)",
+              "",
+              "| Metric | Value |",
+              "| :--- | :--- |",
+              "| **Total Tests** | $total |",
+              "| **Passed** | $passed |",
+              "| **Failed** | $failures |",
+              "| **Skipped / Not Run** | $notRun |",
+              "| **Duration** | ${suiteTime}s |"
+            )
 
             if (Test-Path $covPath) {
               [xml]$covXml = Get-Content $covPath
@@ -76,19 +76,18 @@ jobs:
               $instTotal = $instCov + [int]$instNode.missed
               $instPct = if ($instTotal -gt 0) { [math]::Round(($instCov / $instTotal) * 100, 1) } else { 0 }
 
-              $summary += @"
-
-
-          ### 📊 Code Coverage: unslop.ps1
-          | Metric | Covered | Total | Coverage % |
-          | :--- | :--- | :--- | :--- |
-          | **Lines** | $lineCov | $lineTotal | ${linePct}% |
-          | **Instructions** | $instCov | $instTotal | ${instPct}% |
-          "@
+              $summaryLines += @(
+                "",
+                "### 📊 Code Coverage: unslop.ps1",
+                "| Metric | Covered | Total | Coverage % |",
+                "| :--- | :--- | :--- | :--- |",
+                "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
+                "| **Instructions** | $instCov | $instTotal | ${instPct}% |"
+              )
             }
 
             if ($env:GITHUB_STEP_SUMMARY) {
-              $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
             }
 
             if ([int]$failures -gt 0) {
