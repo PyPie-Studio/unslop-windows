@@ -41,26 +41,40 @@ This skill governs the core execution engine of **unslop-windows** ([`unslop.ps1
 - When changing a default Windows value, the `-Undo` routine must set it back to the exact default value.
 - Never add a one-way modification to `unslop.ps1`.
 
-### 2. Defensive Registry Manipulation
-- Always check if the registry path exists before reading or modifying it:
+### 2. Defensive Registry & Mutation Architecture (No Placebo Logging)
+- Pre-create missing keys defensively:
   ```powershell
   if (-not (Test-Path $regPath)) {
-      New-Item -Path $regPath -Force | Out-Null
+      New-Item -Path $regPath -Force -ErrorAction SilentlyContinue | Out-Null
   }
   ```
-- Always pass `-ErrorAction SilentlyContinue` to avoid terminating on non-existent optional hives or permissions anomalies during user-mode tests.
-- Gate every mutating action behind `if (-not $DryRun)`:
+- Gate every mutating action behind `if (-not $DryRun)` and wrap inside `try/catch` with `-ErrorAction Stop`:
   ```powershell
   if (-not $DryRun) {
-      Set-ItemProperty -Path $path -Name $name -Value $value -Type DWord -Force -ErrorAction SilentlyContinue
+      try {
+          Set-ItemProperty -Path $path -Name $name -Value $value -Type DWord -Force -ErrorAction Stop
+          Log "  [+] SET: $path\$name = $value" "Green"
+      } catch {
+          Log "  [-] FAILED: $path\$name - $($_.Exception.Message)" "Red"
+          $global:FailCount++
+      }
+  } else {
+      Log "  [DRY-RUN] Would set: $path\$name = $value" "Cyan"
   }
   ```
+- **Zero Placebo Logging:** Never use blanket `-ErrorAction SilentlyContinue` on mutations followed by unconditional success logs (`[+] SET:`). If an operation fails due to permissions, locks, or missing keys, log `[-] FAILED:` and increment `$global:FailCount`.
 
-### 3. Safe AppX Removal & Provisioning
+### 3. Safe AppX Removal & Condensation
 - Distinguish between current user packages and all-users provisioned packages:
   ```powershell
   Get-AppxPackage -Name $app -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
   Get-AppxProvisionedPackage -Online | Where-Object DisplayName -eq $app | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+  ```
+- **Condense Repetitive Non-Events:** When packages are already absent from the OS image, do not flood the console with dozens of `SKIP: ... (not installed)` lines. Track absent packages in an aggregate counter and emit a single summary line:
+  ```powershell
+  if ($skipCount -gt 0) {
+      Log "  [-] SKIP: $skipCount bloatware packages not installed (already clean)" "DarkGray"
+  }
   ```
 - **Never Touch System Packages:**
   - Whitelist: `Microsoft.WindowsStore`, `Microsoft.DesktopAppInstaller`, `Microsoft.WindowsTerminal`, `Microsoft.XboxIdentityProvider`, VCLibs, DirectX, and .NET packages.
@@ -70,3 +84,19 @@ This skill governs the core execution engine of **unslop-windows** ([`unslop.ps1
 - Post-execution reboot countdown uses in-place console detection (`$Host.UI.RawUI.KeyAvailable`).
 - Handles `A` (abort via `shutdown.exe /a`), `R`/`Enter` (immediate restart), and `Ctrl+C` interrupt cleanup.
 - Exits with code `100` when a reboot is scheduled so `unslop.bat` cleanly closes without pausing.
+
+### 5. Console UI/UX, Color Hierarchy & Reporting Standards
+- **Semantic Console Colors**: Use `Write-Host -ForegroundColor` for user feedback:
+  - `Cyan`: Titles, stage headers, and dry-run preview tags.
+  - `Green`: Successful mutations and completion banners.
+  - `Yellow`: Warnings, reboot countdown prompts, and cancellation alerts.
+  - `DarkGray`: Skipped items and already-hardened states.
+  - `Red`: Hard failures and exceptions.
+  - Disk logging (`$LogFile`) must remain clean plain text without ANSI escape sequences.
+- **Dynamic Completion Banners**: Summary banners must dynamically reflect runtime parameters (`-KeepOneDrive`, `-KeepXbox`, `-KeepTodos`, `-ClassicContextMenu`) and explicitly flag preview mode when `-DryRun` is active, while preserving quality gate verification tokens (`UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE` and `RESTORE / UNDO COMPLETE`).
+
+### 6. Batch Launcher Interactive Architecture
+- **Interactive Multi-Select Toggles**: `unslop.bat` provides sub-menus (`:toggles`) using pure batch flag state tracking (`!TOGGLE_*!`) to toggle arguments before launching.
+- **UAC Dismissal Error Trapping**: Always inspect `%errorlevel%` after `Start-Process ... -Verb RunAs`. If non-zero (elevation cancelled or denied), warn the user and return to the menu instead of abruptly closing the terminal.
+- **Anti-Screen-Amnesia**: Never clear the screen immediately after an audit run (`:run_dry`); prompt the user to review the output first.
+

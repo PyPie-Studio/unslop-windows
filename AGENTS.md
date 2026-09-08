@@ -60,6 +60,16 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - **Code Changes Only**: Version bumps and tags are strictly reserved for verified changes to executable code (`*.ps1`, `*.bat`, `*.yml`, `*.psd1`).
 - **Documentation-Only Changes**: Edits to documentation (`*.md`, `.gitignore`, `.editorconfig`, issue templates) do NOT trigger a version bump, changelog update, tag, or release. Commit with `docs(...)` or `chore(...)` and push directly.
 
+### 8. Terminal UI/UX, Dynamic Reporting & Failure Honesty Invariants
+- **No Silent Placebo Logging**: NEVER suppress mutation failures with `-ErrorAction SilentlyContinue` while logging success text. All state-mutating operations (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Disable-ScheduledTask`, `Remove-AppxPackage`) must execute with `-ErrorAction Stop` inside `try/catch`. On exception, emit explicit `FAILED: <details>` logs and increment failure counters (`$global:FailCount++`) so terminal and file logs remain truthful.
+- **Dynamic Summary Invariant**: Completion summary banners must dynamically reflect the active parameter flags (e.g. `-KeepXbox`, `-KeepOneDrive`, `-KeepTodos`, `-ClassicContextMenu`) and explicitly flag preview mode when `-DryRun` is active. Summary banners must strictly retain the exact gate assertion tokens required by `scripts/Test-MasterGate.ps1` (`UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE` and `RESTORE / UNDO COMPLETE`).
+- **Signal-to-Noise Ratio (AppX Condensation)**: Repetitive non-events (such as 40+ uninstalled AppX packages) must be condensed into an aggregate summary (e.g., `SKIP: X packages not installed`) rather than flooding the console with line-by-line clutter.
+- **Batch Launcher UI Invariants**:
+  - Interactive multi-select toggles must be supported in `unslop.bat` via dedicated sub-menus (`:toggles`) using pure batch flag state tracking (`[ ON  ]` / `[ OFF ]`).
+  - UAC elevation calls (`Start-Process ... -Verb RunAs`) must check `%errorlevel%` to prevent silent terminal window termination when UAC is dismissed or cancelled by the user.
+  - Audit mode (`unslop.bat [3] Dry Run`) must pause before clearing the console or returning to the main menu ("anti-screen-amnesia").
+
+
 ---
 
 ## ðŸ›  Active Workspace Skills ([`.agents/skills/`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills))

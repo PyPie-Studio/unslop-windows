@@ -34,18 +34,24 @@ The following components must remain functional and un-targeted:
 * Your additions must be safe to execute multiple times without corrupting keys or failing on missing elements.
 * All additions must support `-DryRun` by logging intended actions with `[DRY-RUN]` without modifying system state.
 
+### 6. Failure Honesty & Console UI/UX Standards
+* **Zero Placebo Logging:** Never suppress mutation errors with blanket `-ErrorAction SilentlyContinue` while logging success text. All state modifications must run with `-ErrorAction Stop` inside `try/catch` and emit explicit `[-] FAILED:` feedback on error.
+* **Signal-to-Noise Ratio:** Aggregate repetitive non-events (such as apps not installed on the system) into a single summary line instead of cluttering the console.
+* **Terminal Usability:** Batch and CLI routines must not clear the screen before the user has reviewed audit or diagnostic output. Batch launchers must handle UAC dismissal gracefully without abruptly closing the console.
+* **Preserve CRLF Line Endings:** All batch scripts (`*.bat`) must strictly maintain CRLF (`\r\n`) line endings.
+
 ---
 
 ## Local Development & Testing Workflow
 
 ### 1. Automated Master Quality Gate
-Run the unified 5-pillar verification gate locally:
+Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun, and Batch launcher passthrough):
 
 ```powershell
-# Full gate: AST syntax, PSScriptAnalyzer, line-endings/conflict check, and dry-run tests
+# Full gate: AST syntax, PSScriptAnalyzer, line-endings/conflict check, Pester tests, and dry-run tests
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
 
-# Rapid lint mode (skips dry-run execution):
+# Rapid lint mode (skips dry-run execution and Pester tests):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 ```
 
