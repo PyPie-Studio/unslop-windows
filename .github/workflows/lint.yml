@@ -11,39 +11,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality-gate:
-    name: Quality Gate (${{ matrix.shell }})
+  quality-gate-core:
+    name: Quality Gate (PowerShell 7 Core)
     runs-on: windows-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        shell: [pwsh, powershell]
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Ensure Pester 5 Module Available
-        shell: ${{ matrix.shell }}
+        shell: pwsh
         run: |
           $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
           if (-not $pester) {
-            Write-Host "Installing Pester 5 for ${{ matrix.shell }}..."
+            Write-Host "Installing Pester 5 for pwsh..."
             Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
           }
 
       - name: Run 7-Pillar Master Quality Gate
-        shell: ${{ matrix.shell }}
+        shell: pwsh
         run: |
-          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-${{ matrix.shell }}.xml" -CodeCoveragePath "test-results/coverage-${{ matrix.shell }}.xml"
+          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-pwsh.xml" -CodeCoveragePath "test-results/coverage-pwsh.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
-        shell: ${{ matrix.shell }}
+        shell: pwsh
         run: |
-          $xmlPath = "test-results/pester-${{ matrix.shell }}.xml"
-          $covPath = "test-results/coverage-${{ matrix.shell }}.xml"
+          $xmlPath = "test-results/pester-pwsh.xml"
+          $covPath = "test-results/coverage-pwsh.xml"
           if (Test-Path $xmlPath) {
             [xml]$xml = Get-Content $xmlPath
             $total = $xml.'test-results'.total
@@ -54,7 +50,7 @@ jobs:
             
             $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
             $summaryLines = @(
-              "## 🧪 Pester Unit Test Results: ${{ matrix.shell }} ($statusEmoji)",
+              "## 🧪 Pester Unit Test Results: PowerShell 7 Core ($statusEmoji)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -102,20 +98,116 @@ jobs:
         if: always()
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
-          name: pester-results-${{ matrix.shell }}
+          name: pester-results-pwsh
           path: test-results/
           if-no-files-found: ignore
 
       - name: Run Diagnostic System State Auditor
-        shell: ${{ matrix.shell }}
+        shell: pwsh
+        run: |
+          ./scripts/Measure-SystemState.ps1
+
+  quality-gate-desktop:
+    name: Quality Gate (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Ensure Pester 5 Module Available
+        shell: powershell
+        run: |
+          $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
+          if (-not $pester) {
+            Write-Host "Installing Pester 5 for powershell..."
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          }
+
+      - name: Run 7-Pillar Master Quality Gate
+        shell: powershell
+        run: |
+          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-powershell.xml" -CodeCoveragePath "test-results/coverage-powershell.xml"
+
+      - name: Publish Test Summary to GitHub Actions
+        if: always()
+        shell: powershell
+        run: |
+          $xmlPath = "test-results/pester-powershell.xml"
+          $covPath = "test-results/coverage-powershell.xml"
+          if (Test-Path $xmlPath) {
+            [xml]$xml = Get-Content $xmlPath
+            $total = $xml.'test-results'.total
+            $failures = $xml.'test-results'.failures
+            $notRun = $xml.'test-results'.'not-run'
+            $passed = [int]$total - [int]$failures - [int]$notRun
+            $suiteTime = $xml.'test-results'.'test-suite'.time
+            
+            $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
+            $summaryLines = @(
+              "## 🧪 Pester Unit Test Results: Windows PowerShell 5.1 ($statusEmoji)",
+              "",
+              "| Metric | Value |",
+              "| :--- | :--- |",
+              "| **Total Tests** | $total |",
+              "| **Passed** | $passed |",
+              "| **Failed** | $failures |",
+              "| **Skipped / Not Run** | $notRun |",
+              "| **Duration** | ${suiteTime}s |"
+            )
+
+            if (Test-Path $covPath) {
+              [xml]$covXml = Get-Content $covPath
+              $lineNode = $covXml.report.counter | Where-Object { $_.type -eq 'LINE' }
+              $instNode = $covXml.report.counter | Where-Object { $_.type -eq 'INSTRUCTION' }
+              $lineCov = [int]$lineNode.covered
+              $lineTotal = $lineCov + [int]$lineNode.missed
+              $linePct = if ($lineTotal -gt 0) { [math]::Round(($lineCov / $lineTotal) * 100, 1) } else { 0 }
+              $instCov = [int]$instNode.covered
+              $instTotal = $instCov + [int]$instNode.missed
+              $instPct = if ($instTotal -gt 0) { [math]::Round(($instCov / $instTotal) * 100, 1) } else { 0 }
+
+              $summaryLines += @(
+                "",
+                "### 📊 Code Coverage: unslop.ps1",
+                "| Metric | Covered | Total | Coverage % |",
+                "| :--- | :--- | :--- | :--- |",
+                "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
+                "| **Instructions** | $instCov | $instTotal | ${instPct}% |"
+              )
+            }
+
+            if ($env:GITHUB_STEP_SUMMARY) {
+              ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+            }
+
+            if ([int]$failures -gt 0) {
+              foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
+                $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
+                Write-Host "::error file=tests/unslop.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+              }
+            }
+          }
+
+      - name: Upload Pester Test Results & Coverage Artifact
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: pester-results-powershell
+          path: test-results/
+          if-no-files-found: ignore
+
+      - name: Run Diagnostic System State Auditor
+        shell: powershell
         run: |
           ./scripts/Measure-SystemState.ps1
 
   psscriptanalyzer:
     name: PSScriptAnalyzer
-    needs: quality-gate
+    needs: [quality-gate-core, quality-gate-desktop]
     runs-on: windows-latest
     steps:
       - name: Confirm Status Check
         shell: pwsh
-        run: Write-Host "PSScriptAnalyzer status check passed via quality-gate matrix."
+        run: Write-Host "PSScriptAnalyzer status check passed via dual quality-gate suite."

@@ -12,7 +12,7 @@
 [![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.8.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.9.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.0.8) - PyPie Studio
+  unslop-windows (v1.0.9) - PyPie Studio
   Universal Windows 11 24H2 / 25H2 Debloat & Privacy Hardener
 ============================================================
 
@@ -57,7 +57,7 @@ Select an option [0-8]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.0.8.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.8.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.0.9.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.0.9.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
 4. In the console menu, type `1` (or your preferred option) and press Enter.

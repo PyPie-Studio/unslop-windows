@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2026-09-08
+
+### Fixed
+- **CI/CD Pipeline (`lint.yml`)**: Resolved GitHub Actions workflow parse failure caused by unsupported expression evaluation in the `shell` keyword (`shell: ${{ matrix.shell }}`). Split execution into two explicit, parallel jobs (`quality-gate-core` for PowerShell 7 and `quality-gate-desktop` for Windows PowerShell 5.1), with `PSScriptAnalyzer` gated on both.
+
+---
+
 ## [1.0.8] - 2026-09-08
 
 ### Fixed
