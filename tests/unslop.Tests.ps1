@@ -119,7 +119,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
         It 'Debloat Mode: Stops running service and disables startup' {
             $mockRunningService = [PSCustomObject]@{
                 Name   = "DiagTrack"
-                Status = [System.ServiceProcess.ServiceControllerStatus]::Running
+                Status = "Running"
             }
             Mock -CommandName Get-Service -MockWith { $mockRunningService }
             Mock -CommandName Stop-Service -MockWith { }
@@ -134,7 +134,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
         It 'Undo Mode: Re-enables service with specified StartupType and starts it' {
             $mockStoppedService = [PSCustomObject]@{
                 Name   = "DiagTrack"
-                Status = [System.ServiceProcess.ServiceControllerStatus]::Stopped
+                Status = "Stopped"
             }
             Mock -CommandName Get-Service -MockWith { $mockStoppedService }
             Mock -CommandName Set-Service -MockWith { }

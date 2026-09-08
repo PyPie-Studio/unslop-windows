@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.12] - 2026-09-08
+
+### Fixed
+- **Windows PowerShell 5.1 Dual-Runtime Compatibility**:
+  - Replaced Unicode em dashes (`—`, byte `0x94`) with standard hyphens in `unslop.ps1` service descriptions, preventing premature string-quote termination under Windows-1252 ANSI codepages.
+  - Simplified mock service status in `tests/unslop.Tests.ps1` from .NET `[System.ServiceProcess.ServiceControllerStatus]` to string literals (`"Running"` / `"Stopped"`), preventing type resolution exceptions in environments where `System.ServiceProcess` is not preloaded.
+
+---
+
 ## [1.0.11] - 2026-09-08
 
 ### Fixed

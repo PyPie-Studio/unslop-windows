@@ -1,6 +1,6 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.11)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.0.12)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
-# Safe tier — no core system files touched, all changes reversible
+# Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -189,19 +189,19 @@ if (-not $isAdmin) {
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "UNIVERSAL 25H2 DEBLOAT & PRIVACY HARDEN" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.0.11: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.0.12: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
 # 1. SERVICES
 # ============================================================
 Log "--- 1. Services ---"
-Set-SvcState "SysMain"          "Superfetch — NVMe makes it useless, wastes RAM" "Automatic"
-Set-SvcState "WSearch"          "Windows Search Indexer — Start menu app search still works" "Automatic"
+Set-SvcState "SysMain"          "Superfetch - NVMe makes it useless, wastes RAM" "Automatic"
+Set-SvcState "WSearch"          "Windows Search Indexer - Start menu app search still works" "Automatic"
 Set-SvcState "dmwappushservice" "WAP Push telemetry" "Manual"
 Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automatic"
-Set-SvcState "TrkWks"           "Distributed Link Tracking — tracks file shortcuts" "Automatic"
-Set-SvcState "lfsvc"            "Location Framework — GPS/location tracking" "Manual"
+Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
+Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Manual"
 Log ""
 
 # ============================================================
