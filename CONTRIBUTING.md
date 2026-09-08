@@ -47,6 +47,10 @@ The following components must remain functional and un-targeted:
 * **Preserve Driver Security Updates:** Do not disable Windows Update driver/firmware patches (`ExcludeWUDriversInQualityUpdate`). Hardware CVE updates must flow freely.
 * **Symlink / Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks/junctions before writing files.
 
+### 8. The Zero-Advisory Invariant Mandate
+* **Automated Test Enforcement:** No policy, privacy rule, or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop.Tests.ps1` or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
+* **Universal Mutating AST Audit:** Naked calls to mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) outside approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) will fail the AST quality gate.
+
 ---
 
 ## Local Development & Testing Workflow
@@ -57,6 +61,9 @@ Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer
 ```powershell
 # Full gate: AST syntax, PSScriptAnalyzer, line-endings/conflict check, Pester tests, and dry-run tests
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
+
+# Strict fail-closed mode (fails if analyzer or Pester 5 is missing; auto-enabled in CI):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
 
 # Rapid lint mode (skips dry-run execution and Pester tests):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast

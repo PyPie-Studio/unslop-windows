@@ -36,6 +36,17 @@ This skill governs the Antigravity AI agent workflow, engineering philosophy, an
 - **No Advisory-Only Rules:** Never document an architectural policy or invariant in markdown without adding a corresponding automated test in `tests/unslop.Tests.ps1` or `Test-MasterGate.ps1`. If a rule lacks an automated assertion, it will inevitably be rationalized away or missed due to context attenuation.
 - **Reject the Green-Light Illusion:** Never assume that a passing test gate means all edge cases are addressed. Happy-path mocks often mask underlying flaws. Always test negative paths (exception handling, `$global:FailCount` increments, non-elevated boundaries, and CLI injection bounds).
 
+### 5. Documentation Co-Evolution & Clean Routing Standard
+- **Never Leave Docs Behind:** When mutating code, update the corresponding documentation files in the exact same session.
+- **Zero-Bloat Discipline:** Apply Ponytail minimal-diff discipline to prose. Never pad docs with conversational filler or duplicated paragraphs. Keep descriptions dense and technical.
+- **Strict Document Routing:**
+  - User features & whitelist $\rightarrow$ `README.md`
+  - Version release history $\rightarrow$ `CHANGELOG.md`
+  - PR rules & quality gate commands $\rightarrow$ `CONTRIBUTING.md`
+  - High-level milestones $\rightarrow$ `ROADMAP.md`
+  - Architecture rationale & trade-offs $\rightarrow$ `docs/decisions.md`
+  - Agent invariants & OS internals $\rightarrow$ `AGENTS.md` & `.agents/skills/`
+
 ---
 
 ## 🏷 Release & Versioning Workflow

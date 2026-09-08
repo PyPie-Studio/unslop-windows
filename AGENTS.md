@@ -83,6 +83,17 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - **Fail-Closed Tooling & CI Gate**: CI workflows and strict local checks (`-Strict`) must fail closed with exit code 1 if `PSScriptAnalyzer` or `Pester 5` is absent. Never allow graceful `SKIPPED` fallbacks in automated gates.
 - **Interactive Batch Validation Standard**: Changes to `unslop.bat` must be validated against both headless CLI execution (`cmd.exe /c "unslop.bat -DryRun"`) AND interactive menu elevation paths (`Start-Process -FilePath '%~f0' -Verb RunAs`), ensuring screens never vanish upon completion.
 
+### 11. Documentation Co-Evolution & Clean Routing Standard
+- **Co-Evolution Mandate:** Whenever code changes alter features, telemetry rules, test gates, or safety boundaries, documentation MUST be updated in the same session. Code and documentation must never drift out of sync.
+- **Zero-Bloat Discipline:** Follow Ponytail minimal-diff discipline for prose. Avoid conversational padding, redundant summaries, and duplicated paragraphs across files. Keep documentation dense, factual, and high signal-to-noise.
+- **Strict Documentation Routing Map:** Route each update strictly to its corresponding document:
+  - **[`README.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/README.md)**: User-facing capabilities only (features, 18 modules, untouchable whitelist table, comparison matrix, quickstart, CLI options). Do NOT put developer gate internals, AST details, or ADR rationale here.
+  - **[`CHANGELOG.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/CHANGELOG.md)**: User and developer release history organized by SemVer tags under Keep a Changelog categories (`Fixed`, `Added`, `Changed`, `Security`).
+  - **[`CONTRIBUTING.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/CONTRIBUTING.md)**: Open-source developer standards, non-negotiable PR rules, test commands, and quality gate instructions.
+  - **[`ROADMAP.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/ROADMAP.md)**: High-level milestone tracking and strategic feature checkboxes (`[x]`).
+  - **[`docs/decisions.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/docs/decisions.md)**: Architectural Decision Records (ADRs). Permanent record of problem context, design alternatives, trade-offs, and rationale.
+  - **[`AGENTS.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/AGENTS.md)** & **Skills ([`.agents/skills/`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills))**: AI agent execution invariants, non-negotiable system standards, automated testing mandates, and deep OS internals.
+
 ---
 
 ## ðŸ›  Active Workspace Skills ([`.agents/skills/`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills))

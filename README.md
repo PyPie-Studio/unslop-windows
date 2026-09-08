@@ -125,6 +125,7 @@ How `unslop-windows` compares to other popular debloaters:
 | **Untouchable Whitelist Enforced** | ✅ Guaranteed | ⚠️ User Config | ⚠️ User Config | ❌ High Break Risk |
 | **Safe Delivery Optimization (No Store breaks)** | ✅ GPO `DODownloadMode=0` | ❌ Disables Service | ⚠️ Mixed | ❌ Disables Service |
 | **Decoupled Autonomous Logging** | ✅ Local `logs/` or `$TEMP` | ⚠️ GUI Logs | ⚠️ Flat File | ⚠️ Flat Text |
+| **Test-Driven Invariants & Fail-Closed CI** | ✅ 33 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
 
 ---
 
@@ -155,9 +156,9 @@ Most debloaters break future Windows updates or leave background services in uns
 11. **Scheduled Tasks**: Disables 18+ telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience, and Disk Diagnostics.
 12. **Dual-Stage AppX Purge**: Removes installed packages for all existing user profiles and de-provisions staged packages from the Windows image (TikTok, Spotify, Instagram, Netflix, Solitaire, News, Weather, Get Help, Tips, Feedback Hub).
 13. **OneDrive Purge Engine**: Terminates running processes, runs the silent uninstaller, unpins the Explorer sidebar icon (`{018D5C66-4533-4307-9B53-224DE2ED1FE6}`), sets sync block policies (`DisableFileSyncNGSC = 1`), and removes startup registry entries.
-14. **Startup Entries & Edge Background**: Disables Edge background application access and startup run keys.
-15. **Microsoft Defender Telemetry**: Configures `SubmitSamplesConsent = 0` to block automatic memory and sample file uploads while keeping real-time antivirus active.
-16. **Activity History & Cloud Clipboard**: Disables timeline feeds, activity publishing, and cross-device clipboard sync.
+14. **Startup Entries & Edge Background**: Disables Edge background application access. Removed startup run keys are safely archived under `HKCU:\Software\unslop-windows\StartupBackup` and symmetrically restored on `-Undo` (zero data loss).
+15. **Microsoft Defender Telemetry**: Configures `SubmitSamplesConsent = 2` (NeverSend) to block automatic memory and sample file uploads while keeping real-time antivirus active.
+16. **Activity History & Cloud Clipboard**: Disables timeline feeds, activity publishing, and cross-device clipboard sync. Local multi-item clipboard history (`Win + V`) remains fully functional.
 17. **Delivery Optimization**: Disables local and internet peer-to-peer update distribution via GPO (`DODownloadMode = 0`) without disabling the servicing daemon.
 18. **Firewall Telemetry Rules**: Blocks 8 unnecessary outbound rules for SSDP, Remote Assistance, and Connected Devices Platform.
 
@@ -171,6 +172,8 @@ Most debloaters break future Windows updates or leave background services in uns
 | :--- | :--- | :--- |
 | **System Package Tools** | Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`) | Required for software installation and package management |
 | **Essential Desktop Apps** | Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`) | Daily workflow tools with zero telemetry overhead |
+| **Productivity Features** | Local `Win + V` clipboard history buffer | Daily workflow convenience preserved; only cloud cross-device sync is disabled |
+| **System Experience Hosts** | `CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp` | Immutable system packages preserved to prevent AppX de-provisioning `0x80073CFA` errors |
 | **Audio & Video Hardware** | Microphone access, Webcam access, AMD Noise Suppression / NVIDIA Broadcast | Prevents breaking Discord, OBS, Teams, and voice chat |
 | **Developer Environments** | Visual Studio, VS Code, Git, Docker Desktop, Ollama, existing toolchains, browsers | Developer toolchains and container runtimes |
 | **Application Runtimes** | WebView2, Edge Rendering Engine | Required by modern desktop applications to display web views |

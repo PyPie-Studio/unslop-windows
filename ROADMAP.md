@@ -16,6 +16,8 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 - [x] **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`):** Unified AST parse, PSScriptAnalyzer, DryRun, and Undo DryRun check.
 - [x] **Git Pre-Push Hook (`.githooks/pre-push`):** Blocks pushes to `main` if the local Master Gate fails.
 - [x] **Agent Governance (`AGENTS.md` & `SKILLS.md`):** System harness, skills registry, and `.agents/skills/` for AI pair programming.
+- [x] **Universal Mutating AST Audit & Negative Error-Trap Tests (`tests/unslop.Tests.ps1`):** Enforces 100% helper routing and failure honesty.
+- [x] **Fail-Closed CI Tooling (`scripts/Test-MasterGate.ps1`):** Strict automated gate preventing skipped static analysis and uninstalled test frameworks.
 
 ---
 
@@ -51,4 +53,4 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 ---
 
 ## 📄 Completed Architectural Decisions
-See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-007) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.
+See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-019) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.
