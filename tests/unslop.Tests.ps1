@@ -223,6 +223,100 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             }
         }
     }
+
+    Context 'Remove-StartupEntry' {
+        It 'Debloat Mode: Archives startup entry to backup key and removes from Run' {
+            $mockProps = [PSCustomObject]@{
+                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
+
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "StartupBackup" -and $Name -eq "Discord"
+            }
+            Should -Invoke -CommandName Remove-ItemProperty -Times 1 -ParameterFilter {
+                $Path -eq "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -and $Name -eq "Discord"
+            }
+        }
+
+        It 'Undo Mode: Restores archived startup entry from backup key to Run' {
+            $mockBackupProps = [PSCustomObject]@{
+                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+            }
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockBackupProps }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -Undo
+
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -eq "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -and $Name -eq "Discord"
+            }
+            Should -Invoke -CommandName Remove-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "StartupBackup" -and $Name -eq "Discord"
+            }
+        }
+
+        It 'Dry-Run Mode: Performs zero mutating calls during startup management' {
+            $mockProps = [PSCustomObject]@{
+                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -DryRun
+
+            Should -Invoke -CommandName Set-ItemProperty -Times 0
+            Should -Invoke -CommandName Remove-ItemProperty -Times 0
+        }
+    }
+
+    Context 'Failure Honesty & Negative Error Trapping' {
+        It 'Set-RegDwordSafe traps exceptions, increments FailCount, and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
+            $global:FailCount = 0
+            $script:log = @()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "TestVal" -debloatValue 1 -undoValue 0
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-SvcState traps exceptions, increments FailCount, and emits FAILED log' {
+            $mockSvc = [PSCustomObject]@{ Status = "Running" }
+            Mock -CommandName Get-Service -MockWith { $mockSvc }
+            Mock -CommandName Stop-Service -MockWith { throw "Service cannot be stopped" }
+            $global:FailCount = 0
+            $script:log = @()
+
+            Set-SvcState -name "TestSvc" -desc "Test service"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not disable service TestSvc" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-TaskState traps exceptions, increments FailCount, and emits FAILED log' {
+            $mockTask = [PSCustomObject]@{ TaskName = "TestTask" }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
+            Mock -CommandName Disable-ScheduledTask -MockWith { throw "Task operation failed" }
+            $global:FailCount = 0
+            $script:log = @()
+
+            Set-TaskState -path "\TestPath\" -name "TestTask"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not disable task TestTask" }).Count | Should -BeGreaterThan 0
+        }
+    }
 }
 
 Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integration', 'CLI' {
@@ -306,20 +400,22 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
         }
     }
 
-    It 'Zero raw mutating registry cmdlets exist outside approved helper functions' {
-        $approvedHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry')
-        $mutatingCmdlets = @('Set-ItemProperty', 'New-ItemProperty')
+    It 'Zero raw mutating cmdlets (registry, tasks, services) exist outside approved helper functions' {
+        $approvedRegHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry')
+        $mutatingRegCmdlets = @('Set-ItemProperty', 'New-ItemProperty', 'Remove-ItemProperty')
+        $mutatingTaskCmdlets = @('Disable-ScheduledTask', 'Enable-ScheduledTask')
+        $mutatingSvcCmdlets = @('Set-Service', 'Stop-Service', 'Start-Service')
 
         $nakedCalls = $script:ast.FindAll({
             param($node)
             if ($node -is [System.Management.Automation.Language.CommandAst]) {
                 $name = $node.GetCommandName()
-                if ($mutatingCmdlets -contains $name) {
+                if ($mutatingRegCmdlets -contains $name) {
                     $parent = $node.Parent
                     $inApprovedFunc = $false
                     while ($parent) {
                         if ($parent -is [System.Management.Automation.Language.FunctionDefinitionAst]) {
-                            if ($approvedHelpers -contains $parent.Name) {
+                            if ($approvedRegHelpers -contains $parent.Name) {
                                 $inApprovedFunc = $true
                                 break
                             }
@@ -327,14 +423,43 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
                         $parent = $parent.Parent
                     }
                     if (-not $inApprovedFunc) {
-                        return ($node.Extent.Text -notmatch 'classicMenuPath')
+                        $isApprovedException = ($node.Extent.Text -match 'classicMenuPath') -or ($node.Extent.Text -match 'ExcludeWUDriversInQualityUpdate')
+                        return (-not $isApprovedException)
+                    }
+                }
+                if ($mutatingTaskCmdlets -contains $name) {
+                    $parent = $node.Parent
+                    $inTaskFunc = $false
+                    while ($parent) {
+                        if ($parent -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $parent.Name -eq 'Set-TaskState') {
+                            $inTaskFunc = $true
+                            break
+                        }
+                        $parent = $parent.Parent
+                    }
+                    if (-not $inTaskFunc) {
+                        return $true
+                    }
+                }
+                if ($mutatingSvcCmdlets -contains $name) {
+                    $parent = $node.Parent
+                    $inSvcFunc = $false
+                    while ($parent) {
+                        if ($parent -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $parent.Name -eq 'Set-SvcState') {
+                            $inSvcFunc = $true
+                            break
+                        }
+                        $parent = $parent.Parent
+                    }
+                    if (-not $inSvcFunc) {
+                        return $true
                     }
                 }
             }
             return $false
         }, $true)
 
-        $nakedCalls.Count | Should -Be 0 -Because "All registry mutations must be channeled through Set-RegDwordSafe for 100% undo symmetry"
+        $nakedCalls.Count | Should -Be 0 -Because "All mutations must be channeled through approved helper functions (Set-RegDwordSafe, Set-TaskState, Set-SvcState) for 100% undo symmetry and failure honesty"
     }
 
     It 'Every service managed via Set-SvcState defines a non-empty undo startup type' {
@@ -363,6 +488,7 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
         $funcNames | Should -Contain 'Set-SvcState'
         $funcNames | Should -Contain 'Set-TaskState'
         $funcNames | Should -Contain 'Set-ConsentCapability'
+        $funcNames | Should -Contain 'Remove-StartupEntry'
 
         foreach ($fn in $functions) {
             if ($fn.Name -eq 'Set-RegDwordSafe') {
@@ -383,6 +509,10 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
             if ($fn.Name -eq 'Set-ConsentCapability') {
                 $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-ConsentCapability must evaluate `$Undo"
                 $fn.Extent.Text | Should -Match '\$undoValue' -Because "Set-ConsentCapability must restore undoValue"
+            }
+            if ($fn.Name -eq 'Remove-StartupEntry') {
+                $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Remove-StartupEntry must evaluate `$Undo"
+                $fn.Extent.Text | Should -Match 'StartupBackup' -Because "Remove-StartupEntry must utilize StartupBackup for restoration"
             }
         }
     }
@@ -429,5 +559,39 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         }, $true)
 
         $wuBlocks.Count | Should -BeGreaterThan 0 -Because "Script must inspect for legacy ExcludeWUDriversInQualityUpdate to clear it"
+    }
+
+    It 'Configures Defender SubmitSamplesConsent to 2 (NeverSend) on debloat and 1 on undo' {
+        $mpCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-MpPreference'
+        }, $true)
+
+        $mpCalls.Count | Should -BeGreaterThan 0 -Because "Script must configure Set-MpPreference"
+        $mpTexts = $mpCalls | ForEach-Object { $_.Extent.Text }
+        $mpTexts | Should -Contain 'Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop' -Because "Debloat must use SubmitSamplesConsent = 2 (NeverSend)"
+        $mpTexts | Should -Contain 'Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction Stop' -Because "Undo must restore SubmitSamplesConsent = 1 (SendSafeSamples)"
+        $mpTexts | Should -Not -Contain 'Set-MpPreference -SubmitSamplesConsent 0' -Because "SubmitSamplesConsent = 0 is AlwaysPrompt and must not be used"
+    }
+
+    It 'Does not contain non-removable core system packages in bloatware list' {
+        $nonRemovables = @(
+            'Microsoft.Windows.CloudExperienceHost',
+            'Microsoft.Windows.PeopleExperienceHost',
+            'Microsoft.Windows.ParentalControls',
+            'Microsoft.Windows.NarratorQuickStart',
+            'Microsoft.ECApp',
+            'Microsoft.MicrosoftEdge.Stable',
+            'Microsoft.MicrosoftEdgeDevToolsClient',
+            'Microsoft.WindowsStore',
+            'Microsoft.DesktopAppInstaller',
+            'Microsoft.XboxIdentityProvider',
+            'Microsoft.WindowsTerminal'
+        )
+
+        foreach ($pkg in $nonRemovables) {
+            $script:ast.Extent.Text | Should -Not -Match "`"$([regex]::Escape($pkg))`"" -Because "$pkg is a NonRemovable or untouchable system component and must not be in bloatApps"
+        }
     }
 }

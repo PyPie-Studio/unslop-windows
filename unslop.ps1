@@ -1,4 +1,4 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.2)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.3)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -74,6 +74,7 @@ $ErrorActionPreference = "SilentlyContinue"
 $IsUndo = $Undo.IsPresent
 $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
 
+$global:FailCount = 0
 $log = @()
 
 function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
@@ -116,6 +117,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                     Start-Service -Name $name -ErrorAction Stop
                     Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
                 } catch {
+                    $global:FailCount++
                     Log "  FAILED: Could not restore service $name - $($_.Exception.Message)" -DryRun:$DryRun
                 }
             }
@@ -128,6 +130,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                     Set-Service -Name $name -StartupType Disabled -ErrorAction Stop
                     Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
                 } catch {
+                    $global:FailCount++
                     Log "  FAILED: Could not disable service $name - $($_.Exception.Message)" -DryRun:$DryRun
                 }
             }
@@ -148,6 +151,7 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
                     Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
                     Log "  ENABLED: $name" -DryRun:$DryRun
                 } catch {
+                    $global:FailCount++
                     Log "  FAILED: Could not enable task $name - $($_.Exception.Message)" -DryRun:$DryRun
                 }
             }
@@ -159,6 +163,7 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
                     Disable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
                     Log "  DISABLED: $name" -DryRun:$DryRun
                 } catch {
+                    $global:FailCount++
                     Log "  FAILED: Could not disable task $name - $($_.Exception.Message)" -DryRun:$DryRun
                 }
             }
@@ -179,6 +184,7 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                         Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction Stop
                         Log "  REMOVED: $name from $path" -DryRun:$DryRun
                     } catch {
+                        $global:FailCount++
                         Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
                     }
                 }
@@ -192,6 +198,7 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                     Set-ItemProperty -Path $path -Name $name -Value $undoValue -Type DWord -ErrorAction Stop
                     Log "  RESTORED: $name = $undoValue in $path" -DryRun:$DryRun
                 } catch {
+                    $global:FailCount++
                     Log "  FAILED: Could not restore $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
                 }
             }
@@ -205,6 +212,7 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                 Set-ItemProperty -Path $path -Name $name -Value $debloatValue -Type DWord -ErrorAction Stop
                 Log "  SET: $name = $debloatValue" -DryRun:$DryRun
             } catch {
+                $global:FailCount++
                 Log "  FAILED: Could not set $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
             }
         }
@@ -222,6 +230,7 @@ function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", 
                 Set-ItemProperty -Path $locPath -Name "Value" -Value $undoValue -ErrorAction Stop
                 Log "  RESTORED CONSENT: $capability = $undoValue" -DryRun:$DryRun
             } catch {
+                $global:FailCount++
                 Log "  FAILED: Could not restore consent $capability - $($_.Exception.Message)" -DryRun:$DryRun
             }
         }
@@ -234,6 +243,7 @@ function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", 
                 Set-ItemProperty -Path $locPath -Name "Value" -Value $debloatValue -ErrorAction Stop
                 Log "  BLOCKED CONSENT: $capability = $debloatValue ($desc)" -DryRun:$DryRun
             } catch {
+                $global:FailCount++
                 Log "  FAILED: Could not block consent $capability - $($_.Exception.Message)" -DryRun:$DryRun
             }
         }
@@ -241,22 +251,61 @@ function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", 
 }
 
 function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
+    $backupBase = "HKCU:\Software\unslop-windows\StartupBackup"
     if ($Undo) {
-        Log "  INFO: Startup entry for '$pattern' can be re-enabled in Task Manager > Startup Apps" -DryRun:$DryRun
+        foreach ($runKey in $runKeys) {
+            $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
+            $backupPath = "$backupBase\$keySub"
+            if (Test-Path $backupPath) {
+                $props = Get-ItemProperty -Path $backupPath -ErrorAction SilentlyContinue
+                if ($props) {
+                    $matches = $props.PSObject.Properties | Where-Object {
+                        $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
+                        ($_.Name -match $pattern -or $_.Value -match $pattern)
+                    }
+                    foreach ($entry in $matches) {
+                        if ($DryRun) {
+                            Log "  [WOULD RESTORE STARTUP]: $($entry.Name) -> $runKey" -DryRun:$DryRun
+                        } else {
+                            try {
+                                if (-not (Test-Path $runKey)) { New-Item -Path $runKey -Force -ErrorAction Stop | Out-Null }
+                                Set-ItemProperty -Path $runKey -Name $entry.Name -Value $entry.Value -ErrorAction Stop
+                                Remove-ItemProperty -Path $backupPath -Name $entry.Name -Force -ErrorAction SilentlyContinue
+                                Log "  RESTORED STARTUP: $($entry.Name) in $runKey" -DryRun:$DryRun
+                            } catch {
+                                $global:FailCount++
+                                Log "  FAILED: Could not restore startup entry $($entry.Name) in $runKey - $($_.Exception.Message)" -DryRun:$DryRun
+                            }
+                        }
+                    }
+                }
+            } else {
+                Log "  SKIP: No archived startup entry found for '$pattern' in $runKey" -DryRun:$DryRun
+            }
+        }
         return
     }
+
     foreach ($runKey in $runKeys) {
         $props = Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue
         if ($props) {
-            $matches = $props.PSObject.Properties | Where-Object { $_.Name -match $pattern -or $_.Value -match $pattern }
+            $matches = $props.PSObject.Properties | Where-Object {
+                $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
+                ($_.Name -match $pattern -or $_.Value -match $pattern)
+            }
             foreach ($entry in $matches) {
                 if ($DryRun) {
-                    Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey" -DryRun:$DryRun
+                    Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey (archive to backup)" -DryRun:$DryRun
                 } else {
                     try {
+                        $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
+                        $backupPath = "$backupBase\$keySub"
+                        if (-not (Test-Path $backupPath)) { New-Item -Path $backupPath -Force -ErrorAction Stop | Out-Null }
+                        Set-ItemProperty -Path $backupPath -Name $entry.Name -Value $entry.Value -ErrorAction Stop
                         Remove-ItemProperty -Path $runKey -Name $entry.Name -Force -ErrorAction Stop
-                        Log "  REMOVED: $($entry.Name) from $runKey" -DryRun:$DryRun
+                        Log "  REMOVED: $($entry.Name) from $runKey (archived for restore)" -DryRun:$DryRun
                     } catch {
+                        $global:FailCount++
                         Log "  FAILED: Could not remove $($entry.Name) from $runKey - $($_.Exception.Message)" -DryRun:$DryRun
                     }
                 }
@@ -305,7 +354,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.1.2: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.1.3: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -530,17 +579,27 @@ if ($ClassicContextMenu) {
             if ($IsDryRun) {
                 Log "  [WOULD RESTORE]: Default Windows 11 context menu (remove classic CLSID)"
             } else {
-                Remove-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction SilentlyContinue
-                Log "  RESTORED: Default Windows 11 context menu"
+                try {
+                    Remove-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction Stop
+                    Log "  RESTORED: Default Windows 11 context menu"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not restore default context menu - $($_.Exception.Message)"
+                }
             }
         }
     } else {
         if ($IsDryRun) {
             Log "  [WOULD SET]: Classic Windows 10 context menu (-ClassicContextMenu enabled)"
         } else {
-            if (-not (Test-Path $classicMenuPath)) { New-Item -Path $classicMenuPath -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $classicMenuPath -Name "(default)" -Value "" -ErrorAction SilentlyContinue
-            Log "  APPLIED: Classic full context menu enabled"
+            try {
+                if (-not (Test-Path $classicMenuPath)) { New-Item -Path $classicMenuPath -Force -ErrorAction Stop | Out-Null }
+                Set-ItemProperty -Path $classicMenuPath -Name "(default)" -Value "" -ErrorAction Stop
+                Log "  APPLIED: Classic full context menu enabled"
+            } catch {
+                $global:FailCount++
+                Log "  FAILED: Could not apply classic context menu - $($_.Exception.Message)"
+            }
         }
     }
 } else {
@@ -548,8 +607,13 @@ if ($ClassicContextMenu) {
         if ($IsDryRun) {
             Log "  [WOULD RESTORE]: Default Windows 11 context menu (remove classic CLSID)"
         } else {
-            Remove-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction SilentlyContinue
-            Log "  RESTORED: Default Windows 11 context menu"
+            try {
+                Remove-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction Stop
+                Log "  RESTORED: Default Windows 11 context menu"
+            } catch {
+                $global:FailCount++
+                Log "  FAILED: Could not restore default context menu - $($_.Exception.Message)"
+            }
         }
     }
 }
@@ -588,6 +652,7 @@ $tasksToToggle = @(
     # 24H2/25H2 Application Experience & Reporting
     "\Microsoft\Windows\Application Experience\MareBackup"
     "\Microsoft\Windows\Application Experience\StartupAppTask"
+    "\Microsoft\Windows\Application Experience\ProgramDataUpdater"
     "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp"
     "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser"
     "\Microsoft\Windows\Application Experience\PcaPatchDbTask"
@@ -616,13 +681,7 @@ foreach ($task in $tasksToToggle) {
 
 # Scan any Recall tasks if present
 Get-ScheduledTask -TaskPath "\Microsoft\Windows\Recall\*" -ErrorAction SilentlyContinue | ForEach-Object {
-    if ($IsUndo) {
-        if ($IsDryRun) { Log "  [WOULD ENABLE]: $($_.TaskName)" }
-        else { Enable-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName -EA 0 | Out-Null; Log "  ENABLED: $($_.TaskName)" }
-    } else {
-        if ($IsDryRun) { Log "  [WOULD DISABLE]: $($_.TaskName)" }
-        else { Disable-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName -EA 0 | Out-Null; Log "  DISABLED: $($_.TaskName)" }
-    }
+    Set-TaskState -path $_.TaskPath -name $_.TaskName
 }
 
 # Office telemetry tasks (8)
@@ -642,21 +701,7 @@ foreach ($t in $officeTasks) {
 
 # NVIDIA auto-update tasks
 Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match "NVIDIA.*SelfUpdate" } | ForEach-Object {
-    if ($IsUndo) {
-        if ($IsDryRun) {
-            Log "  [WOULD ENABLE]: $($_.TaskName)"
-        } else {
-            Enable-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName -EA 0 | Out-Null
-            Log "  ENABLED: $($_.TaskName)"
-        }
-    } else {
-        if ($IsDryRun) {
-            Log "  [WOULD DISABLE]: $($_.TaskName)"
-        } else {
-            Disable-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName -EA 0 | Out-Null
-            Log "  DISABLED: $($_.TaskName)"
-        }
-    }
+    Set-TaskState -path $_.TaskPath -name $_.TaskName
 }
 Log ""
 
@@ -717,15 +762,8 @@ $bloatApps = @(
     # Legacy bloat & stubs
     "Microsoft.ZuneMusic"
     "Microsoft.MixedRealityLink"
-    "Microsoft.ECApp"
     "Microsoft.Adera"
     "Microsoft.Adera-Lite"
-    "Microsoft.Windows.PeopleExperienceHost"
-    "Microsoft.Windows.ParentalControls"
-    "Microsoft.Windows.NarratorQuickStart"
-    "Microsoft.Windows.CloudExperienceHost"
-    "Microsoft.MicrosoftEdge.Stable"
-    "Microsoft.MicrosoftEdgeDevToolsClient"
 )
 
 if ($KeepTodos) {
@@ -752,8 +790,13 @@ if ($IsUndo) {
             if ($IsDryRun) {
                 Log "  [WOULD RE-REGISTER]: $app"
             } else {
-                Add-AppxPackage -RegisterByFamilyName -MainPackage $match.PackageName -AllUsers -ErrorAction SilentlyContinue
-                Log "  RE-REGISTERED: $app"
+                try {
+                    Add-AppxPackage -RegisterByFamilyName -MainPackage $match.PackageName -AllUsers -ErrorAction Stop
+                    Log "  RE-REGISTERED: $app"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not re-register $app - $($_.Exception.Message)"
+                }
             }
         } else {
             Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
@@ -775,6 +818,7 @@ if ($IsUndo) {
                         Log "  DE-PROVISIONED: $($pkg.DisplayName)"
                         $deprovisionedCount++
                     } catch {
+                        $global:FailCount++
                         Log "  FAILED: Could not de-provision $($pkg.DisplayName) - $($_.Exception.Message)"
                     }
                 }
@@ -782,10 +826,22 @@ if ($IsUndo) {
         }
     }
 
-    # 2. Remove installed instances across all existing user accounts
+    # 2. Remove installed instances across all existing user accounts (optimized single-query scan)
+    if ($isAdmin) {
+        $allInstalled = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+    } else {
+        $allInstalled = Get-AppxPackage -ErrorAction SilentlyContinue
+        if ($IsDryRun) {
+            Log "  INFO: Auditing current user packages (provisioned image packages require Administrator)"
+        }
+    }
+
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
-        $installed = Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue
+        $installed = if ($allInstalled) {
+            $allInstalled | Where-Object { $_.Name -match "^$([regex]::Escape($app))" }
+        } else { $null }
+
         if ($installed) {
             foreach ($pkg in $installed) {
                 if ($IsDryRun) {
@@ -797,6 +853,7 @@ if ($IsUndo) {
                         Log "  REMOVED APP: $($pkg.Name)"
                         $removedInstalled++
                     } catch {
+                        $global:FailCount++
                         Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
                     }
                 }
@@ -834,8 +891,7 @@ if ($KeepOneDrive) {
         }
 
         Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            if ($IsDryRun) { Log "  [WOULD ENABLE]: $($_.TaskName)" }
-            else { Enable-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName -EA 0 | Out-Null; Log "  ENABLED: $($_.TaskName)" }
+            Set-TaskState -path $_.TaskPath -name $_.TaskName
         }
         Log "  INFO: To reinstall OneDrive if uninstalled, run: winget install Microsoft.OneDrive"
     } else {
@@ -896,8 +952,7 @@ if ($KeepOneDrive) {
 
         # 5. Disable scheduled update tasks
         Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            if ($IsDryRun) { Log "  [WOULD DISABLE]: $($_.TaskName)" }
-            else { Disable-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName -EA 0 | Out-Null; Log "  DISABLED: $($_.TaskName)" }
+            Set-TaskState -path $_.TaskPath -name $_.TaskName
         }
 
         # 6. Remove Run registry keys
@@ -933,10 +988,10 @@ try {
         }
     } else {
         if ($IsDryRun) {
-            Log "  [WOULD SET]: SubmitSamplesConsent = 0 (Never send samples)"
+            Log "  [WOULD SET]: SubmitSamplesConsent = 2 (Never send samples)"
         } else {
-            Set-MpPreference -SubmitSamplesConsent 0 -ErrorAction Stop
-            Log "  SubmitSamplesConsent = 0 (Disabled telemetry uploads)"
+            Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop
+            Log "  SubmitSamplesConsent = 2 (Disabled telemetry uploads)"
         }
     }
 } catch {
@@ -957,11 +1012,9 @@ $feedbackPath = "HKCU:\Software\Microsoft\Siuf\Rules"
 Set-RegDwordSafe -path $feedbackPath -name "NumberOfSIUFInPeriod" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $feedbackPath -name "PeriodInNanoSeconds" -debloatValue 0 -undoValue 0 -removeOnUndo $true
 
-# Clipboard sync
+# Cross-Device Cloud Clipboard Sync (Local Win+V history is preserved)
 $clipPath = "HKCU:\Software\Microsoft\Clipboard"
 Set-RegDwordSafe -path $clipPath -name "EnableClipboardSyncAcrossDevices" -debloatValue 0 -undoValue 1
-Set-RegDwordSafe -path $clipPath -name "EnableClipboardHistory" -debloatValue 0 -undoValue 1
-Set-RegDwordSafe -path $sysPath -name "AllowClipboardHistory" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $sysPath -name "AllowCrossDeviceClipboard" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Log ""
 
@@ -991,20 +1044,35 @@ $fwRules = @(
     "Connected Devices Platform (UDP-Out)"
 )
 foreach ($rule in $fwRules) {
-    if ($IsUndo) {
-        if ($IsDryRun) {
-            Log "  [WOULD ENABLE FIREWALL]: $rule"
+    $existing = Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
+    if ($existing) {
+        if ($IsUndo) {
+            if ($IsDryRun) {
+                Log "  [WOULD ENABLE FIREWALL]: $rule"
+            } else {
+                try {
+                    Enable-NetFirewallRule -DisplayName $rule -ErrorAction Stop
+                    Log "  ENABLED: $rule"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not enable firewall rule $rule - $($_.Exception.Message)"
+                }
+            }
         } else {
-            Enable-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
-            Log "  ENABLED: $rule"
+            if ($IsDryRun) {
+                Log "  [WOULD BLOCK FIREWALL]: $rule"
+            } else {
+                try {
+                    Disable-NetFirewallRule -DisplayName $rule -ErrorAction Stop
+                    Log "  BLOCKED: $rule"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not block firewall rule $rule - $($_.Exception.Message)"
+                }
+            }
         }
     } else {
-        if ($IsDryRun) {
-            Log "  [WOULD BLOCK FIREWALL]: $rule"
-        } else {
-            Disable-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
-            Log "  BLOCKED: $rule"
-        }
+        Log "  SKIP: Firewall rule '$rule' not found" -DryRun:$DryRun
     }
 }
 Log ""
@@ -1025,6 +1093,9 @@ if ($IsUndo) {
     } else {
         Log "  UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE"
     }
+}
+if ($global:FailCount -gt 0) {
+    Log "  [!] NOTICE: Completed with $global:FailCount warning(s) or skipped operation(s)" -Color Yellow
 }
 Log "============================================"
 Log ""

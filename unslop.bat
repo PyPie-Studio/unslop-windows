@@ -31,7 +31,7 @@ if not "%~1"=="" (
     :: Validate arguments against strict switch whitelist to prevent command injection
     for %%A in (%*) do (
         set "ARG_VALID=0"
-        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -RunDirect) do (
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -RunDirect -FromMenu) do (
             if /i "%%~A"=="%%V" set "ARG_VALID=1"
         )
         if "!ARG_VALID!"=="0" (
@@ -39,6 +39,19 @@ if not "%~1"=="" (
             echo [ERROR] Unrecognized or illegal parameter switch: "%%~A"
             echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart
             exit /b 1
+        )
+    )
+
+    :: Check if invoked from interactive menu
+    set "IS_FROM_MENU=0"
+    set "FORWARD_ARGS="
+    for %%A in (%*) do (
+        if /i "%%~A"=="-FromMenu" (
+            set "IS_FROM_MENU=1"
+        ) else if /i "%%~A"=="-RunDirect" (
+            set "IS_FROM_MENU=1"
+        ) else (
+            set "FORWARD_ARGS=!FORWARD_ARGS! %%~A"
         )
     )
 
@@ -53,14 +66,6 @@ if not "%~1"=="" (
         exit /b !errorlevel!
     )
 
-    if "%~1"=="-RunDirect" (
-        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1"
-        if !errorlevel! equ 100 exit /b 0
-        echo.
-        pause
-        goto :menu
-    )
-
     net session >nul 2>&1
     if !errorlevel! neq 0 (
         echo Requesting Administrator privileges...
@@ -70,6 +75,14 @@ if not "%~1"=="" (
             exit /b 1
         )
         exit /b 0
+    )
+
+    if "!IS_FROM_MENU!"=="1" (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" !FORWARD_ARGS!
+        if !errorlevel! equ 100 exit /b 0
+        echo.
+        pause
+        goto :menu
     )
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" %*
@@ -83,7 +96,7 @@ if not "%~1"=="" (
 :menu
 cls
 echo ============================================================
-echo   unslop-windows (v1.1.2) - PyPie Studio
+echo   unslop-windows (v1.1.3) - PyPie Studio
 echo   Universal Windows 11 23H2 / 24H2 / 25H2 Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -242,9 +255,9 @@ if !errorlevel! neq 0 (
     echo.
     echo Administrator privileges required. Prompting for UAC elevation...
     if defined ARGS (
-        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '!ARGS!' -Verb RunAs"
+        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '-FromMenu !ARGS!' -Verb RunAs"
     ) else (
-        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '-RunDirect' -Verb RunAs"
+        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '-FromMenu' -Verb RunAs"
     )
     if !errorlevel! neq 0 (
         echo.

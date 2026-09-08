@@ -54,9 +54,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -TestResu
 # Rapid gate (steps 1-3 only; executes in < 0.2s):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 
+# Strict fail-closed gate (fails if PSScriptAnalyzer or Pester 5 is missing; auto-enabled in CI):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
+
 # Gate with analyzer bypassed:
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -SkipAnalyzer
 ```
+
+> [!NOTE]
+> In GitHub Actions CI (`$env:GITHUB_ACTIONS -eq 'true'`) or automated CI environments, `-Strict` mode is auto-enabled, ensuring no linting or unit test steps are ever skipped silently.
 
 ---
 

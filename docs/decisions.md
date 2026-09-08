@@ -231,5 +231,29 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Added dedicated Pester and AST unit tests in `tests/unslop.Tests.ps1` validating Authenticode enforcement, reparse point detection, and legacy driver policy cleanup.
 - **Consequences:** Closes critical privilege escalation and command injection attack surfaces, ensures offline integrity, restores hardware vulnerability patch delivery, and retains 100% of privacy-preserving telemetry killswitches.
 
+---
+
+## ADR-019: Engine Integrity, Startup Symmetry, Defender Realignment, and Audit Fidelity (2026-09-08)
+- **Status:** Accepted
+- **Context:** A comprehensive critical systems analysis and code audit of `unslop-windows` identified 4 critical bugs and 3 invariant violations:
+  1. *Inverted Defender sample submission value (BUG-01):* `Set-MpPreference -SubmitSamplesConsent 0` configured Defender to `AlwaysPrompt` rather than `NeverSend` (`2`).
+  2. *Destructive startup entry removal and broken symmetry (BUG-02):* `Remove-StartupEntry` permanently deleted registry properties and falsely logged that they could be re-enabled in Task Manager.
+  3. *NonRemovable system packages in bloatware list (BUG-03):* `$bloatApps` included packages marked `NonRemovable: True` (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`), guaranteeing deployment error `0x80073CFA` on elevated runs and risking damage to Windows account management.
+  4. *Non-elevated dry-run audit blindspot & performance bottleneck (BUG-04 & PERF-01):* `Get-AppxPackage -AllUsers` and `Get-AppxProvisionedPackage -Online` failed with Access Denied under standard user mode, falsely reporting 0 targeted apps, while sequential per-app querying caused 15–20s execution delays.
+  5. *Silent placebo logging (INV-01):* Recall/NVIDIA tasks, firewall rules, and context menu tweaks suppressed errors with `-EA 0` while logging success, and `$global:FailCount` was unmonitored.
+  6. *Vanishing elevated launcher window (INV-02):* Double-clicking `unslop.bat` and selecting presets (Gamer, Productivity, Toggles, Undo, Custom) closed the window immediately upon completion without pausing.
+  7. *Local clipboard history suppression (INV-03):* Local `Win + V` clipboard history was disabled despite documentation claiming only cloud sync was blocked.
+- **Decision:**
+  - Corrected Defender `SubmitSamplesConsent` debloat value to `2` (`NeverSend`) and undo value to `1` (`SendSafeSamples`).
+  - Re-architected `Remove-StartupEntry` to archive target entries under `HKCU:\Software\unslop-windows\StartupBackup` on debloat, cleanly restoring them to `Run` on `-Undo`.
+  - Stripped non-removable and core system packages (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`, `MicrosoftEdge.Stable`, `MicrosoftEdgeDevToolsClient`) from `$bloatApps`.
+  - Optimized AppX enumeration to query `$allInstalled` once, with graceful fallback to current-user packages in non-elevated `-DryRun` and clear informative logging.
+  - Initialized `$global:FailCount` tracking across all helper catch blocks, scheduled task loops, firewall rules, and context menu mutations, alerting users in the completion summary banner.
+  - Upgraded `unslop.bat` with `-FromMenu` parameter forwarding, guaranteeing anti-screen-amnesia pauses before returning to the menu across all presets.
+  - Decoupled local clipboard history (`Win + V`) by removing `EnableClipboardHistory = 0` and `AllowClipboardHistory = 0`, keeping only cross-device cloud sync disabled.
+  - Ensured `PSScriptAnalyzer` module availability in both `lint.yml` and `release.yml` CI workflows.
+  - Expanded `tests/unslop.Tests.ps1` with unit and AST tests for startup symmetry, Defender values, and bloatware whitelist invariants.
+- **Consequences:** Resolves all critical functional bugs and placebo logging flaws, achieves true 100% restoration symmetry for startup apps, improves AppX execution speed from ~18s to <0.5s, provides accurate non-elevated audit reports, and guarantees interactive window persistence.
+
 
 

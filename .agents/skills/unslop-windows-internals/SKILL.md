@@ -84,9 +84,13 @@ Debloating and telemetry neutralization must never impair critical platform secu
 
 ### 2. Intentional Privacy Hardening vs. Telemetry Trade-Offs
 The following policies represent intentional privacy guardrails that must **not** be treated as bugs or removed:
-- **Defender Cloud Sample Submission (`SubmitSamplesConsent = 0`) [REG-01]:**
+- **Defender Cloud Sample Submission (`SubmitSamplesConsent = 2`) [REG-01]:**
+  - **Enum Values:** `0 = AlwaysPrompt` (causes interactive popups on every upload), `1 = SendSafeSamples` (Windows default), `2 = NeverSend` (debloat target), `3 = SendAll`.
   - Keeps Microsoft Defender real-time protection, antivirus definitions, and MAPS heuristic cloud lookups fully functional.
   - Suppresses automatic exfiltration of suspicious user documents and executables to Microsoft cloud infrastructure, preventing confidential data leaks.
+- **AppX NonRemovable Packages:**
+  - Packages marked `NonRemovable = True` (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`, `MicrosoftEdge.*`) throw `0x80073CFA` when de-provisioned and must never be in `$bloatApps`.
+  - `Get-AppxPackage -AllUsers` returns `$null` without admin privileges; non-elevated audits must scope to current user.
 - **Windows Error Reporting / Watson Dumps (`Disabled = 1`, `DontSendAdditionalData = 1`) [REG-03]:**
   - Crash dumps and heap memory snapshots frequently capture confidential user data, passwords, cryptographic keys, and internal tokens residing in RAM at the moment of failure.
   - Disabling Watson uploads protects memory privacy without impacting system stability.

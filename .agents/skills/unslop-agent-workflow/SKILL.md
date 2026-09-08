@@ -32,6 +32,10 @@ This skill governs the Antigravity AI agent workflow, engineering philosophy, an
 - Run `scripts/Test-MasterGate.ps1` before staging commits.
 - Confirm files exist and have correct line endings on disk.
 
+### 4. Zero-Advisory Invariants & Anti-Green-Light-Illusion Discipline
+- **No Advisory-Only Rules:** Never document an architectural policy or invariant in markdown without adding a corresponding automated test in `tests/unslop.Tests.ps1` or `Test-MasterGate.ps1`. If a rule lacks an automated assertion, it will inevitably be rationalized away or missed due to context attenuation.
+- **Reject the Green-Light Illusion:** Never assume that a passing test gate means all edge cases are addressed. Happy-path mocks often mask underlying flaws. Always test negative paths (exception handling, `$global:FailCount` increments, non-elevated boundaries, and CLI injection bounds).
+
 ---
 
 ## 🏷 Release & Versioning Workflow

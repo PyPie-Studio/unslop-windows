@@ -20,13 +20,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Ensure Pester 5 Module Available
+      - name: Ensure Required Modules Available (Pester 5 & PSScriptAnalyzer)
         shell: pwsh
         run: |
           $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
           if (-not $pester) {
             Write-Host "Installing Pester 5 for pwsh..."
             Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          }
+          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+            Write-Host "Installing PSScriptAnalyzer for pwsh..."
+            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
       - name: Run 7-Pillar Master Quality Gate
@@ -116,13 +120,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Ensure Pester 5 Module Available
+      - name: Ensure Required Modules Available (Pester 5 & PSScriptAnalyzer)
         shell: powershell
         run: |
           $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
           if (-not $pester) {
             Write-Host "Installing Pester 5 for powershell..."
             Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          }
+          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+            Write-Host "Installing PSScriptAnalyzer for powershell..."
+            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
       - name: Run 7-Pillar Master Quality Gate

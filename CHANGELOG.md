@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.3] - 2026-09-09
+
+### Fixed
+- **Defender Telemetry Invariant Alignment (`unslop.ps1`)**: Corrected Defender `SubmitSamplesConsent` from `0` (`AlwaysPrompt`, which caused interactive prompts) to `2` (`NeverSend`) in debloat mode, and `1` (`SendSafeSamples`) in undo mode (BUG-01).
+- **Startup Entry Preservation & Restoration Symmetry (`unslop.ps1`)**: Upgraded `Remove-StartupEntry` to archive target startup entries under `HKCU:\Software\unslop-windows\StartupBackup` during debloat, enabling 100% lossless symmetrical restoration under `-Undo` (BUG-02).
+- **AppX Package List Depuration (`unslop.ps1`)**: Removed system-protected and non-removable packages (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`, `MicrosoftEdge.Stable`, `MicrosoftEdgeDevToolsClient`) from `$bloatApps`, preventing `0x80073CFA` de-provisioning errors (BUG-03).
+- **Non-Elevated AppX Audit Fidelity & Sequential Enumeration Bottleneck (`unslop.ps1`)**: Switched AppX evaluation to a single-pass `Get-AppxPackage` query with in-memory regex matching, reducing scan latency from ~14s to <1s while providing clear current-user audit guidance when running non-elevated `-DryRun` (BUG-04, PERF-01).
+- **Silent Placebo Logging Elimination (`unslop.ps1`)**: Initialized `$global:FailCount` tracking across all modules; replaced raw unhandled commands in scheduled tasks (NVIDIA, Recall, OneDrive) with defensive `Set-TaskState` invocations, and added error trapping with informative failure reporting to firewall and context menu operations (INV-01).
+- **Vanishing Elevated Menu Windows (`unslop.bat`)**: Added `-FromMenu` parameter forwarding to the launcher switch whitelist, ensuring that elevated executions initiated from the interactive console menu pause with anti-screen-amnesia before returning to the menu (INV-02).
+- **Local Clipboard History Decoupling (`unslop.ps1`)**: Preserved local `Win + V` multi-item clipboard history by eliminating `EnableClipboardHistory = 0` and `AllowClipboardHistory = 0`, while maintaining strict neutralization of cross-device cloud clipboard synchronization (INV-03).
+- **CI PSScriptAnalyzer Pre-Installation (`lint.yml`, `release.yml`)**: Added automated `PSScriptAnalyzer` module installation to CI workflows to guarantee static analysis coverage is never skipped in automated pipelines.
+
+### Added
+- **Universal Mutating AST Audit (`tests/unslop.Tests.ps1`)**: Expanded the AST parity suite to scan all registry, scheduled task, and service mutations, strictly forbidding naked mutating cmdlets outside approved bidirectional helper functions.
+- **Negative Error-Trap Unit Tests (`tests/unslop.Tests.ps1`)**: Added test cases injecting exceptions into helper mocks, verifying error trapping, `$global:FailCount` increments, and truthful `FAILED:` logging.
+- **System Package Blacklist Assertions (`tests/unslop.Tests.ps1`)**: Added automated checks ensuring `$bloatApps` never contains immutable system packages or essential Windows Store runtimes.
+- **Fail-Closed CI Tooling (`scripts/Test-MasterGate.ps1`)**: Introduced `-Strict` mode (auto-engaged in GitHub Actions) that fails with exit code 1 if `PSScriptAnalyzer` or `Pester 5` is missing.
+- **The Zero-Advisory Invariant Mandate (`AGENTS.md`)**: Codified Section 10 requiring that no architectural policy or safety rule exist purely as markdown prose without automated test enforcement.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-019 covering engine integrity, startup symmetry, Defender realignment, and audit fidelity.
+
+---
+
 ## [1.1.2] - 2026-09-08
 
 ### Security
@@ -199,7 +221,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.9...v1.1.0

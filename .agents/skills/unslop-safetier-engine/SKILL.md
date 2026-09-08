@@ -41,28 +41,16 @@ This skill governs the core execution engine of **unslop-windows** ([`unslop.ps1
 - When changing a default Windows value, the `-Undo` routine must set it back to the exact default value.
 - Never add a one-way modification to `unslop.ps1`.
 
-### 2. Defensive Registry & Mutation Architecture (No Placebo Logging)
+### 2. Defensive Mutation Architecture & Universal AST Symmetry
+- **Universal Helper Routing:** State mutations (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) must NEVER be called as bare/naked cmdlets in procedural modules. They must route through approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`). The AST gate will reject any bare mutating calls.
+- **Startup Entry Archival:** Target startup entries removed from `HKCU:\Software\Microsoft\Windows\CurrentVersion\Run` must be archived under `HKCU:\Software\unslop-windows\StartupBackup` during debloat, enabling 100% lossless restoration on `-Undo`.
+- **Zero Placebo Logging & Honest Failure Tracking:** Never suppress mutation failures with `-ErrorAction SilentlyContinue` while logging success text. All state mutations must execute with `-ErrorAction Stop` inside `try/catch`. On error, emit explicit `FAILED:` logs and increment `$global:FailCount++` so disk and terminal logs truthfully report errors.
 - Pre-create missing keys defensively:
   ```powershell
   if (-not (Test-Path $regPath)) {
       New-Item -Path $regPath -Force -ErrorAction SilentlyContinue | Out-Null
   }
   ```
-- Gate every mutating action behind `if (-not $DryRun)` and wrap inside `try/catch` with `-ErrorAction Stop`:
-  ```powershell
-  if (-not $DryRun) {
-      try {
-          Set-ItemProperty -Path $path -Name $name -Value $value -Type DWord -Force -ErrorAction Stop
-          Log "  [+] SET: $path\$name = $value" "Green"
-      } catch {
-          Log "  [-] FAILED: $path\$name - $($_.Exception.Message)" "Red"
-          $global:FailCount++
-      }
-  } else {
-      Log "  [DRY-RUN] Would set: $path\$name = $value" "Cyan"
-  }
-  ```
-- **Zero Placebo Logging:** Never use blanket `-ErrorAction SilentlyContinue` on mutations followed by unconditional success logs (`[+] SET:`). If an operation fails due to permissions, locks, or missing keys, log `[-] FAILED:` and increment `$global:FailCount`.
 
 ### 3. Safe AppX Removal & Condensation
 - Distinguish between current user packages and all-users provisioned packages:

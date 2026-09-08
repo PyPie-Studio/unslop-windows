@@ -36,6 +36,7 @@ param(
     [switch]$Fast,
     [switch]$SkipAnalyzer,
     [switch]$SkipUnitTests,
+    [switch]$Strict,
     [string]$TestResultsPath,
     [string]$CodeCoveragePath
 )
@@ -45,6 +46,10 @@ $root = Split-Path -Parent $PSScriptRoot
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $fail = $false
 $totalSteps = if ($Fast) { 3 } else { 7 }
+
+if ($env:GITHUB_ACTIONS -eq 'true' -or $env:CI -eq 'true') {
+    $Strict = $true
+}
 
 # Resolve matching PowerShell executable for subprocess execution based on current host runtime
 $psExec = if ($PSVersionTable.PSEdition -eq 'Desktop' -or -not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
@@ -122,8 +127,13 @@ if (-not $SkipAnalyzer) {
             Write-Host "  WARNING: ScriptAnalyzer execution encountered an error: $_" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "  SKIPPED: PSScriptAnalyzer module is not installed locally." -ForegroundColor DarkGray
-        Write-Host "  (To install: Install-Module PSScriptAnalyzer -Scope CurrentUser)" -ForegroundColor DarkGray
+        if ($Strict) {
+            $fail = $true
+            Write-Host "  FAILED: PSScriptAnalyzer is required in CI / Strict mode but is not installed." -ForegroundColor Red
+        } else {
+            Write-Host "  SKIPPED: PSScriptAnalyzer module is not installed locally." -ForegroundColor DarkGray
+            Write-Host "  (To install: Install-Module PSScriptAnalyzer -Scope CurrentUser)" -ForegroundColor DarkGray
+        }
     }
 } else {
     Write-Host "  SKIPPED: -SkipAnalyzer parameter supplied." -ForegroundColor DarkGray
@@ -255,8 +265,13 @@ if (-not $Fast) {
                     Write-Host "  FAILED: Error invoking Pester test suite: $_" -ForegroundColor Red
                 } finally { Pop-Location }
             } else {
-                Write-Host "  SKIPPED: Pester 5.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
-                Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 5.0.0)" -ForegroundColor DarkGray
+                if ($Strict) {
+                    $fail = $true
+                    Write-Host "  FAILED: Pester 5.x+ is required in CI / Strict mode but is not installed (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor Red
+                } else {
+                    Write-Host "  SKIPPED: Pester 5.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
+                    Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 5.0.0)" -ForegroundColor DarkGray
+                }
             }
         } else {
             Write-Host "  SKIPPED: tests/unslop.Tests.ps1 not found." -ForegroundColor DarkGray
