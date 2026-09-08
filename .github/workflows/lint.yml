@@ -48,9 +48,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
+            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
             $summaryLines = @(
-              "## 🧪 Pester Unit Test Results: PowerShell 7 Core ($statusEmoji)",
+              "## :test_tube: Pester Unit Test Results: PowerShell 7 Core ($statusEmoji)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -74,7 +74,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### 📊 Code Coverage: unslop.ps1",
+                "### :bar_chart: Code Coverage: unslop.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -144,9 +144,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { '❌ FAILED' } else { '✅ PASSED' }
+            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
             $summaryLines = @(
-              "## 🧪 Pester Unit Test Results: Windows PowerShell 5.1 ($statusEmoji)",
+              "## :test_tube: Pester Unit Test Results: Windows PowerShell 5.1 ($statusEmoji)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -170,7 +170,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### 📊 Code Coverage: unslop.ps1",
+                "### :bar_chart: Code Coverage: unslop.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",

@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.10] - 2026-09-08
+
+### Fixed
+- **CI/CD Summary Steps (`lint.yml`, `release.yml`)**: Replaced raw UTF-8 emoji literals in workflow summary blocks with standard ASCII GitHub Markdown shortcodes (`:test_tube:`, `:bar_chart:`, `:shield:`, `:white_check_mark:`, `:x:`). Resolves Windows PowerShell 5.1 ANSI codepage script parsing corruption (`Unexpected token 'Š' in expression or statement`) on GitHub Actions runners.
+
+---
+
 ## [1.0.9] - 2026-09-08
 
 ### Fixed
