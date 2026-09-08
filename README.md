@@ -12,7 +12,7 @@
 [![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.0.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.1.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
@@ -26,22 +26,21 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.1.0) - PyPie Studio
-  Universal Windows 11 24H2 / 25H2 Debloat & Privacy Hardener
+  unslop-windows (v1.1.1) - PyPie Studio
+  Universal Windows 11 23H2 / 24H2 / 25H2 Debloat & Privacy
 ============================================================
 
-  [1] Full Debloat (Purge OneDrive, telemetry & bloatware)
-  [2] Dry-Run Audit (Inspect changes safely, no modifications)
-  [3] Debloat, but Keep Microsoft To-Do
-  [4] Debloat, but Keep Xbox & Gaming Services
-  [5] Debloat, but Keep OneDrive
-  [6] Debloat + Enable Classic Context Menu
-  [7] Custom Flags (Enter custom parameter combinations)
-  [8] Full Restore / Undo (Revert all changes back to defaults)
+  [1] Full Debloat (Purge OneDrive, telemetry, and bloatware)
+  [2] Gamer Preset (Debloat, but Keep Xbox & Gaming Services)
+  [3] Productivity Preset (Debloat, but Keep OneDrive & To-Do)
+  [4] Interactive Toggles (Configure custom feature combinations)
+  [5] Safe Dry-Run Audit (Inspect changes safely, zero modifications)
+  [6] Full Restore / Undo (Revert all tweaks back to defaults)
+  [7] Custom CLI Flags (Manually enter parameter switches)
   [0] Exit
 
 ============================================================
-Select an option [0-8]: 
+Select an option [0-7]: 
 ```
 
 ---
@@ -57,10 +56,10 @@ Select an option [0-8]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.1.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.1.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
-4. In the console menu, type `1` (or your preferred option) and press Enter.
+4. In the console menu, type `1` for Full Debloat, `2` for Gamer Preset, `3` for Productivity Preset, or `4` to interactively toggle features on/off.
 5. When the script completes, ensure your work is saved and press **Enter** (or `Y`) to initiate the 30-second restart countdown (press **`A`** to abort or **`R`** to reboot immediately; if allowed to finish, the window closes automatically).
 
 ### Method 2: PowerShell One-Liner (Terminal Users)

@@ -1,7 +1,61 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.0)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.1)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
+
+<#
+.SYNOPSIS
+    unslop-windows: Safe-Tier Universal Windows 11 Debloater & Privacy Hardener.
+
+.DESCRIPTION
+    Safely debloats Windows 11 23H2, 24H2, and 25H2+ by removing telemetry,
+    disabling unnecessary services and background tasks, de-provisioning sponsored
+    bloatware, neutralizing Windows Recall and Copilot, and securing ConsentStore permissions.
+    All operations adhere to the Safe-Tier invariant (zero WinSxS / DISM corruption)
+    and support 100% symmetrical restoration via -Undo.
+
+.PARAMETER Undo
+    Reverts all debloat modifications, restores services, re-enables scheduled tasks,
+    and resets registry policies back to clean Windows defaults. Alias: -Restore.
+
+.PARAMETER DryRun
+    Executes in read-only inspection mode under standard user privileges.
+    Audits all proposed actions without modifying system state. Supports -WhatIf.
+
+.PARAMETER KeepXbox
+    Preserves Xbox App, Gaming Services, and related gaming components.
+
+.PARAMETER KeepOneDrive
+    Preserves Microsoft OneDrive process, auto-start, syncing, and File Explorer sidebar integration.
+
+.PARAMETER KeepTodos
+    Preserves the Microsoft To-Do UWP application.
+
+.PARAMETER ClassicContextMenu
+    Restores the classic Windows 10 style full context menu in File Explorer.
+
+.PARAMETER NoRestart
+    Suppresses the post-execution restart prompt and countdown.
+
+.PARAMETER ForceRestart
+    Automatically initiates an immediate system restart upon completion without prompting.
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\unslop.ps1
+    Runs full debloat with default settings and prompts for restart upon completion.
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
+    Safely audits proposed debloat changes in non-elevated user mode.
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -KeepXbox -KeepOneDrive
+    Debloats system while preserving Xbox gaming services and OneDrive.
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
+    Fully restores system policies and services back to clean Windows defaults.
+#>
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -22,12 +76,32 @@ $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.Contai
 
 $log = @()
 
-function Log($msg, [switch]$DryRun = $IsDryRun) {
+function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
     $ts = Get-Date -Format "HH:mm:ss"
     $prefix = if ($DryRun) { "[DRY-RUN] " } else { "" }
     $entry = "[$ts] $prefix$msg"
-    Write-Host $entry
     $script:log += $entry
+
+    if ($Color) {
+        Write-Host $entry -ForegroundColor $Color
+        return
+    }
+
+    if ($msg -match '^(===|---|=== unslop)') {
+        Write-Host $entry -ForegroundColor Cyan
+    } elseif ($msg -match '(\[WOULD|DRY-RUN)') {
+        Write-Host $entry -ForegroundColor Yellow
+    } elseif ($msg -match '(DISABLED:|REMOVED:|RESTORED:|ENABLED:|BLOCKED:|STOPPED:|UNINSTALLED:|SET:)') {
+        Write-Host $entry -ForegroundColor Green
+    } elseif ($msg -match 'SKIP:') {
+        Write-Host $entry -ForegroundColor DarkGray
+    } elseif ($msg -match '(FAIL:|FAILED:|ERROR:)') {
+        Write-Host $entry -ForegroundColor Red
+    } elseif ($msg -match '(KEEP:|INFO:|NOTE:)') {
+        Write-Host $entry -ForegroundColor Magenta
+    } else {
+        Write-Host $entry
+    }
 }
 
 function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
@@ -37,17 +111,25 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
             if ($DryRun) {
                 Log "  [WOULD RESTORE]: $name -> $undoStartupType and Start-Service" -DryRun:$DryRun
             } else {
-                Set-Service -Name $name -StartupType $undoStartupType -ErrorAction SilentlyContinue
-                Start-Service -Name $name -ErrorAction SilentlyContinue
-                Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
+                try {
+                    Set-Service -Name $name -StartupType $undoStartupType -ErrorAction Stop
+                    Start-Service -Name $name -ErrorAction Stop
+                    Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
+                } catch {
+                    Log "  FAILED: Could not restore service $name - $($_.Exception.Message)" -DryRun:$DryRun
+                }
             }
         } else {
             if ($DryRun) {
                 Log "  [WOULD DISABLE]: $name ($desc)" -DryRun:$DryRun
             } else {
-                if ($s.Status -eq "Running") { Stop-Service -Name $name -Force -ErrorAction SilentlyContinue }
-                Set-Service -Name $name -StartupType Disabled -ErrorAction SilentlyContinue
-                Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
+                try {
+                    if ($s.Status -eq "Running") { Stop-Service -Name $name -Force -ErrorAction Stop }
+                    Set-Service -Name $name -StartupType Disabled -ErrorAction Stop
+                    Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
+                } catch {
+                    Log "  FAILED: Could not disable service $name - $($_.Exception.Message)" -DryRun:$DryRun
+                }
             }
         }
     } else {
@@ -62,15 +144,23 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
             if ($DryRun) {
                 Log "  [WOULD ENABLE]: $name ($path)" -DryRun:$DryRun
             } else {
-                Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue | Out-Null
-                Log "  ENABLED: $name" -DryRun:$DryRun
+                try {
+                    Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
+                    Log "  ENABLED: $name" -DryRun:$DryRun
+                } catch {
+                    Log "  FAILED: Could not enable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                }
             }
         } else {
             if ($DryRun) {
                 Log "  [WOULD DISABLE]: $name ($path)" -DryRun:$DryRun
             } else {
-                Disable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue | Out-Null
-                Log "  DISABLED: $name" -DryRun:$DryRun
+                try {
+                    Disable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
+                    Log "  DISABLED: $name" -DryRun:$DryRun
+                } catch {
+                    Log "  FAILED: Could not disable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                }
             }
         }
     } else {
@@ -85,26 +175,38 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                 if ($DryRun) {
                     Log "  [WOULD REMOVE REG]: $path\$name" -DryRun:$DryRun
                 } else {
-                    Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction SilentlyContinue
-                    Log "  REMOVED: $name from $path" -DryRun:$DryRun
+                    try {
+                        Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction Stop
+                        Log "  REMOVED: $name from $path" -DryRun:$DryRun
+                    } catch {
+                        Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
                 }
             }
         } else {
             if ($DryRun) {
                 Log "  [WOULD SET REG]: $path\$name = $undoValue" -DryRun:$DryRun
             } else {
-                if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction SilentlyContinue | Out-Null }
-                Set-ItemProperty -Path $path -Name $name -Value $undoValue -Type DWord -ErrorAction SilentlyContinue
-                Log "  RESTORED: $name = $undoValue in $path" -DryRun:$DryRun
+                try {
+                    if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction Stop | Out-Null }
+                    Set-ItemProperty -Path $path -Name $name -Value $undoValue -Type DWord -ErrorAction Stop
+                    Log "  RESTORED: $name = $undoValue in $path" -DryRun:$DryRun
+                } catch {
+                    Log "  FAILED: Could not restore $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
+                }
             }
         }
     } else {
         if ($DryRun) {
             Log "  [WOULD SET REG]: $path\$name = $debloatValue" -DryRun:$DryRun
         } else {
-            if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $path -Name $name -Value $debloatValue -Type DWord -ErrorAction SilentlyContinue
-            Log "  SET: $name = $debloatValue" -DryRun:$DryRun
+            try {
+                if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction Stop | Out-Null }
+                Set-ItemProperty -Path $path -Name $name -Value $debloatValue -Type DWord -ErrorAction Stop
+                Log "  SET: $name = $debloatValue" -DryRun:$DryRun
+            } catch {
+                Log "  FAILED: Could not set $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
+            }
         }
     }
 }
@@ -115,17 +217,25 @@ function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", 
         if ($DryRun) {
             Log "  [WOULD SET CONSENT]: $capability -> $undoValue" -DryRun:$DryRun
         } else {
-            if (-not (Test-Path $locPath)) { New-Item -Path $locPath -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $locPath -Name "Value" -Value $undoValue -EA 0
-            Log "  RESTORED CONSENT: $capability = $undoValue" -DryRun:$DryRun
+            try {
+                if (-not (Test-Path $locPath)) { New-Item -Path $locPath -Force -ErrorAction Stop | Out-Null }
+                Set-ItemProperty -Path $locPath -Name "Value" -Value $undoValue -ErrorAction Stop
+                Log "  RESTORED CONSENT: $capability = $undoValue" -DryRun:$DryRun
+            } catch {
+                Log "  FAILED: Could not restore consent $capability - $($_.Exception.Message)" -DryRun:$DryRun
+            }
         }
     } else {
         if ($DryRun) {
             Log "  [WOULD SET CONSENT]: $capability -> $debloatValue ($desc)" -DryRun:$DryRun
         } else {
-            if (-not (Test-Path $locPath)) { New-Item -Path $locPath -Force -ErrorAction SilentlyContinue | Out-Null }
-            Set-ItemProperty -Path $locPath -Name "Value" -Value $debloatValue -EA 0
-            Log "  BLOCKED CONSENT: $capability = $debloatValue ($desc)" -DryRun:$DryRun
+            try {
+                if (-not (Test-Path $locPath)) { New-Item -Path $locPath -Force -ErrorAction Stop | Out-Null }
+                Set-ItemProperty -Path $locPath -Name "Value" -Value $debloatValue -ErrorAction Stop
+                Log "  BLOCKED CONSENT: $capability = $debloatValue ($desc)" -DryRun:$DryRun
+            } catch {
+                Log "  FAILED: Could not block consent $capability - $($_.Exception.Message)" -DryRun:$DryRun
+            }
         }
     }
 }
@@ -143,8 +253,12 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
                 if ($DryRun) {
                     Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey" -DryRun:$DryRun
                 } else {
-                    Remove-ItemProperty -Path $runKey -Name $entry.Name -Force -ErrorAction SilentlyContinue
-                    Log "  REMOVED: $($entry.Name) from $runKey" -DryRun:$DryRun
+                    try {
+                        Remove-ItemProperty -Path $runKey -Name $entry.Name -Force -ErrorAction Stop
+                        Log "  REMOVED: $($entry.Name) from $runKey" -DryRun:$DryRun
+                    } catch {
+                        Log "  FAILED: Could not remove $($entry.Name) from $runKey - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
                 }
             }
         }
@@ -186,10 +300,12 @@ if (-not $isAdmin) {
     }
 }
 
-$modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "UNIVERSAL 25H2 DEBLOAT & PRIVACY HARDEN" }
+$build = [System.Environment]::OSVersion.Version.Build
+$osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } else { "Universal" }
+$modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.1.0: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.1.1: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -639,15 +755,20 @@ if ($IsUndo) {
                     Log "  [WOULD DE-PROVISION]: $($pkg.DisplayName)"
                     $deprovisionedCount++
                 } else {
-                    Remove-AppxProvisionedPackage -Online -PackageName $pkg.PackageName -ErrorAction SilentlyContinue | Out-Null
-                    Log "  DE-PROVISIONED: $($pkg.DisplayName)"
-                    $deprovisionedCount++
+                    try {
+                        Remove-AppxProvisionedPackage -Online -PackageName $pkg.PackageName -ErrorAction Stop | Out-Null
+                        Log "  DE-PROVISIONED: $($pkg.DisplayName)"
+                        $deprovisionedCount++
+                    } catch {
+                        Log "  FAILED: Could not de-provision $($pkg.DisplayName) - $($_.Exception.Message)"
+                    }
                 }
             }
         }
     }
 
     # 2. Remove installed instances across all existing user accounts
+    $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
         $installed = Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue
         if ($installed) {
@@ -656,14 +777,21 @@ if ($IsUndo) {
                     Log "  [WOULD REMOVE APP]: $($pkg.Name)"
                     $removedInstalled++
                 } else {
-                    Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction SilentlyContinue
-                    Log "  REMOVED APP: $($pkg.Name)"
-                    $removedInstalled++
+                    try {
+                        Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
+                        Log "  REMOVED APP: $($pkg.Name)"
+                        $removedInstalled++
+                    } catch {
+                        Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
+                    }
                 }
             }
         } else {
-            Log "  SKIP: $app (not installed)"
+            $skippedAppsCount++
         }
+    }
+    if ($skippedAppsCount -gt 0) {
+        Log "  SKIP: $skippedAppsCount bloatware packages not installed on system"
     }
     Log "  Total installed instances targeted: $removedInstalled"
     Log "  Total provisioned packages de-staged: $deprovisionedCount"
@@ -859,33 +987,58 @@ Log ""
 # ============================================================
 Log "============================================"
 if ($IsUndo) {
-    Log "  RESTORE / UNDO COMPLETE"
+    if ($IsDryRun) {
+        Log "  RESTORE / UNDO COMPLETE (DRY-RUN PREVIEW)"
+    } else {
+        Log "  RESTORE / UNDO COMPLETE"
+    }
 } else {
-    Log "  UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE"
+    if ($IsDryRun) {
+        Log "  UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE (DRY-RUN PREVIEW)"
+    } else {
+        Log "  UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE"
+    }
 }
 Log "============================================"
 Log ""
 
+if ($IsDryRun) {
+    Log "MODE:                  DRY-RUN AUDIT ONLY (No modifications written to disk or registry)"
+}
+
 if ($IsUndo) {
-    Log "Services restored:     SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
+    $act = if ($IsDryRun) { "Would restore" } else { "Restored" }
+    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
     Log "Recall & Copilot:      Windows Recall, Screenray, and Copilot policies reverted"
-    Log "OneDrive restored:     Sync policy cleared, Explorer sidebar re-pinned"
+    Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR, Wi-Fi Sense, and GPU Driver exclusion policies reverted"
     Log "Explorer & Taskbar:    Widgets, Chat, and File Extensions restored to Windows default"
-    Log "Telemetry tasks:       25H2 OneSettings, PowerGridForecast, MareBackup, CEIP, Office, NVIDIA enabled"
+    Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, CEIP, Office, NVIDIA enabled"
     Log "Firewall rules:        8 rules re-enabled"
 } else {
-    Log "Services disabled:     SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
+    $act = if ($IsDryRun) { "Would disable" } else { "Disabled" }
+    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
     Log "Recall & Copilot:      Windows Recall (DisableAIDataAnalysis=1) & Copilot policies enforced"
-    Log "OneDrive purged:       Process killed, uninstalled, unpinned from sidebar, sync blocked"
+    if ($KeepOneDrive) {
+        Log "OneDrive:              Preserved (-KeepOneDrive enabled)"
+    } else {
+        $odAct = if ($IsDryRun) { "Would purge" } else { "Purged" }
+        Log "OneDrive:              $odAct (Process killed, uninstalled, unpinned from sidebar, sync blocked)"
+    }
+    if ($KeepXbox) {
+        Log "Xbox & Gaming:         Preserved (-KeepXbox enabled)"
+    }
+    if ($KeepTodos) {
+        Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
+    }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
-    Log "ConsentStore:          12 capabilities blocked (Location, Diagnostics, Contacts, Tasks, 25H2 AI text/models)"
+    Log "ConsentStore:          12 capabilities blocked (Location, Diagnostics, Contacts, Tasks, AI models)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, GPU driver overwrite prevented"
     Log "Explorer & Taskbar:    File extensions visible, Taskbar Widgets & Chat removed"
     if ($ClassicContextMenu) { Log "Context Menu:          Classic Windows 10 style full context menu applied" }
-    Log "Telemetry tasks:       25H2 OneSettings, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
+    Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
     Log "UWP bloatware:         Dual-stage purged ($removedInstalled active, $deprovisionedCount staged packages)"
     Log "Firewall:              8 outbound telemetry/remote rules blocked"
     Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
@@ -899,7 +1052,11 @@ Log "  AMDNoiseSuppression (Discord mic)"
 Log "  Edge rendering engine (startup behavior only suppressed; WebView2 preserved)"
 Log "  VS Code, Firefox, Docker, Ollama auto-updates"
 Log ""
-Log "REBOOT REQUIRED for all changes to take full effect."
+if ($IsDryRun) {
+    Log "DRY-RUN AUDIT COMPLETE: No restart needed (inspection only, zero changes applied)."
+} else {
+    Log "REBOOT REQUIRED for all changes to take full effect."
+}
 Log ""
 
 # ============================================================
@@ -917,7 +1074,8 @@ if (-not (Test-Path $logDir)) {
 
 $prefixName = if ($IsUndo) { "restore" } else { "unslop" }
 $modeTag = if ($IsDryRun) { "_dryrun" } else { "" }
-$logPath = Join-Path $logDir "$($prefixName)_25h2$($modeTag)_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$fileOsTag = $osTag.ToLowerInvariant()
+$logPath = Join-Path $logDir "$($prefixName)_$($fileOsTag)$($modeTag)_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 $log | Out-File -FilePath $logPath -Encoding UTF8
 Log "Log saved to: $logPath"
@@ -939,27 +1097,35 @@ if (-not $IsDryRun) {
         exit 0
     }
 
-    $shouldInitiate = $ForceRestart
-    if (-not $ForceRestart) {
+    if ($ForceRestart) {
         Write-Host ""
-        Write-Host "============================================================" -ForegroundColor Yellow
-        Write-Host "  [!] ACTION REQUIRED: SYSTEM RESTART NEEDED" -ForegroundColor Yellow
-        Write-Host "============================================================" -ForegroundColor Yellow
-        Write-Host "  A restart is required to finalize debloating and apply all changes." -ForegroundColor Yellow
-        Write-Host "  PLEASE SAVE ALL OPEN WORK BEFORE RESTARTING!" -ForegroundColor Yellow
-        Write-Host "============================================================" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  [!] ACTION: RESTARTING COMPUTER IMMEDIATELY (-ForceRestart)" -ForegroundColor Red
+        Write-Host "============================================================" -ForegroundColor Red
         Write-Host ""
+        & shutdown.exe /r /t 0 /d p:2:4 /c "unslop-windows: Immediate restart initiated by -ForceRestart." 2>$null
+        exit 100
+    }
 
-        try {
-            $response = Read-Host "Restart computer now? [Y/n] (Press Enter for Yes)"
-            if ([string]::IsNullOrWhiteSpace($response) -or $response.Trim() -match '^(y|yes)$') {
-                $shouldInitiate = $true
-            }
-        } catch {
-            $shouldInitiate = $false
-            Write-Host "Non-interactive session detected. Skipping automatic restart." -ForegroundColor Cyan
-            Write-Host "Please restart your computer manually to apply changes." -ForegroundColor Cyan
+    $shouldInitiate = $false
+    Write-Host ""
+    Write-Host "============================================================" -ForegroundColor Yellow
+    Write-Host "  [!] ACTION REQUIRED: SYSTEM RESTART NEEDED" -ForegroundColor Yellow
+    Write-Host "============================================================" -ForegroundColor Yellow
+    Write-Host "  A restart is required to finalize debloating and apply all changes." -ForegroundColor Yellow
+    Write-Host "  PLEASE SAVE ALL OPEN WORK BEFORE RESTARTING!" -ForegroundColor Yellow
+    Write-Host "============================================================" -ForegroundColor Yellow
+    Write-Host ""
+
+    try {
+        $response = Read-Host "Initiate 30-second restart countdown? [Y/n] (Press Enter to start countdown, 'n' to postpone)"
+        if ([string]::IsNullOrWhiteSpace($response) -or $response.Trim() -match '^(y|yes)$') {
+            $shouldInitiate = $true
         }
+    } catch {
+        $shouldInitiate = $false
+        Write-Host "Non-interactive session detected. Skipping automatic restart." -ForegroundColor Cyan
+        Write-Host "Please restart your computer manually to apply changes." -ForegroundColor Cyan
     }
 
     if ($shouldInitiate) {

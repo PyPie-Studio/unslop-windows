@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2026-09-08
+
+### Added
+- **PowerShell Comment-Based Help (`unslop.ps1`)**: Integrated comprehensive `<# .SYNOPSIS ... #>` documentation enabling native `Get-Help .\unslop.ps1 -Full` inspection across all parameters, switches, and usage examples.
+- **Pure-Batch Interactive Feature Toggles Sub-Menu (`unslop.bat`)**: Added Option `[4] Interactive Toggles` allowing users to configure custom combinations (Xbox, OneDrive, To-Do, Classic Menu, Dry-Run) with visual `[ ON  ]` / `[ OFF ]` toggle states without typing CLI parameters.
+- **Curated Launcher Presets (`unslop.bat`)**: Replaced rigid single-app options with curated profiles: `[2] Gamer Preset (-KeepXbox)` and `[3] Productivity Preset (-KeepOneDrive -KeepTodos)`.
+- **Dynamic Build Detection (`unslop.ps1`)**: Dynamically resolves the Windows 11 build tag (`23H2`, `24H2`, `25H2`) for runtime console banners and log file names instead of hardcoding `25h2`.
+
+### Changed
+- **Semantic Console Logging (`unslop.ps1`)**: Modernized terminal output with contextual `-ForegroundColor` formatting (Cyan headers, Green mutations, Yellow dry-run predictions, DarkGray skips, Red errors, Magenta preserved items) while maintaining clean timestamped disk logs.
+- **AppX Package Skip Condensation (`unslop.ps1`)**: Collapsed 40+ repetitive `SKIP: [App] (not installed)` lines into a single aggregate summary line (`SKIP: X bloatware packages not installed on system`), drastically reducing terminal noise.
+- **Dynamic & Honest Summary Reporting (`unslop.ps1`)**: Replaced static summary text with dynamic reporting that honors `-KeepOneDrive`, `-KeepXbox`, and `-KeepTodos` parameter flags, and explicitly marks `-DryRun` as preview-only with zero modifications written.
+- **Streamlined Reboot Ergonomics (`unslop.ps1`)**: Clarified the interactive restart prompt text (`Initiate 30-second restart countdown? [Y/n]`) and configured `-ForceRestart` to execute immediate reboot without the 30-second delay.
+- **Anti-Screen-Amnesia Protection (`unslop.bat`)**: Added an interactive post-audit prompt (`Press [Enter] to return to the menu, or [Q] to exit...`) preventing `cls` from wiping dry-run inspection output.
+
+### Fixed
+- **Placebo Logging Elimination (`unslop.ps1`)**: Replaced silent error suppression across helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) with `try/catch` error trapping that logs honest `FAILED:` feedback when operations encounter locked hives or permissions errors.
+- **UAC Elevation Cancellation Handling (`unslop.bat`)**: Added explicit `%errorlevel%` checks after `Start-Process ... -Verb RunAs` to prevent the terminal window from silently vanishing when a user cancels or denies the UAC elevation prompt.
+
+---
+
 ## [1.1.0] - 2026-09-08
 
 ### Fixed
@@ -161,7 +182,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.9...v1.1.0
 [1.0.9]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.7...v1.0.8
