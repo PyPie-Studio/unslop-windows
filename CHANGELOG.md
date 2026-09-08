@@ -11,26 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.12] - 2026-09-08
+## [1.1.0] - 2026-09-08
 
 ### Fixed
 - **Windows PowerShell 5.1 Dual-Runtime Compatibility**:
   - Replaced Unicode em dashes (`—`, byte `0x94`) with standard hyphens in `unslop.ps1` service descriptions, preventing premature string-quote termination under Windows-1252 ANSI codepages.
   - Simplified mock service status in `tests/unslop.Tests.ps1` from .NET `[System.ServiceProcess.ServiceControllerStatus]` to string literals (`"Running"` / `"Stopped"`), preventing type resolution exceptions in environments where `System.ServiceProcess` is not preloaded.
-
----
-
-## [1.0.11] - 2026-09-08
-
-### Fixed
 - **Local Master Gate (`Test-MasterGate.ps1`)**: Refactored Pester 5 subprocess invocation to execute via parameterized script block instead of an escaped command string. Eliminates Windows PowerShell 5.1 command-line expression parsing error (`At line:1 char:890`) during automated CI execution.
-
----
-
-## [1.0.10] - 2026-09-08
-
-### Fixed
-- **CI/CD Summary Steps (`lint.yml`, `release.yml`)**: Replaced raw UTF-8 emoji literals in workflow summary blocks with standard ASCII GitHub Markdown shortcodes (`:test_tube:`, `:bar_chart:`, `:shield:`, `:white_check_mark:`, `:x:`). Resolves Windows PowerShell 5.1 ANSI codepage script parsing corruption (`Unexpected token 'Š' in expression or statement`) on GitHub Actions runners.
+- **CI/CD Summary Steps (`lint.yml`, `release.yml`)**: Replaced raw UTF-8 emoji literals in workflow summary blocks with standard ASCII GitHub Markdown shortcodes (`:test_tube:`, `:bar_chart:`, `:shield:`, `:white_check_mark:`, `:x:`). Resolves Windows PowerShell 5.1 ANSI codepage script parsing corruption on GitHub Actions runners.
 
 ---
 
@@ -173,7 +161,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.9...v1.1.0
+[1.0.9]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.8...v1.0.9
+[1.0.8]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.7...v1.0.8
+[1.0.7]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.6...v1.0.7
+[1.0.6]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.2...v1.0.3
