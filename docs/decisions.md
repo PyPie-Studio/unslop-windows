@@ -189,3 +189,26 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Integrated `actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0` to generate verifiable cryptographic SLSA build provenance attestations for both `unslop-windows-*.zip` and `SHA256SUMS.txt`.
 - **Consequences:** Eliminates supply chain risks from mutated action tags and provides users with cryptographic proof of release build provenance.
 
+---
+
+## ADR-017: Terminal UI/UX Modernization, Interactive Batch Toggles & Honest Error Feedback (2026-09-08)
+- **Status:** Accepted
+- **Context:** A comprehensive critical analysis of `unslop-windows` UI/UX identified 8 architectural deficiencies:
+  1. *Placebo logging:* Silent error suppression (`-ErrorAction SilentlyContinue`) logged success even when mutating registry or service calls failed.
+  2. *Deceptive summary:* Hardcoded static text claimed items were disabled or purged during read-only `-DryRun` audits, and falsely reported "OneDrive purged" even when `-KeepOneDrive` was passed.
+  3. *Signal-to-noise saturation:* Monochrome terminal logging and 40+ repetitive `SKIP:` lines for uninstalled AppX packages flooded the screen.
+  4. *Rigid launcher menu:* Mutually exclusive radio-button options in `unslop.bat` forced users to type manual CLI flags when combining common features (e.g. keeping both Xbox and OneDrive).
+  5. *Vanishing window on UAC dismissal:* The parent batch launcher exited immediately without checking if UAC elevation succeeded or was cancelled by the user.
+  6. *Screen amnesia:* Returning from a `-DryRun` audit immediately invoked `cls`, wiping the inspection results off the screen.
+  7. *Reboot double-prompt friction:* Users answering "Yes" to restart were immediately presented with another 30-second countdown delay asking them to press `R` to restart now.
+  8. *Missing help documentation:* `unslop.ps1` lacked PowerShell comment-based help (`<# .SYNOPSIS ... #>`).
+- **Decision:**
+  - Upgraded engine helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) with `try/catch` error blocks (`-ErrorAction Stop`) that log honest `FAILED:` feedback without breaking AST symmetry or Pester mocks.
+  - Dynamically evaluated completion summary screens based on runtime parameters (`-KeepOneDrive`, `-KeepXbox`, `-KeepTodos`, `-ClassicContextMenu`) and `-DryRun` state while strictly preserving gate assertion tokens (`"UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE"` and `"RESTORE / UNDO COMPLETE"`).
+  - Modernized console output with semantic ANSI color formatting (Cyan headers, Green mutations, Yellow dry-run predictions, DarkGray skips, Red failures, Magenta notices) and collapsed 40+ uninstalled package lines into a single aggregate skip count.
+  - Overhauled `unslop.bat` with curated presets (`Gamer Preset`, `Productivity Preset`), an interactive toggle sub-menu (`:toggles`) managing `[ ON  ]` / `[ OFF ]` states in pure Batch, UAC dismissal error handling, and an anti-screen-amnesia prompt.
+  - Streamlined reboot handling: `-ForceRestart` immediately reboots (`shutdown /r /t 0`), and the interactive prompt clearly announces the 30-second countdown.
+  - Added comprehensive PowerShell `<# .SYNOPSIS ... #>` comment-based help to `unslop.ps1`.
+- **Consequences:** Eliminates cognitive friction for non-technical users, provides truthful audit reporting for sysadmins, prevents silent configuration failures, and preserves 100% backward compatibility and safe-tier invariants.
+
+
