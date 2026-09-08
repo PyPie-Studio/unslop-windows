@@ -36,17 +36,21 @@ This skill governs the Antigravity AI agent workflow, engineering philosophy, an
 
 ## 🏷 Release & Versioning Workflow
 
+### Mandatory Versioning Rules
+1. **Batch / Session Consolidation**: Group all code changes made during a task or conversation into **a single combined release**. Never create separate releases for intermediate bug fixes or individual commits while still troubleshooting.
+2. **Decimal Roll-Over Invariant**: When a version reaches `x.y.9` (e.g., `1.0.9`), the next release rolls over to `x.(y+1).0` (e.g., `1.1.0`), and continues incrementally `1.1.1` through `1.1.9`. Never produce two-digit patch numbers (`.10`, `.11`, `.12`).
+
 ### What Triggers a Version Bump & Tagged Release
-Version bumps, changelog entries, annotated tags, and GitHub Releases are reserved for **verified code changes** — meaning changes to files that contain executable logic:
+Version bumps, changelog entries, annotated tags, and GitHub Releases are reserved strictly for **verified code changes** at the conclusion of a work session:
 - `unslop.ps1`, `unslop.bat` (core engine and launcher)
 - `scripts/*.ps1` (quality gate, benchmarking, git hooks)
 - `tests/*.ps1` (Pester unit tests)
 - `.github/workflows/*.yml` (CI/CD pipelines)
 - `PSScriptAnalyzerSettings.psd1` (static analysis rules)
 
-**Release sequence** (only for code changes confirmed clean by `Test-MasterGate.ps1`):
+**Release sequence** (executed ONCE at the end of the session):
 1. **Version Alignment:** Bump version in `unslop.ps1` (header + log banner), `unslop.bat` (menu banner), and `README.md` (download links + ASCII menu).
-2. **Changelog:** Add a new version block with current date in `CHANGELOG.md` following Keep a Changelog standard.
+2. **Changelog:** Add a consolidated version block with current date in `CHANGELOG.md` following Keep a Changelog standard.
 3. **Master Gate:** Run `pwsh -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1`.
 4. **Commit, Tag & Push:** `git add .` → `git commit -m "feat/fix(...): <summary>"` → `git tag -a vX.Y.Z -m "..."` → `git push origin main --tags`.
 
@@ -58,4 +62,4 @@ Documentation-only changes get committed and pushed directly — **no version bu
 - `.github/ISSUE_TEMPLATE/*`, `.github/PULL_REQUEST_TEMPLATE.md`
 - `.gitignore`, `.gitattributes`, `.editorconfig`
 
-Commit these with a `docs(...)` or `chore(...)` conventional commit and push to `main` without tagging.
+Commit these with a `docs(...)` or `chore(...)` conventional commit and push directly to `main` without tagging.

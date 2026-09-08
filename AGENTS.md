@@ -54,15 +54,11 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - All PowerShell scripts must pass AST syntax parsing (`[System.Management.Automation.Language.Parser]::ParseFile`) with 0 errors.
 - All code must pass the Local Master Quality Gate (`scripts/Test-MasterGate.ps1`) before being pushed to `main`.
 
-### 7. Continuous Verified Release & Commit Invariant (Always Up-To-Date)
-- Version bumps, annotated tags, and GitHub Releases are reserved for **verified code changes** to executable files (`*.ps1`, `*.bat`, `*.yml`, `*.psd1`). After a code change passes the Local Master Quality Gate, the agent MUST immediately:
-  1. Bump the SemVer version across `unslop.ps1`, `unslop.bat`, and `README.md`.
-  2. Document the release in `CHANGELOG.md` following Keep a Changelog standards.
-  3. Stage and commit all changes with a conventional commit message (`feat(...)`, `fix(...)`).
-  4. Create an annotated Git tag (`vX.Y.Z`).
-  5. Push both `main` and the tag to `origin` (`git push origin main --tags`), triggering the automated release pipeline in GitHub Actions.
-  6. NEVER leave verified code uncommitted or unreleased on local disk.
-- **Documentation-only changes** (`*.md`, `.gitignore`, `.editorconfig`, issue/PR templates) do NOT trigger a version bump or tag. Commit with `docs(...)` or `chore(...)` and push directly.
+### 7. Release & Versioning Policy
+- **Batch / Session Consolidation**: If making code changes or debugging issues during a conversation or task, **group all changes together**. Do NOT cut individual releases or version bumps for each micro-commit or intermediate bugfix. Only bump the version, tag, and trigger a release **once at the end of the session** when all changes are verified and complete.
+- **Decimal Roll-over Rule**: Versions follow a strict single-digit patch roll-over. When a version reaches `x.y.9` (e.g. `1.0.9`), the next bump rolls to `x.(y+1).0` (e.g. `1.1.0`), and continues incrementally `1.1.1` up to `1.1.9`. Never produce two-digit patch versions like `.10`, `.11`, or `.12`.
+- **Code Changes Only**: Version bumps and tags are strictly reserved for verified changes to executable code (`*.ps1`, `*.bat`, `*.yml`, `*.psd1`).
+- **Documentation-Only Changes**: Edits to documentation (`*.md`, `.gitignore`, `.editorconfig`, issue templates) do NOT trigger a version bump, changelog update, tag, or release. Commit with `docs(...)` or `chore(...)` and push directly.
 
 ---
 
