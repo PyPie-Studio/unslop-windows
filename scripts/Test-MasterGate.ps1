@@ -190,7 +190,7 @@ if (-not $Fast) {
             if ($pesterModule -and $pesterModule.Version.Major -ge 5) {
                 Push-Location $root
                 try {
-                    $xmlConfig = ""
+                    $targetXml = ""
                     if ($TestResultsPath) {
                         $targetXml = if ([System.IO.Path]::IsPathRooted($TestResultsPath)) {
                             $TestResultsPath
@@ -201,9 +201,9 @@ if (-not $Fast) {
                         if ($xmlDir -and -not (Test-Path $xmlDir)) {
                             New-Item -ItemType Directory -Path $xmlDir -Force | Out-Null
                         }
-                        $xmlConfig = "`$cfg.TestResult.Enabled = `$true; `$cfg.TestResult.OutputFormat = 'NUnitXml'; `$cfg.TestResult.OutputPath = '$targetXml';"
                     }
-                    $covConfig = ""
+                    $targetCovXml = ""
+                    $covFile = ""
                     if ($CodeCoveragePath) {
                         $targetCovXml = if ([System.IO.Path]::IsPathRooted($CodeCoveragePath)) {
                             $CodeCoveragePath
@@ -215,10 +215,33 @@ if (-not $Fast) {
                             New-Item -ItemType Directory -Path $covDir -Force | Out-Null
                         }
                         $covFile = Join-Path $root "unslop.ps1"
-                        $covConfig = "`$cfg.CodeCoverage.Enabled = `$true; `$cfg.CodeCoverage.Path = '$covFile'; `$cfg.CodeCoverage.OutputFormat = 'JaCoCo'; `$cfg.CodeCoverage.OutputPath = '$targetCovXml';"
                     }
-                    $pesterCmd = "Import-Module Pester -MinimumVersion 5.0.0; `$cfg = New-PesterConfiguration; `$cfg.Run.Path = '$testScript'; `$cfg.Output.Verbosity = 'Detailed'; $xmlConfig $covConfig `$cfg.Run.PassThru = `$true; `$res = Invoke-Pester -Configuration `$cfg; if (`$res.CodeCoverage) { Write-Host `"  Code Coverage: `$([math]::Round(`$res.CodeCoverage.CoveragePercent, 1))% (`$(`$res.CodeCoverage.CommandsExecutedCount)/`$(`$res.CodeCoverage.CommandsAnalyzedCount) commands)`" -ForegroundColor Cyan }; if (`$res.FailedCount -gt 0) { exit 1 }"
-                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterCmd 2>&1
+                    $pesterBlock = {
+                        param($testPath, $xmlOut, $covOut, $covTarget)
+                        Import-Module Pester -MinimumVersion 5.0.0
+                        $cfg = New-PesterConfiguration
+                        $cfg.Run.Path = $testPath
+                        $cfg.Output.Verbosity = 'Detailed'
+                        $cfg.Run.PassThru = $true
+                        if ($xmlOut) {
+                            $cfg.TestResult.Enabled = $true
+                            $cfg.TestResult.OutputFormat = 'NUnitXml'
+                            $cfg.TestResult.OutputPath = $xmlOut
+                        }
+                        if ($covOut -and $covTarget) {
+                            $cfg.CodeCoverage.Enabled = $true
+                            $cfg.CodeCoverage.Path = $covTarget
+                            $cfg.CodeCoverage.OutputFormat = 'JaCoCo'
+                            $cfg.CodeCoverage.OutputPath = $covOut
+                        }
+                        $res = Invoke-Pester -Configuration $cfg
+                        if ($res.CodeCoverage) {
+                            $pct = [math]::Round($res.CodeCoverage.CoveragePercent, 1)
+                            Write-Host "  Code Coverage: $pct% ($($res.CodeCoverage.CommandsExecutedCount)/$($res.CodeCoverage.CommandsAnalyzedCount) commands)" -ForegroundColor Cyan
+                        }
+                        if ($res.FailedCount -gt 0) { exit 1 }
+                    }
+                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testScript, $targetXml, $targetCovXml, $covFile 2>&1
                     $pesterExit = $LASTEXITCODE
                     if ($pesterExit -ne 0) {
                         $fail = $true

@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.11] - 2026-09-08
+
+### Fixed
+- **Local Master Gate (`Test-MasterGate.ps1`)**: Refactored Pester 5 subprocess invocation to execute via parameterized script block instead of an escaped command string. Eliminates Windows PowerShell 5.1 command-line expression parsing error (`At line:1 char:890`) during automated CI execution.
+
+---
+
 ## [1.0.10] - 2026-09-08
 
 ### Fixed
