@@ -8,7 +8,7 @@ To maintain stability across Windows 11 updates, all contributions must adhere t
 
 ## Non-Negotiable Core Rules
 
-Every Pull Request must meet these five requirements:
+Every Pull Request must meet these seven requirements:
 
 ### 1. The Safe-Tier Mandate
 * **Never touch WinSxS or DISM servicing components.**
@@ -39,6 +39,13 @@ The following components must remain functional and un-targeted:
 * **Signal-to-Noise Ratio:** Aggregate repetitive non-events (such as apps not installed on the system) into a single summary line instead of cluttering the console.
 * **Terminal Usability:** Batch and CLI routines must not clear the screen before the user has reviewed audit or diagnostic output. Batch launchers must handle UAC dismissal gracefully without abruptly closing the console.
 * **Preserve CRLF Line Endings:** All batch scripts (`*.bat`) must strictly maintain CRLF (`\r\n`) line endings.
+
+### 7. Security & Privilege Boundary Standards
+* **No User-Space Execution Without Validation:** Never spawn executables located in user-writable paths (`$env:LOCALAPPDATA`, `$env:USERPROFILE`, `$env:TEMP`) from elevated scripts unless cryptographically validated via `Get-AuthenticodeSignature` (verifying `Status -eq 'Valid'` and authorized publisher).
+* **Batch Parameter Whitelisting:** Batch launchers must never pass unfiltered CLI parameters (`%*`) to dynamic execution strings or elevated commands. All switches must be validated against a strict allowlist.
+* **Strictly Offline-First:** Pull requests introducing dynamic script fetching (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) will be rejected. The debloater must execute completely offline.
+* **Preserve Driver Security Updates:** Do not disable Windows Update driver/firmware patches (`ExcludeWUDriversInQualityUpdate`). Hardware CVE updates must flow freely.
+* **Symlink / Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks/junctions before writing files.
 
 ---
 

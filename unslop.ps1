@@ -1,4 +1,4 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.1)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.2)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -305,7 +305,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.1.1: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.1.2: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -488,12 +488,27 @@ Set-RegDwordSafe -path $findPath -name "AllowFindMyDevice" -debloatValue 0 -undo
 Log ""
 
 # ============================================================
-# 8. WINDOWS UPDATE GPU DRIVER PROTECTION
+# 8. WINDOWS UPDATE DRIVER & FIRMWARE INTEGRITY
 # ============================================================
-Log "--- 8. Windows Update Driver Protection ---"
-# Stops Windows Update from replacing clean NVIDIA/AMD display drivers with generic DCH drivers
+Log "--- 8. Windows Update Driver & Firmware Integrity ---"
+# Windows Update driver & firmware updates are preserved to ensure hardware CVEs and patches install cleanly.
+# Proactively clear any legacy ExcludeWUDriversInQualityUpdate policy from older unslop versions:
 $wuPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-Set-RegDwordSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+if (Test-Path $wuPolicy) {
+    $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
+    if ($wuProp) {
+        if ($IsDryRun) {
+            Log "  [WOULD RESTORE]: Driver updates (remove legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+        } else {
+            Remove-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Force -ErrorAction SilentlyContinue
+            Log "  RESTORED: Driver updates enabled (cleared legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+        }
+    } else {
+        Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
+    }
+} else {
+    Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
+}
 Log ""
 
 # ============================================================
@@ -835,12 +850,24 @@ if ($KeepOneDrive) {
             }
         }
 
-        # 2. Run uninstaller if present
+        # 2. Run uninstaller if present (prefer protected system directories first)
         $oneDriveUninstaller = @(
-            "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDriveSetup.exe",
             "$env:SYSTEMROOT\SysWOW64\OneDriveSetup.exe",
             "$env:SYSTEMROOT\System32\OneDriveSetup.exe"
         ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+        if (-not $oneDriveUninstaller) {
+            $userSetup = "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDriveSetup.exe"
+            if (Test-Path $userSetup) {
+                # Enforce cryptographic Authenticode verification before executing user-writable binary as admin
+                $sig = Get-AuthenticodeSignature -FilePath $userSetup -ErrorAction SilentlyContinue
+                if ($sig -and $sig.Status -eq "Valid" -and $sig.SignerCertificate.Subject -match "CN=Microsoft Corporation") {
+                    $oneDriveUninstaller = $userSetup
+                } else {
+                    Log "  [SECURITY WARNING]: Skipping unverified OneDriveSetup.exe in AppData (signature invalid or untrusted)"
+                }
+            }
+        }
 
         if ($oneDriveUninstaller) {
             if ($IsDryRun) {
@@ -1013,7 +1040,7 @@ if ($IsUndo) {
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
-    Log "Security & Network:    LLMNR, Wi-Fi Sense, and GPU Driver exclusion policies reverted"
+    Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
     Log "Explorer & Taskbar:    Widgets, Chat, and File Extensions restored to Windows default"
     Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, CEIP, Office, NVIDIA enabled"
     Log "Firewall rules:        8 rules re-enabled"
@@ -1035,7 +1062,7 @@ if ($IsUndo) {
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
     Log "ConsentStore:          12 capabilities blocked (Location, Diagnostics, Contacts, Tasks, AI models)"
-    Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, GPU driver overwrite prevented"
+    Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, Taskbar Widgets & Chat removed"
     if ($ClassicContextMenu) { Log "Context Menu:          Classic Windows 10 style full context menu applied" }
     Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
@@ -1065,11 +1092,20 @@ Log ""
 $logDir = if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
     Join-Path $PSScriptRoot "logs"
 } else {
-    "$env:TEMP\unslop_logs"
+    Join-Path $env:LOCALAPPDATA "unslop-windows\logs"
 }
 
 if (-not (Test-Path $logDir)) {
     New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+} else {
+    # Guard against symlink / reparse point hijacking in shared or user paths
+    $dirItem = Get-Item -Path $logDir -ErrorAction SilentlyContinue
+    if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        # Reparse point detected: divert to an isolated unique directory
+        $uniqueFolder = "logs_" + [System.IO.Path]::GetRandomFileName()
+        $logDir = Join-Path $env:LOCALAPPDATA "unslop-windows\$uniqueFolder"
+        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+    }
 }
 
 $prefixName = if ($IsUndo) { "restore" } else { "unslop" }

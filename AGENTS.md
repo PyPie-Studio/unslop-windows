@@ -69,6 +69,14 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
   - UAC elevation calls (`Start-Process ... -Verb RunAs`) must check `%errorlevel%` to prevent silent terminal window termination when UAC is dismissed or cancelled by the user.
   - Audit mode (`unslop.bat [3] Dry Run`) must pause before clearing the console or returning to the main menu ("anti-screen-amnesia").
 
+### 9. Security & Privilege Boundary Invariants
+- **User-Space Elevated Binary Execution (VULN-01 / LPE Defense)**: Elevated scripts must NEVER blindly invoke executables located in user-writable paths (`$env:LOCALAPPDATA`, `$env:USERPROFILE`, `$env:TEMP`). Prioritize machine-wide system directories (`C:\Program Files`, `C:\Windows\System32`). If a user-profile executable must be invoked (e.g. legacy user-scoped OneDrive uninstaller), verify its cryptographic integrity via `Get-AuthenticodeSignature` (`Status -eq 'Valid'`, publisher matching authorized vendor like `*Microsoft Corporation*`) before spawning.
+- **Batch CLI Argument Whitelisting (VULN-02 / Injection Defense)**: In batch elevation wrappers and launchers (`unslop.bat`), NEVER pass raw CLI arguments (`%*`, `!ARGS!`) directly into dynamic shell strings or PowerShell `-Command "Start-Process ... -ArgumentList '%*'"` without strict token whitelist validation. Unfiltered arguments allow command chaining and batch injection. Loop through `%*` and whitelist only known safe switches.
+- **Fail-Closed Offline Architecture (VULN-03 / Zero Script Fetching)**: `unslop-windows` is strictly offline-first. Scripts and batch launchers must NEVER attempt ad-hoc network downloads (`Invoke-RestMethod`, `Invoke-WebRequest`, `curl`) to pull missing code or dependencies. If companion files are missing, fail closed immediately with an informative error.
+- **Hardware Security & Driver Patch Inviolability (REG-02)**: Debloating and telemetry reduction must never break hardware CVE mitigation or firmware updates. Never set `ExcludeWUDriversInQualityUpdate = 1` as part of general debloating. Any legacy policy setting must be actively cleaned up to preserve driver and microcode CVE patches delivered via Windows Update.
+- **Reparse Point / Junction Guard (OPSEC-01)**: When initializing logging, backup, or output directories in user or temporary profiles, always inspect `[System.IO.FileAttributes]::ReparsePoint`. Refuse or remove reparse points/junctions before writing files to prevent redirection attacks targeting arbitrary system paths.
+- **Intentional Privacy Hardening vs Bloat Invariants (REG-01, REG-03, REG-04)**: Hardening features that disable Cloud Sample Submission (`SubmitSamplesConsent = 0`), disable Windows Error Reporting telemetry dumps (`Disabled = 1`, `DontSendAdditionalData = 1`), or block MDM/diagnostic telemetry egress via outbound Windows Firewall rules are intentional safe-tier debloat/privacy invariants and must NOT be removed or weakened.
+
 
 ---
 

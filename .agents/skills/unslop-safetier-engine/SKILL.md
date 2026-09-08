@@ -100,3 +100,62 @@ This skill governs the core execution engine of **unslop-windows** ([`unslop.ps1
 - **UAC Dismissal Error Trapping**: Always inspect `%errorlevel%` after `Start-Process ... -Verb RunAs`. If non-zero (elevation cancelled or denied), warn the user and return to the menu instead of abruptly closing the terminal.
 - **Anti-Screen-Amnesia**: Never clear the screen immediately after an audit run (`:run_dry`); prompt the user to review the output first.
 
+---
+
+## 🛡 Security & Privilege Boundary Engineering Standards
+
+### 1. User-Space Binary Invocation Defense (VULN-01)
+Elevated processes must never execute untrusted executables from user-writable directories (`$env:LOCALAPPDATA`, `$env:USERPROFILE`, `$env:TEMP`) without cryptographic validation:
+- **Search Order Priority**: Prioritize machine-wide, Administrator-writable directories (`$env:ProgramFiles`, `$env:ProgramFiles(x86)`, `$env:SystemRoot\System32`) first.
+- **Authenticode Cryptographic Validation**: If an executable is found in user-writable space (such as legacy user-installed OneDrive uninstaller), verify its digital signature before calling `Start-Process`:
+  ```powershell
+  $sig = Get-AuthenticodeSignature -FilePath $exePath
+  if ($sig.Status -eq "Valid" -and $sig.SignerCertificate.Subject -like "*CN=Microsoft Corporation*") {
+      Start-Process -FilePath $exePath -ArgumentList "/uninstall" -Wait -NoNewWindow
+  } else {
+      Log "  [-] BLOCKED: $exePath signature invalid ($($sig.Status)). Skipping uninstaller execution." "Red"
+  }
+  ```
+
+### 2. Batch CLI Argument Token Whitelisting (VULN-02)
+Never interpolate raw `%*` or `!ARGS!` directly into elevated execution strings (`Start-Process ... -ArgumentList "%*"`), as metacharacters (`&`, `|`, `"`, `;`) allow arbitrary command chaining. Instead, parse arguments iteratively through a strict token whitelist:
+```cmd
+set "SAFE_ARGS="
+for %%A in (%*) do (
+    set "VALID_ARG=0"
+    if /i "%%~A"=="-DryRun" set "VALID_ARG=1"
+    if /i "%%~A"=="-Undo" set "VALID_ARG=1"
+    if /i "%%~A"=="-KeepXbox" set "VALID_ARG=1"
+    if /i "%%~A"=="-KeepOneDrive" set "VALID_ARG=1"
+    if /i "%%~A"=="-KeepTodos" set "VALID_ARG=1"
+    if /i "%%~A"=="-ClassicContextMenu" set "VALID_ARG=1"
+    if "!VALID_ARG!"=="1" (
+        set "SAFE_ARGS=!SAFE_ARGS! %%~A"
+    ) else (
+        echo [!] WARNING: Ignored untrusted argument '%%~A'
+    )
+)
+```
+
+### 3. Fail-Closed Offline Architecture (VULN-03)
+The debloater must operate in strictly isolated, air-gapped, or offline environments. Never implement automatic fallback downloads (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) in scripts or batch launchers. If required companion scripts (e.g. `unslop.ps1`) are missing:
+```cmd
+if not exist "%~dp0unslop.ps1" (
+    echo [!] ERROR: unslop.ps1 not found in directory: %~dp0
+    echo [*] Please verify all files are extracted together before running.
+    exit /b 1
+)
+```
+
+### 4. Reparse Point & Junction Path Guard (OPSEC-01)
+When initializing logging or scratch directories in user-writable paths (`$env:TEMP`, `.\logs`), check for reparse points (symlinks/junctions) to prevent junction redirection attacks targeting arbitrary system locations:
+```powershell
+if (Test-Path $logDir) {
+    $dirItem = Get-Item $logDir -Force -ErrorAction SilentlyContinue
+    if ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+        Remove-Item -Path $logDir -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+    }
+}
+```
+

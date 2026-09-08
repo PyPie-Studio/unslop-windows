@@ -399,3 +399,35 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
         $fwCmds | Should -Contain 'Enable-NetFirewallRule' -Because "Firewall restoration must restore original firewall state on -Undo"
     }
 }
+
+Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Security', 'Unit' {
+    It 'Enforces Authenticode signature verification on user-space executables' {
+        $setupCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Get-AuthenticodeSignature'
+        }, $true)
+
+        $setupCalls.Count | Should -BeGreaterThan 0 -Because "Script must enforce Authenticode signature verification on user-space executables"
+    }
+
+    It 'Log path resolution protects against reparse point / symlink redirection' {
+        $reparseChecks = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.MemberExpressionAst] -and
+            $node.Member.Extent.Text -eq 'ReparsePoint'
+        }, $true)
+
+        $reparseChecks.Count | Should -BeGreaterThan 0 -Because "Log initialization must inspect directory attributes for ReparsePoint to prevent symlink attacks"
+    }
+
+    It 'Windows Update driver updates are preserved and legacy ExcludeWUDrivers policy is cleaned up' {
+        $wuBlocks = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
+            $node.Value -eq 'ExcludeWUDriversInQualityUpdate'
+        }, $true)
+
+        $wuBlocks.Count | Should -BeGreaterThan 0 -Because "Script must inspect for legacy ExcludeWUDriversInQualityUpdate to clear it"
+    }
+}

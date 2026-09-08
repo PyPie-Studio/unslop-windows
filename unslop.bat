@@ -5,18 +5,22 @@ title unslop-windows Launcher
 :: Change directory to script directory
 cd /d "%~dp0"
 
-:: Ensure unslop.ps1 exists locally; auto-download from GitHub if standalone
+:: Ensure unslop.ps1 exists locally (fail-closed, zero unauthenticated downloads)
 if not exist "%~dp0unslop.ps1" (
-    echo [unslop] unslop.ps1 not found locally.
-    echo [unslop] Downloading latest unslop.ps1 from PyPie-Studio/unslop-windows...
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.ps1' -OutFile '%~dp0unslop.ps1'"
-    if not exist "%~dp0unslop.ps1" (
-        echo [ERROR] Failed to download unslop.ps1. Check your internet connection.
-        pause
-        exit /b 1
-    )
-    echo [unslop] Download complete.
     echo.
+    echo ============================================================
+    echo   [ERROR] MISSING REQUIRED SCRIPT: unslop.ps1
+    echo ============================================================
+    echo   unslop.ps1 was not found in the script directory:
+    echo   %~dp0
+    echo.
+    echo   For your security, unslop-windows will not download code
+    echo   dynamically from the internet. Please extract the complete
+    echo   release package before running unslop.bat.
+    echo ============================================================
+    echo.
+    pause
+    exit /b 1
 )
 
 :: ------------------------------------------------------------
@@ -24,8 +28,27 @@ if not exist "%~dp0unslop.ps1" (
 :: If arguments are passed via command-line, bypass menu
 :: ------------------------------------------------------------
 if not "%~1"=="" (
-    echo "%*" | findstr /i /c:"-DryRun" /c:"-WhatIf" >nul
-    if !errorlevel! equ 0 (
+    :: Validate arguments against strict switch whitelist to prevent command injection
+    for %%A in (%*) do (
+        set "ARG_VALID=0"
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -RunDirect) do (
+            if /i "%%~A"=="%%V" set "ARG_VALID=1"
+        )
+        if "!ARG_VALID!"=="0" (
+            echo.
+            echo [ERROR] Unrecognized or illegal parameter switch: "%%~A"
+            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart
+            exit /b 1
+        )
+    )
+
+    :: Check if non-elevated Dry-Run is requested
+    set "IS_DRY=0"
+    for %%A in (%*) do (
+        if /i "%%~A"=="-DryRun" set "IS_DRY=1"
+        if /i "%%~A"=="-WhatIf" set "IS_DRY=1"
+    )
+    if "!IS_DRY!"=="1" (
         powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0unslop.ps1" %*
         exit /b !errorlevel!
     )
@@ -60,7 +83,7 @@ if not "%~1"=="" (
 :menu
 cls
 echo ============================================================
-echo   unslop-windows (v1.1.1) - PyPie Studio
+echo   unslop-windows (v1.1.2) - PyPie Studio
 echo   Universal Windows 11 23H2 / 24H2 / 25H2 Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -168,8 +191,32 @@ echo           -Undo -DryRun
 echo.
 set /p "ARGS=Enter parameter flags: "
 if "%ARGS%"=="" goto :menu
-echo "%ARGS%" | findstr /i /c:"-DryRun" /c:"-WhatIf" >nul
-if !errorlevel! equ 0 goto :run_dry
+
+:: Validate entered custom parameters against strict whitelist
+set "ARGS_OK=1"
+for %%A in (!ARGS!) do (
+    set "ARG_VALID=0"
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart) do (
+        if /i "%%~A"=="%%V" set "ARG_VALID=1"
+    )
+    if "!ARG_VALID!"=="0" (
+        echo [ERROR] Unrecognized or illegal parameter flag: "%%~A"
+        set "ARGS_OK=0"
+    )
+)
+if "!ARGS_OK!"=="0" (
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart
+    echo.
+    pause
+    goto :custom
+)
+
+set "IS_DRY=0"
+for %%A in (!ARGS!) do (
+    if /i "%%~A"=="-DryRun" set "IS_DRY=1"
+    if /i "%%~A"=="-WhatIf" set "IS_DRY=1"
+)
+if "!IS_DRY!"=="1" goto :run_dry
 goto :run
 
 :: ------------------------------------------------------------

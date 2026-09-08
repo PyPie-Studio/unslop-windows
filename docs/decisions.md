@@ -211,4 +211,25 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Added comprehensive PowerShell `<# .SYNOPSIS ... #>` comment-based help to `unslop.ps1`.
 - **Consequences:** Eliminates cognitive friction for non-technical users, provides truthful audit reporting for sysadmins, prevents silent configuration failures, and preserves 100% backward compatibility and safe-tier invariants.
 
+---
+
+## ADR-018: Production Security Hardening & Vulnerability Remediation (2026-09-08)
+- **Status:** Accepted
+- **Context:** A rigorous critical security review of `unslop-windows` identified 5 vulnerabilities and architectural security concerns:
+  1. *Elevated untrusted binary execution (VULN-01):* `unslop.ps1` prioritized user-writable `%LOCALAPPDATA%\Microsoft\OneDrive\OneDriveSetup.exe` ahead of protected system paths, executing the uninstaller with Administrator privileges without digital signature validation.
+  2. *Command & argument injection in launcher (VULN-02):* `unslop.bat` forwarded raw arguments via `echo "%*"` and PowerShell `-Command "Start-Process ... -ArgumentList '%*'"` which exposed the elevation wrapper to batch metacharacter injection (`&`, `|`, `;`, `'`).
+  3. *Unauthenticated remote script download (VULN-03):* `unslop.bat` contained a fallback to auto-download `unslop.ps1` from GitHub CDN over raw HTTPS without hash verification or Authenticode pinning.
+  4. *Windows Update hardware driver blackout (REG-02):* The policy `ExcludeWUDriversInQualityUpdate = 1` blocked all third-party hardware driver and firmware security updates across the entire system.
+  5. *Insecure temporary logging & symlink race (OPSEC-01):* Fallback logging to `$env:TEMP\unslop_logs` in shared/temp directories created symlink/junction hijacking exposure.
+- **Decision:**
+  - Hardened OneDrive uninstaller resolution in `unslop.ps1`: system directories (`SysWOW64`, `System32`) are prioritized, and any user AppData binary must pass cryptographic `Get-AuthenticodeSignature` verification (`Status = Valid`, `CN=Microsoft Corporation`) before elevated invocation.
+  - Hardened `unslop.bat` with a strict switch whitelist validation loop (`-Undo`, `-Restore`, `-DryRun`, `-WhatIf`, `-KeepXbox`, `-KeepOneDrive`, `-KeepTodos`, `-ClassicContextMenu`, `-NoRestart`, `-ForceRestart`, `-RunDirect`), rejecting unlisted tokens and metacharacters immediately with exit code 1.
+  - Implemented a fail-closed offline architecture in `unslop.bat`: if `unslop.ps1` is missing, halt with a security error; zero unauthenticated script downloads.
+  - Completely removed the code setting `ExcludeWUDriversInQualityUpdate = 1` and added proactive removal of any legacy key so Windows Update driver, firmware, and hardware CVE patches flow freely.
+  - Hardened decoupled log directory resolution in `unslop.ps1`: fallback redirected to `$env:LOCALAPPDATA\unslop-windows\logs` with explicit `[System.IO.FileAttributes]::ReparsePoint` inspection to neutralize junction/symlink redirection attacks.
+  - Synchronized `.github/workflows/release.yml` to package `tests/` inside the release zip bundle per ADR-010.
+  - Added dedicated Pester and AST unit tests in `tests/unslop.Tests.ps1` validating Authenticode enforcement, reparse point detection, and legacy driver policy cleanup.
+- **Consequences:** Closes critical privilege escalation and command injection attack surfaces, ensures offline integrity, restores hardware vulnerability patch delivery, and retains 100% of privacy-preserving telemetry killswitches.
+
+
 

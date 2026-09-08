@@ -70,3 +70,26 @@ When `/resetbase` is executed after removing component manifests, subsequent mon
 - No deletion of files inside `C:\Windows\WinSxS` or `C:\Windows\System32`.
 - All modifications are configuration-level (Registry, GPO, Service startup types, and UWP package de-provisioning).
 - Every Windows Cumulative Update installs smoothly without rollbacks.
+
+---
+
+## 🛡 Security Patching vs. Privacy Telemetry Boundaries
+
+Debloating and telemetry neutralization must never impair critical platform security defenses.
+
+### 1. Hardware Driver & Firmware Patch Inviolability (REG-02)
+- Setting `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\ExcludeWUDriversInQualityUpdate = 1` stops Windows Update from installing hardware drivers.
+- **Why this violates Safe-Tier standards:** While often deployed to prevent display driver regressions, it blinds the OS to essential security updates for hardware: GPU vulnerability patches, WiFi/Bluetooth stack CVE mitigations, and CPU microcode updates delivered via Windows Update.
+- **The unslop standard:** Never set this policy. If present from legacy debloater scripts, `unslop.ps1` actively removes the property to restore security patch delivery.
+
+### 2. Intentional Privacy Hardening vs. Telemetry Trade-Offs
+The following policies represent intentional privacy guardrails that must **not** be treated as bugs or removed:
+- **Defender Cloud Sample Submission (`SubmitSamplesConsent = 0`) [REG-01]:**
+  - Keeps Microsoft Defender real-time protection, antivirus definitions, and MAPS heuristic cloud lookups fully functional.
+  - Suppresses automatic exfiltration of suspicious user documents and executables to Microsoft cloud infrastructure, preventing confidential data leaks.
+- **Windows Error Reporting / Watson Dumps (`Disabled = 1`, `DontSendAdditionalData = 1`) [REG-03]:**
+  - Crash dumps and heap memory snapshots frequently capture confidential user data, passwords, cryptographic keys, and internal tokens residing in RAM at the moment of failure.
+  - Disabling Watson uploads protects memory privacy without impacting system stability.
+- **Telemetry & Diagnostic Firewall Egress Hardening [REG-04]:**
+  - Outbound firewall rules restrict known telemetry endpoints and diagnostic beaconing.
+  - Windows Update, Microsoft Store, and Defender definition distribution CDNs are strictly excluded from firewall blocks.

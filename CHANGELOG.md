@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.2] - 2026-09-08
+
+### Security
+- **Elevated Binary Authenticode Verification (`unslop.ps1`)**: Prioritized protected system directories (`SysWOW64`, `System32`) for `OneDriveSetup.exe` uninstaller resolution. Strictly enforced cryptographic `Get-AuthenticodeSignature` verification (`Status = Valid`, `CN=Microsoft Corporation`) before executing any user-writable `%LOCALAPPDATA%` binary in an elevated Administrator context (VULN-01).
+- **CLI & Parameter Whitelist Validation Loop (`unslop.bat`)**: Implemented strict token whitelist checking (`-Undo`, `-Restore`, `-DryRun`, `-WhatIf`, `-KeepXbox`, `-KeepOneDrive`, `-KeepTodos`, `-ClassicContextMenu`, `-NoRestart`, `-ForceRestart`, `-RunDirect`), rejecting unlisted parameters and metacharacters with exit code 1 to eliminate command and argument injection vectors (VULN-02).
+- **Fail-Closed Offline Architecture (`unslop.bat`)**: Removed unauthenticated `Invoke-RestMethod` script downloads from GitHub CDN. If `unslop.ps1` is missing, the launcher halts with a clear error requiring users to extract the full release archive, eliminating supply chain and MITM risks (VULN-03).
+- **Reparse Point & Symlink Defense (`unslop.ps1`)**: Decoupled log saving fallback now targets isolated `$env:LOCALAPPDATA\unslop-windows\logs` and inspects directory attributes for `[System.IO.FileAttributes]::ReparsePoint`, preventing junction/symlink redirection attacks in shared or multi-user environments (OPSEC-01).
+- **Release Archive Unit Test Packaging (`.github/workflows/release.yml`)**: Added `tests/` directory to `Compress-Archive` in GitHub Actions release packaging step per ADR-010.
+
+### Changed
+- **Windows Update Hardware Driver & Firmware Preservation (`unslop.ps1`)**: Removed `ExcludeWUDriversInQualityUpdate = 1` from debloat passes and added proactive removal of any legacy key so Windows Update hardware CVE patches and firmware updates flow freely (REG-02).
+
+### Added
+- **Security & Privilege Boundary Unit Tests (`tests/unslop.Tests.ps1`)**: Added 3 new unit and AST invariant tests verifying Authenticode verification enforcement, reparse point detection, and legacy driver policy cleanup, expanding the test suite to 25 passing assertions.
+
+---
+
 ## [1.1.1] - 2026-09-08
 
 ### Added
@@ -182,7 +199,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.9...v1.1.0
 [1.0.9]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.0.8...v1.0.9

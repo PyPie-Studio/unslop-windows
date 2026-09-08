@@ -94,7 +94,7 @@ jobs:
         shell: pwsh
         run: |
           $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE -DestinationPath $zipName -Force
+          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE, tests -DestinationPath $zipName -Force
 
       - name: Generate Cryptographic SHA-256 Checksums
         shell: pwsh

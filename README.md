@@ -12,7 +12,7 @@
 [![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.1.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.2.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.1.1) - PyPie Studio
+  unslop-windows (v1.1.2) - PyPie Studio
   Universal Windows 11 23H2 / 24H2 / 25H2 Debloat & Privacy
 ============================================================
 
@@ -56,18 +56,20 @@ Select an option [0-7]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.1.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.1.2.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.2.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
 4. In the console menu, type `1` for Full Debloat, `2` for Gamer Preset, `3` for Productivity Preset, or `4` to interactively toggle features on/off.
 5. When the script completes, ensure your work is saved and press **Enter** (or `Y`) to initiate the 30-second restart countdown (press **`A`** to abort or **`R`** to reboot immediately; if allowed to finish, the window closes automatically).
 
-### Method 2: PowerShell One-Liner (Terminal Users)
-Launch the interactive menu straight from an elevated PowerShell terminal:
+### Method 2: Git Clone (Developers & Terminal Users)
+Clone and run straight from an elevated terminal:
 
 ```powershell
-# Run inside an elevated PowerShell prompt (Right-click Start -> Terminal (Admin) / PowerShell (Admin))
-irm https://raw.githubusercontent.com/PyPie-Studio/unslop-windows/main/unslop.bat -OutFile unslop.bat; .\unslop.bat
+# Run inside an elevated terminal (PowerShell or Windows Terminal)
+git clone https://github.com/PyPie-Studio/unslop-windows.git
+cd unslop-windows
+.\unslop.bat
 ```
 
 ### Method 3: Direct Command-Line Execution
@@ -147,7 +149,7 @@ Most debloaters break future Windows updates or leave background services in uns
 5. **Speech & Inking Personalization**: Disables cloud speech recognition and removes typing/inking dictionary collection.
 6. **Search History & Cloud Integration**: Disables local search history tracking, MSA cloud search, and Bing web suggestions.
 7. **Network Security & Wi-Fi Sense**: Disables LLMNR (`EnableMulticast = 0`) to mitigate NTLM hash theft on local networks. Disables Wi-Fi hotspot reporting and auto-connect beacons.
-8. **Windows Update GPU Driver Protection**: Sets `ExcludeWUDriversInQualityUpdate = 1` to stop Windows Update from overwriting custom NVIDIA or AMD display drivers with generic DCH drivers.
+8. **Windows Update Driver & Firmware Integrity**: Preserves Windows Update delivery of hardware driver and firmware updates so critical security patches and hardware CVE mitigations install cleanly, while proactively clearing legacy overwrite blocks.
 9. **Explorer & Taskbar Cleanliness**: Hides Widgets (`TaskbarDa = 0`) and Chat (`TaskbarMn = 0`). Ensures file extensions are visible (`HideFileExt = 0`).
 10. **ConsentStore Permissions (12)**: Revokes background access for location, diagnostics, contacts, calendar, phone, and 25H2 screen text scraping (`foregroundTextAccess`), OS AI model execution (`systemAIModels`), and borderless screen capture (`graphicsCaptureWithoutBorder`).
 11. **Scheduled Tasks**: Disables 18+ telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience, and Disk Diagnostics.

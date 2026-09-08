@@ -17,10 +17,12 @@
 
 `unslop-windows` is designed with a strict **Safe-Tier Guarantee**:
 
-1. **Zero External Binaries**: All operations are conducted exclusively through standard Windows PowerShell (`powershell.exe` / `pwsh.exe`) and native Windows APIs. No compiled binaries, external DLLs, or third-party executables are packaged or executed.
-2. **Servicing Stack Preservation**: The script never modifies WinSxS component stores, DISM manifests, or system file permissions (`takeown` / `icacls`). This ensures Windows Servicing and Cumulative Updates remain stable.
-3. **Auditable**: Every action can be reviewed before execution via the non-elevated `-DryRun` switch.
-4. **Reversible**: Every policy and service change can be reversed using the `-Undo` switch.
+1. **Zero External Binaries & Offline-Only**: All operations are conducted exclusively through standard Windows PowerShell (`powershell.exe` / `pwsh.exe`) and native Windows APIs. No compiled binaries, external DLLs, or third-party executables are packaged or executed. The launcher strictly refuses to pull unsigned or unauthenticated code from the internet.
+2. **Servicing Stack & Hardware Patch Preservation**: The script never modifies WinSxS component stores, DISM manifests, or system file permissions (`takeown` / `icacls`). Essential Windows Update hardware and firmware driver updates are preserved so endpoints receive critical security mitigations.
+3. **Cryptographic Validation on Elevated Binaries**: Any invocation of external setup or uninstaller binaries located in user-writable paths (e.g. `%LOCALAPPDATA%`) requires valid Microsoft Authenticode digital signatures before elevated execution.
+4. **Auditable**: Every action can be reviewed before execution via the non-elevated `-DryRun` switch.
+5. **Reversible**: Every policy and service change can be reversed using the `-Undo` switch.
+6. **Reparse Point / Symlink Hardening**: Log file paths inspect directory attributes to prevent junction and symlink redirection attacks in multi-user environments.
 
 ---
 
