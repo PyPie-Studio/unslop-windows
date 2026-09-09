@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2026-09-09
+
+### Fixed
+- **Widgets Policy Alignment & UCPD Defense (`unslop.ps1`)**: Switched Widgets disablement from user-mode `HKCU:\...\Advanced\TaskbarDa` to machine-wide Group Policy `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (undo `1`, `removeOnUndo = $true`). This avoids `UnauthorizedAccessException` from the Windows 11 User Choice Protection Driver (`UCPD.sys`) introduced in 23H2/24H2 while cleanly disabling Widgets system-wide.
+- **SYSTEM-Restricted Task Cleanup (`unslop.ps1`)**: Removed `\Microsoft\Windows\Application Experience\SdbinstMergeDbTask` from debloat scheduled tasks list. This task is Windows' internal app compat shim DB merger (non-telemetry) and has an explicit SDDL descriptor restricting write access to `SYSTEM` (`BA` only has Read/Execute), which caused `Access is denied` under standard Administrator elevation.
+- **Inbox SystemApps Depuration & NonRemovable Filter (`unslop.ps1`)**: Removed protected inbox SystemApps (`MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, `MicrosoftWindows.UndockedDevKit`) from `$bloatApps` and added `-not $_.NonRemovable` filtering to `Get-AppxPackage` retrieval, preventing `0x80070032` (`ERROR_NOT_SUPPORTED`) deployment errors on immutable system components while keeping AI engines neutralized via GPO and ConsentStore.
+- **PowerShell Registry Drive Mapping (`unslop.ps1`)**: Replaced unmounted `HKCR:\CLSID\{018D5C66-...}` with `HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-...}` in both debloat and undo OneDrive unpinning routines, eliminating "Cannot find drive HKCR" errors.
+
+### Added
+- **Automated Registry & System Package Invariant Tests (`tests/unslop.Tests.ps1`)**: Added test assertions ensuring `AllowNewsAndInterests` is used for Widgets, forbidding unmounted `HKCR:` paths in registry operations, verifying `SdbinstMergeDbTask` is excluded, and locking `Photon`, `CoreAI`, and `UndockedDevKit` into the non-removable package invariants.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-020 detailing Windows 11 24H2/25H2 Protection Driver (UCPD), Inbox SystemApps, and Elevation ACL Alignment.
+
+---
+
 ## [1.1.3] - 2026-09-09
 
 ### Fixed
@@ -221,7 +235,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.0...v1.1.1

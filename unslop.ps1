@@ -1,4 +1,4 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.3)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.4)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -354,7 +354,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.1.3: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.1.4: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -567,8 +567,10 @@ Log "--- 9. Taskbar & Explorer Cleanliness ---"
 # Security Baseline: Always show file extensions (prevents .pdf.exe malware masking)
 Set-RegDwordSafe -path $explorerAdv -name "HideFileExt" -debloatValue 0 -undoValue 1
 
-# Clean Taskbar clutter (Hide Widgets and Chat/Teams buttons)
-Set-RegDwordSafe -path $explorerAdv -name "TaskbarDa" -debloatValue 0 -undoValue 1
+# Clean Taskbar clutter (Hide Widgets via official GPO policy and Chat/Teams buttons)
+# Note: On Windows 11 23H2+/24H2/25H2, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa; HKLM Dsh policy disables Widgets system-wide
+$dshPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
+Set-RegDwordSafe -path $dshPolicy -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $explorerAdv -name "TaskbarMn" -debloatValue 0 -undoValue 1
 
 # Optional Classic Right-Click Context Menu (Windows 10 style, no "Show more options")
@@ -656,7 +658,6 @@ $tasksToToggle = @(
     "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp"
     "\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser"
     "\Microsoft\Windows\Application Experience\PcaPatchDbTask"
-    "\Microsoft\Windows\Application Experience\SdbinstMergeDbTask"
     # CEIP tasks
     "\Microsoft\Windows\Customer Experience Improvement Program\Consolidator"
     "\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip"
@@ -720,15 +721,12 @@ $bloatApps = @(
     # 24H2 / 25H2 AI & Shell Injections
     "aimgr"
     "Microsoft.StartExperiencesApp"
-    "MicrosoftWindows.Client.Photon"
-    "MicrosoftWindows.Client.CoreAI"
     "Microsoft.AIFabric.CBS.1.6"
     "Microsoft.Windows.AugLoop.CBS"
     "Microsoft.WidgetsPlatformRuntime"
     "Microsoft.MicrosoftPCManager"
     "Microsoft.Windows.DevHome"
     "Microsoft.Windows.Client.WebExperience"
-    "MicrosoftWindows.UndockedDevKit"
 
     # Sponsored third-party bloat
     "ByteDance.TikTok"
@@ -839,7 +837,7 @@ if ($IsUndo) {
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
         $installed = if ($allInstalled) {
-            $allInstalled | Where-Object { $_.Name -match "^$([regex]::Escape($app))" }
+            $allInstalled | Where-Object { -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" }
         } else { $null }
 
         if ($installed) {
@@ -883,7 +881,7 @@ if ($KeepOneDrive) {
         Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
         $odClsidPaths = @(
-            "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
+            "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
             "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         )
         foreach ($odPath in $odClsidPaths) {
@@ -939,7 +937,7 @@ if ($KeepOneDrive) {
 
         # 3. Unpin OneDrive from File Explorer sidebar
         $odClsidPaths = @(
-            "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
+            "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
             "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
         )
         foreach ($odPath in $odClsidPaths) {

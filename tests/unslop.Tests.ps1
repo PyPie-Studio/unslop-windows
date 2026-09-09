@@ -587,11 +587,26 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
             'Microsoft.WindowsStore',
             'Microsoft.DesktopAppInstaller',
             'Microsoft.XboxIdentityProvider',
-            'Microsoft.WindowsTerminal'
+            'Microsoft.WindowsTerminal',
+            'MicrosoftWindows.Client.Photon',
+            'MicrosoftWindows.Client.CoreAI',
+            'MicrosoftWindows.UndockedDevKit'
         )
 
         foreach ($pkg in $nonRemovables) {
             $script:ast.Extent.Text | Should -Not -Match "`"$([regex]::Escape($pkg))`"" -Because "$pkg is a NonRemovable or untouchable system component and must not be in bloatApps"
         }
+    }
+
+    It 'Never references unmounted HKCR drive in registry paths' {
+        $script:ast.Extent.Text | Should -Not -Match 'HKCR:\\' -Because "PowerShell does not mount HKCR: by default; use HKLM:\SOFTWARE\Classes or HKCU:\Software\Classes"
+    }
+
+    It 'Disables Widgets via official GPO AllowNewsAndInterests policy rather than UCPD-blocked TaskbarDa' {
+        $script:ast.Extent.Text | Should -Match 'AllowNewsAndInterests' -Because "Widgets must be disabled via HKLM Dsh policy to prevent UCPD UnauthorizedAccessException"
+    }
+
+    It 'Does not include SYSTEM-only SdbinstMergeDbTask in debloat tasks' {
+        $script:ast.Extent.Text | Should -Not -Match 'SdbinstMergeDbTask' -Because "SdbinstMergeDbTask is ACL-restricted to SYSTEM and is non-telemetry"
     }
 }

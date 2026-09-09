@@ -255,5 +255,23 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Expanded `tests/unslop.Tests.ps1` with unit and AST tests for startup symmetry, Defender values, and bloatware whitelist invariants.
 - **Consequences:** Resolves all critical functional bugs and placebo logging flaws, achieves true 100% restoration symmetry for startup apps, improves AppX execution speed from ~18s to <0.5s, provides accurate non-elevated audit reports, and guarantees interactive window persistence.
 
+---
+
+## ADR-020: Windows 11 24H2/25H2 Protection Driver (UCPD), Inbox SystemApps, and Elevation ACL Alignment (2026-09-09)
+- **Status:** Accepted
+- **Context:** Live execution of `unslop-windows v1.1.3` on Windows 11 24H2/25H2 revealed 6 specific operation warnings/failures due to new OS-level kernel/driver protections and unmounted registry drives:
+  1. *UCPD driver registry blocking (TaskbarDa):* Microsoft introduced the User Choice Protection Driver (`UCPD.sys`) in Windows 11 23H2 (March 2024+) and 24H2/25H2. UCPD actively filters and intercepts direct user-mode registry writes to `HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDa`, throwing `UnauthorizedAccessException` ("Attempted to perform an unauthorized operation") even under elevated Administrator tokens.
+  2. *SYSTEM-only Scheduled Task ACL (SdbinstMergeDbTask):* `\Microsoft\Windows\Application Experience\SdbinstMergeDbTask` has an explicit security descriptor `(A;;FRFX;;;BA)(A;;GA;;;SY)` granting Builtin Administrators only Read/Execute (`FRFX`) and NT AUTHORITY\SYSTEM Full Control (`GA`). Invoking `Disable-ScheduledTask` fails with `Access is denied`. Furthermore, this task is an internal application compatibility shim database merger (`sdbinst.exe -m`), not a telemetry collector.
+  3. *NonRemovable inbox SystemApps (Photon, CoreAI, UndockedDevKit):* `MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, and `MicrosoftWindows.UndockedDevKit` reside in `C:\Windows\SystemApps` and have `NonRemovable: True` and `SignatureKind: System`. Calling `Remove-AppxPackage` is rejected by Windows AppX deployment server with error `0x80070032` (`ERROR_NOT_SUPPORTED`). AI capabilities are already disabled via Recall policies (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`) and ConsentStore (`systemAIModels = Deny`, `foregroundTextAccess = Deny`).
+  4. *Unmounted HKCR PSDrive:* OneDrive sidebar unpinning referenced `HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}`. PowerShell's registry provider only mounts `HKLM:` and `HKCU:` by default, throwing `Cannot find drive. A drive with the name 'HKCR' does not exist.`
+- **Decision:**
+  - Disables Windows 11 Widgets using the official machine-wide Group Policy setting: `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (undo `1`, `removeOnUndo = $true`). This cleanly turns off Widgets and unpins the taskbar icon without triggering UCPD blocks.
+  - Removed `SdbinstMergeDbTask` from `$tasksToToggle`. Genuine telemetry tasks in Application Experience (`Microsoft Compatibility Appraiser`, `Consolidator`, `UsbCeip`, `MareBackup`, `StartupAppTask`) remain disabled.
+  - Removed `MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, and `MicrosoftWindows.UndockedDevKit` from `$bloatApps`, and guarded `Get-AppxPackage` matching with `-not $_.NonRemovable` to prevent illegal uninstalls on protected inbox packages.
+  - Fixed OneDrive CLSID unpinning to target machine-wide `HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}` in addition to `HKCU:\Software\Classes`.
+  - Added Pester tests in `tests/unslop.Tests.ps1` enforcing the removal of `SdbinstMergeDbTask`, forbidding unmounted `HKCR:` paths, asserting the presence of `AllowNewsAndInterests`, and adding `Photon`, `CoreAI`, and `UndockedDevKit` to the non-removable package invariants.
+- **Consequences:** Eliminates all 6 live run warnings on 24H2 and 25H2, aligns debloating with Microsoft's official Group Policy management paths, avoids kernel driver blocking, and retains 100% of telemetry blocks, debloat effectiveness, and restoration symmetry.
+
+
 
 
