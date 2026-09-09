@@ -42,12 +42,15 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 - Audit inspection logs must accurately reflect what actions would be performed.
 
 ### 5. Reboot Lifecycle & Abort Safety
-- When a debloat or restoration pass completes, a 30-second reboot countdown is initiated.
-- The lifecycle must provide an in-place keyboard shortcut:
+- When a debloat or restoration pass completes, the user is presented with an interactive confirmation prompt (`Initiate 30-second restart countdown? [Y/n]`):
+  - Press `n` to postpone the restart and exit immediately without rebooting.
+  - Press `Enter` or `Y` to initiate the 30-second countdown.
+- During the active 30-second countdown, the lifecycle provides in-place keyboard shortcuts:
   - Press `A` to immediately abort the scheduled reboot (`shutdown.exe /a`).
   - Press `R` or `Enter` to reboot immediately without waiting.
   - Press `Ctrl+C` interrupt trapped safely in a `finally` block to cancel the restart.
-- When a restart is scheduled, `unslop.ps1` must exit with code `100`, signaling `unslop.bat` to terminate immediately without halting on `pause`.
+- When `-ForceRestart` is passed, the confirmation prompt and countdown are bypassed and the machine reboots immediately (`shutdown /r /t 0`).
+- When a restart is scheduled or triggered, `unslop.ps1` must exit with code `100`, signaling `unslop.bat` to terminate immediately without halting on `pause`.
 
 ### 6. Code Quality, AST & Line-Ending Invariants
 - `unslop.bat` and all batch scripts MUST maintain CRLF (`\r\n`) line endings. Naked LF causes `cmd.exe` block parsing corruption.

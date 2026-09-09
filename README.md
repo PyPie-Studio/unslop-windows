@@ -51,7 +51,7 @@ Select an option [0-7]:
 > ### ⚠️ Mandatory Requirements: Administrator Rights & System Restart
 > 1. **Run as Administrator**: `unslop-windows` configures system-level Group Policies, Services, Registry trees, and de-provisions AppX packages. The script **must be executed as an Administrator** (except `-DryRun`, which safely audits changes without elevation).
 > 2. **System Restart Required**: Windows caches service states, group policies, and background telemetry threads in memory. A **full system restart is required** after the script is done to finalize all debloat, privacy, and performance optimizations.
-> 3. **Save Your Work & In-Place Abort Shortcut**: Please save all open documents before running. Upon completion, the script notifies you to save your work and initiates a 30-second restart countdown with an in-place shortcut: press **`A`** to abort the restart at any time, or **`R`** to reboot immediately. If not aborted, the restart proceeds and the launcher window closes automatically.
+> 3. **Save Your Work & Restart Controls**: Please save all open documents before running. Upon completion, the script presents an interactive confirmation prompt (`Initiate 30-second restart countdown? [Y/n]`): press **`n`** to postpone the restart and reboot manually later, or press **Enter** (or `Y`) to start the 30-second countdown. During an active countdown, you can tap **`A`** to abort the restart (`shutdown /a`), or **`R`** to reboot immediately. If allowed to finish, the system restarts and the launcher window closes automatically.
 
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
@@ -60,7 +60,7 @@ No Git, terminal commands, or PowerShell knowledge needed:
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
 4. In the console menu, type `1` for Full Debloat, `2` for Gamer Preset, `3` for Productivity Preset, or `4` to interactively toggle features on/off.
-5. When the script completes, ensure your work is saved and press **Enter** (or `Y`) to initiate the 30-second restart countdown (press **`A`** to abort or **`R`** to reboot immediately; if allowed to finish, the window closes automatically).
+5. When the script completes, ensure your work is saved: press **`n`** to postpone rebooting and return to the menu, or press **Enter** (or `Y`) to start the 30-second countdown (during the countdown, tap **`A`** to abort or **`R`** to reboot immediately).
 
 ### Method 2: Git Clone (Developers & Terminal Users)
 Clone and run straight from an elevated terminal:
@@ -125,7 +125,7 @@ How `unslop-windows` compares to other popular debloaters:
 | **Untouchable Whitelist Enforced** | ✅ Guaranteed | ⚠️ User Config | ⚠️ User Config | ❌ High Break Risk |
 | **Safe Delivery Optimization (No Store breaks)** | ✅ GPO `DODownloadMode=0` | ❌ Disables Service | ⚠️ Mixed | ❌ Disables Service |
 | **Decoupled Autonomous Logging** | ✅ Local `logs/` or `$TEMP` | ⚠️ GUI Logs | ⚠️ Flat File | ⚠️ Flat Text |
-| **Test-Driven Invariants & Fail-Closed CI** | ✅ 33 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
+| **Test-Driven Invariants & Fail-Closed CI** | ✅ 36 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
 
 ---
 
@@ -153,7 +153,7 @@ Most debloaters break future Windows updates or leave background services in uns
 8. **Windows Update Driver & Firmware Integrity**: Preserves Windows Update delivery of hardware driver and firmware updates so critical security patches and hardware CVE mitigations install cleanly, while proactively clearing legacy overwrite blocks.
 9. **Explorer & Taskbar Cleanliness**: Disables Widgets via official GPO policy (`AllowNewsAndInterests = 0`) and hides Chat (`TaskbarMn = 0`). Ensures file extensions are visible (`HideFileExt = 0`).
 10. **ConsentStore Permissions (12)**: Revokes background access for location, diagnostics, contacts, calendar, phone, and 25H2 screen text scraping (`foregroundTextAccess`), OS AI model execution (`systemAIModels`), and borderless screen capture (`graphicsCaptureWithoutBorder`).
-11. **Scheduled Tasks**: Disables 18+ telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience, and Disk Diagnostics.
+11. **Scheduled Tasks**: Disables 20+ telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience, and Disk Diagnostics.
 12. **Dual-Stage AppX Purge**: Removes installed packages for all existing user profiles and de-provisions staged packages from the Windows image (TikTok, Spotify, Instagram, Netflix, Solitaire, News, Weather, Get Help, Tips, Feedback Hub).
 13. **OneDrive Purge Engine**: Terminates running processes, runs the silent uninstaller, unpins the Explorer sidebar icon (`{018D5C66-4533-4307-9B53-224DE2ED1FE6}`), sets sync block policies (`DisableFileSyncNGSC = 1`), and removes startup registry entries.
 14. **Startup Entries & Edge Background**: Disables Edge background application access. Removed startup run keys are safely archived under `HKCU:\Software\unslop-windows\StartupBackup` and symmetrically restored on `-Undo` (zero data loss).
@@ -173,7 +173,7 @@ Most debloaters break future Windows updates or leave background services in uns
 | **System Package Tools** | Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`) | Required for software installation and package management |
 | **Essential Desktop Apps** | Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`) | Daily workflow tools with zero telemetry overhead |
 | **Productivity Features** | Local `Win + V` clipboard history buffer | Daily workflow convenience preserved; only cloud cross-device sync is disabled |
-| **System Experience Hosts** | `CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp` | Immutable system packages preserved to prevent AppX de-provisioning `0x80073CFA` errors |
+| **System Experience Hosts** | `CloudExperienceHost`, `Photon`, `CoreAI`, `UndockedDevKit`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp` | Immutable system packages preserved to prevent AppX de-provisioning `0x80070032`/`0x80073CFA` errors (AI capabilities neutralized via GPO/ConsentStore) |
 | **Audio & Video Hardware** | Microphone access, Webcam access, AMD Noise Suppression / NVIDIA Broadcast | Prevents breaking Discord, OBS, Teams, and voice chat |
 | **Developer Environments** | Visual Studio, VS Code, Git, Docker Desktop, Ollama, existing toolchains, browsers | Developer toolchains and container runtimes |
 | **Application Runtimes** | WebView2, Edge Rendering Engine | Required by modern desktop applications to display web views |
@@ -191,7 +191,7 @@ Most debloaters break future Windows updates or leave background services in uns
 | `-KeepXbox` | Switch | `False` | Preserves Xbox app and Gaming Services for Game Pass users. |
 | `-ClassicContextMenu`| Switch | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
 | `-NoRestart` | Switch | `False` | Suppresses the post-execution restart prompt (user must manually restart computer). |
-| `-ForceRestart` | Switch | `False` | Automatically initiates a 30-second countdown restart without prompting for confirmation. |
+| `-ForceRestart` | Switch | `False` | Bypasses confirmation and immediately restarts the computer (`shutdown /r /t 0`). |
 
 ### Parameter Examples
 
