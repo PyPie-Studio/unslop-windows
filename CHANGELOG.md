@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-10
+
+### Added
+- **Universal Windows 10 Debloat Engine (`unslop-win10.ps1`)**: Complete, standalone debloater and privacy hardener targeting all Windows 10 versions (Build 10240 through 19045 22H2). Replicates all 6 core helper functions for complete isolation from the Windows 11 engine, with full 100% symmetrical `-Undo` restoration and safe non-elevated `-DryRun` audit support.
+- **Windows 10-Specific Debloating Modules (`unslop-win10.ps1`)**:
+  - **Cortana Complete Purge**: Group Policy neutralization (`AllowCortana = 0`, `AllowSearchToUseLocation = 0`, `SearchboxTaskbarMode = 0`, `AllowCortanaAboveLock = 0`) coupled with dual-stage de-provisioning and removal of the Cortana UWP app (`Microsoft.549981C3F5F10`).
+  - **Taskbar & Explorer Cleanup**: Disables News & Interests (`Feeds\ShellFeedsTaskbarViewMode = 2`), hides the People Bar (`PeopleBand = 0`), hides Meet Now (`HideSCAMeetNow = 1`), and shows file extensions.
+  - **Win10 Bloatware De-Provisioning**: Tailored dual-stage AppX package purge targeting Print3D, 3DBuilder, 3DViewer, OneConnect, Paint 3D, Skype, Alarms, Maps, Sound Recorder, Mail & Calendar, and Mixed Reality Portal while strictly protecting the untouchable whitelist (Store, Winget, XboxIdentityProvider, classic Paint).
+- **Unified Dual-OS Batch Launcher (`unslop.bat`)**: Added interactive OS selection menu (Windows 11 vs Windows 10) on launch, OS-specific feature toggle sub-menus (omitting the irrelevant Classic Context Menu toggle for Win10), `-Win10` CLI flag pass-through routing, and `-SkipBuildCheck` whitelist support.
+- **Dedicated Windows 10 Pester Test Suite (`tests/unslop-win10.Tests.ps1`)**: 38 unit, mocking, integration, and AST parity test cases verifying helper functions, parameter switches, privilege boundaries, and Win10-specific invariants (Cortana, News & Interests, PeopleBand, Meet Now).
+- **Local Master Quality Gate Multi-OS Support (`scripts/Test-MasterGate.ps1`)**: Added `-Win10` and `-SkipBuildCheck` switches to dynamically route AST syntax, Pester tests, DryRun audits, and batch launcher passthrough tests to either Windows 10 or Windows 11 targets.
+- **Quad-Target CI Quality Gate Matrix (`.github/workflows/lint.yml`)**: Added `quality-gate-win10-core` (PS7 Core) and `quality-gate-win10-desktop` (PS 5.1 Desktop) workflows, ensuring both Windows 10 and Windows 11 engines are validated on every commit and PR.
+- **Release Automation Upgrades (`.github/workflows/release.yml`)**: Added pre-flight testing for both OS targets, bundle packaging for `unslop-win10.ps1`, and automated SHA-256 checksum generation for the Win10 script.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-022 detailing the multi-OS support architecture, dual-script engine isolation, and unified launcher design.
+- **Windows 10 Internals Knowledge Skill (`.agents/skills/unslop-win10-internals/SKILL.md`)**: Complete reference for Windows 10 telemetry, Cortana suppression, Feeds, and build differences.
+
+---
+
 ## [1.1.5] - 2026-09-10
 
 ### Security

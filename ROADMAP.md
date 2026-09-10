@@ -52,5 +52,14 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 
 ---
 
+## 🪟 Milestone 5: Windows 10 Multi-OS Support (Completed)
+- [x] **Universal Windows 10 Engine (`unslop-win10.ps1`):** Complete debloat and hardening engine for all Windows 10 releases (Build 10240 through 19045 22H2).
+- [x] **Cortana Complete Purge & Taskbar Suppression:** Group Policy and AppX neutralization of Cortana, Feeds / News & Interests, People Bar, and Meet Now.
+- [x] **Unified Dual-OS Launcher (`unslop.bat`):** Interactive OS selection menu (Win10 vs Win11) and `-Win10` CLI pass-through routing.
+- [x] **Dedicated Win10 Pester Test Suite (`tests/unslop-win10.Tests.ps1`):** 38 unit, mocking, and AST parity tests.
+- [x] **CI/CD Multi-OS Quad Matrix (`.github/workflows/lint.yml`):** Automated validation across both PowerShell 7 Core and Windows PowerShell 5.1 for both OS targets.
+
+---
+
 ## 📄 Completed Architectural Decisions
-See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-021) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.
+See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-022) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.

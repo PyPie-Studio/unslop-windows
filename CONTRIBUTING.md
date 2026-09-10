@@ -60,7 +60,7 @@ The following components must remain functional and un-targeted:
 Every change must pass our unified 7-pillar quality gate. You have two options for testing:
 
 #### Option A: 1-Command Automated Setup (Recommended)
-Automatically install required testing modules (`Pester 5+` and `PSScriptAnalyzer`), configure Git hooks (`pre-commit` and `pre-push`), and verify the test gate:
+Automatically install required testing modules (`Pester 6+` and `PSScriptAnalyzer`), configure Git hooks (`pre-commit` and `pre-push`), and verify the test gate:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -InstallPrerequisites -Test
@@ -70,8 +70,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Install
 If you prefer to manage PowerShell modules manually, install them in your user profile:
 
 ```powershell
-# Install Pester 5+ and PSScriptAnalyzer
-Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+# Install Pester 6+ and PSScriptAnalyzer
+Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
 Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
 
 # Activate repository Git hooks
@@ -79,16 +79,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Test
 ```
 
 > [!NOTE]
-> **Remote CI/CD Automation**: Even if you do not install testing modules locally, our GitHub Actions CI pipeline (`.github/workflows/lint.yml`) automatically provisions fresh Windows environments, installs Pester 5 and PSScriptAnalyzer, and runs the full 7-pillar gate across both PowerShell 7 (Core) and Windows PowerShell 5.1 (Desktop) in `-Strict` mode on every pull request and push.
+> **Remote CI/CD Automation**: Even if you do not install testing modules locally, our GitHub Actions CI pipeline (`.github/workflows/lint.yml`) automatically provisions fresh Windows environments, installs Pester 6 and PSScriptAnalyzer, and runs the full 7-pillar gate across both PowerShell 7 (Core) and Windows PowerShell 5.1 (Desktop) in `-Strict` mode on every pull request and push.
 
 ### 2. Automated Master Quality Gate
 Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun, and Batch launcher passthrough):
 
 ```powershell
-# Full 7-pillar gate: AST syntax, PSScriptAnalyzer, CRLF integrity, Pester tests, and dry-run tests
+# Full 7-pillar gate for Windows 11:
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
 
-# Strict fail-closed mode (fails if analyzer or Pester 5 is missing; enforced in CI):
+# Full 7-pillar gate for Windows 10:
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Win10 -SkipBuildCheck
+
+# Strict fail-closed mode (fails if analyzer or Pester 6 is missing; enforced in CI):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
 
 # Rapid lint mode (skips dry-run execution and Pester tests; AST, Analyzer & CRLF only):
@@ -107,11 +110,13 @@ When initialized via `Install-GitHooks.ps1`, your repository enforces quality ch
 Verify both standard debloat and symmetrical restoration audit output:
 
 ```powershell
-# Verify debloat audit output
+# Windows 11: Verify debloat and inverse restore audit output
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
-
-# Verify inverse restore audit output
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo -DryRun
+
+# Windows 10: Verify debloat and inverse restore audit output
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -DryRun
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo -DryRun
 ```
 
 ---

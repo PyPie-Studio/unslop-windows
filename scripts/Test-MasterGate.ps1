@@ -19,7 +19,7 @@
     Bypasses PSScriptAnalyzer if the module is not installed locally.
 
 .PARAMETER SkipUnitTests
-    Bypasses Pester unit tests if Pester 5 is not installed locally.
+    Bypasses Pester unit tests if Pester 6 is not installed locally.
 
 .PARAMETER TestResultsPath
     Optional file path to export Pester unit test results in NUnit XML format.
@@ -37,6 +37,8 @@ param(
     [switch]$SkipAnalyzer,
     [switch]$SkipUnitTests,
     [switch]$Strict,
+    [switch]$Win10,
+    [switch]$SkipBuildCheck,
     [string]$TestResultsPath,
     [string]$CodeCoveragePath
 )
@@ -58,8 +60,18 @@ $psExec = if ($PSVersionTable.PSEdition -eq 'Desktop' -or -not (Get-Command pwsh
     "pwsh"
 }
 
+$targetEngine = if ($Win10) { "unslop-win10.ps1" } else { "unslop.ps1" }
+$targetTests  = if ($Win10) { "tests\unslop-win10.Tests.ps1" } else { "tests\unslop.Tests.ps1" }
+$targetBatArgs = if ($Win10) { "-DryRun -Win10" } else { "-DryRun" }
+$engineExtraArgs = @()
+if ($SkipBuildCheck) {
+    $engineExtraArgs += "-SkipBuildCheck"
+    $targetBatArgs += " -SkipBuildCheck"
+}
+$targetPlatformTitle = if ($Win10) { "Windows 10 Target" } else { "Windows 11 Target" }
+
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  unslop-windows: Master Quality Gate ($($PSVersionTable.PSEdition) Edition - PS $($PSVersionTable.PSVersion))" -ForegroundColor Cyan
+Write-Host "  unslop-windows: Master Quality Gate ($targetPlatformTitle - $($PSVersionTable.PSEdition) Edition - PS $($PSVersionTable.PSVersion))" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # ------------------------------------------------------------
@@ -193,11 +205,11 @@ if ($lineEndingFail) { $fail = $true }
 # ------------------------------------------------------------
 if (-not $Fast) {
     if (-not $SkipUnitTests) {
-        Write-Host "`n[4/$totalSteps] Pester unit & mocking test suite..." -ForegroundColor Yellow
-        $testScript = Join-Path $root "tests\unslop.Tests.ps1"
+        Write-Host "`n[4/$totalSteps] Pester unit & mocking test suite ($targetTests)..." -ForegroundColor Yellow
+        $testScript = Join-Path $root $targetTests
         if (Test-Path $testScript) {
             $pesterModule = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
-            if ($pesterModule -and $pesterModule.Version.Major -ge 5) {
+            if ($pesterModule -and $pesterModule.Version.Major -ge 6) {
                 Push-Location $root
                 try {
                     $targetXml = ""
@@ -224,11 +236,11 @@ if (-not $Fast) {
                         if ($covDir -and -not (Test-Path $covDir)) {
                             New-Item -ItemType Directory -Path $covDir -Force | Out-Null
                         }
-                        $covFile = Join-Path $root "unslop.ps1"
+                        $covFile = Join-Path $root $targetEngine
                     }
                     $pesterBlock = {
                         param($testPath, $xmlOut, $covOut, $covTarget)
-                        Import-Module Pester -MinimumVersion 5.0.0
+                        Import-Module Pester -MinimumVersion 6.0.0
                         $cfg = New-PesterConfiguration
                         $cfg.Run.Path = $testPath
                         $cfg.Output.Verbosity = 'Detailed'
@@ -267,14 +279,14 @@ if (-not $Fast) {
             } else {
                 if ($Strict) {
                     $fail = $true
-                    Write-Host "  FAILED: Pester 5.x+ is required in CI / Strict mode but is not installed (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor Red
+                    Write-Host "  FAILED: Pester 6.x+ is required in CI / Strict mode but is not installed (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor Red
                 } else {
-                    Write-Host "  SKIPPED: Pester 5.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
-                    Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 5.0.0)" -ForegroundColor DarkGray
+                    Write-Host "  SKIPPED: Pester 6.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
+                    Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 6.0.0)" -ForegroundColor DarkGray
                 }
             }
         } else {
-            Write-Host "  SKIPPED: tests/unslop.Tests.ps1 not found." -ForegroundColor DarkGray
+            Write-Host "  SKIPPED: $targetTests not found." -ForegroundColor DarkGray
         }
     } else {
         Write-Host "`n[4/$totalSteps] SKIPPED: -SkipUnitTests parameter supplied." -ForegroundColor DarkGray
@@ -283,22 +295,23 @@ if (-not $Fast) {
     # ------------------------------------------------------------
     # STEP 5: Safe Non-Elevated Dry-Run Execution Test
     # ------------------------------------------------------------
-    Write-Host "`n[5/$totalSteps] Safe non-elevated Dry-Run execution test..." -ForegroundColor Yellow
+    Write-Host "`n[5/$totalSteps] Safe non-elevated Dry-Run execution test ($targetEngine)..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $dryRunOut = & $psExec -NoProfile -ExecutionPolicy Bypass -File ".\unslop.ps1" -DryRun 2>&1
+        $dryRunArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\$targetEngine", "-DryRun") + $engineExtraArgs
+        $dryRunOut = & $psExec @dryRunArgs 2>&1
         $dryExit = $LASTEXITCODE
         if ($dryExit -ne 0) {
             $fail = $true
-            Write-Host "  FAILED: unslop.ps1 -DryRun exited with code $dryExit" -ForegroundColor Red
+            Write-Host "  FAILED: $targetEngine -DryRun exited with code $dryExit" -ForegroundColor Red
             Write-Host ($dryRunOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
         } else {
             $summaryFound = ($dryRunOut -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length -gt 0
             if ($summaryFound) {
-                Write-Host "  PASSED: unslop.ps1 -DryRun completed successfully (code 0, all 18 modules verified)." -ForegroundColor Green
+                Write-Host "  PASSED: $targetEngine -DryRun completed successfully (code 0, all modules verified)." -ForegroundColor Green
             } else {
                 $fail = $true
-                Write-Host "  FAILED: unslop.ps1 -DryRun completed without expected completion banner." -ForegroundColor Red
+                Write-Host "  FAILED: $targetEngine -DryRun completed without expected completion banner." -ForegroundColor Red
             }
         }
     } finally { Pop-Location }
@@ -306,22 +319,23 @@ if (-not $Fast) {
     # ------------------------------------------------------------
     # STEP 6: Symmetrical Restoration Dry-Run Execution Test
     # ------------------------------------------------------------
-    Write-Host "`n[6/$totalSteps] Symmetrical restoration Dry-Run execution test..." -ForegroundColor Yellow
+    Write-Host "`n[6/$totalSteps] Symmetrical restoration Dry-Run execution test ($targetEngine)..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $undoOut = & $psExec -NoProfile -ExecutionPolicy Bypass -File ".\unslop.ps1" -Undo -DryRun 2>&1
+        $undoArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\$targetEngine", "-Undo", "-DryRun") + $engineExtraArgs
+        $undoOut = & $psExec @undoArgs 2>&1
         $undoExit = $LASTEXITCODE
         if ($undoExit -ne 0) {
             $fail = $true
-            Write-Host "  FAILED: unslop.ps1 -Undo -DryRun exited with code $undoExit" -ForegroundColor Red
+            Write-Host "  FAILED: $targetEngine -Undo -DryRun exited with code $undoExit" -ForegroundColor Red
             Write-Host ($undoOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
         } else {
             $undoSummaryFound = ($undoOut -match "RESTORE / UNDO COMPLETE").Length -gt 0
             if ($undoSummaryFound) {
-                Write-Host "  PASSED: unslop.ps1 -Undo -DryRun completed successfully (code 0, symmetrical restore verified)." -ForegroundColor Green
+                Write-Host "  PASSED: $targetEngine -Undo -DryRun completed successfully (code 0, symmetrical restore verified)." -ForegroundColor Green
             } else {
                 $fail = $true
-                Write-Host "  FAILED: unslop.ps1 -Undo -DryRun completed without expected restore banner." -ForegroundColor Red
+                Write-Host "  FAILED: $targetEngine -Undo -DryRun completed without expected restore banner." -ForegroundColor Red
             }
         }
     } finally { Pop-Location }
@@ -332,11 +346,11 @@ if (-not $Fast) {
     Write-Host "`n[7/$totalSteps] Batch launcher CLI parameter passthrough audit..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $batOut = & cmd.exe /c ".\unslop.bat -DryRun" 2>&1
+        $batOut = & cmd.exe /c ".\unslop.bat $targetBatArgs" 2>&1
         $batExit = $LASTEXITCODE
         if ($batExit -ne 0 -or ($batOut -match 'unexpected at this time|syntax of the command is incorrect')) {
             $fail = $true
-            Write-Host "  FAILED: unslop.bat -DryRun exited with code $batExit" -ForegroundColor Red
+            Write-Host "  FAILED: unslop.bat $targetBatArgs exited with code $batExit" -ForegroundColor Red
             Write-Host ($batOut | Select-Object -Last 10 | Out-String) -ForegroundColor Red
         } else {
             Write-Host "  PASSED: unslop.bat headless execution verified in cmd.exe (code 0)." -ForegroundColor Green

@@ -6,14 +6,16 @@ Master guide and non-negotiable architectural standards for **unslop-windows** ‚
 
 ## üèó System Architecture & Tech Stack
 
-- **Target Platforms:** Windows 11 23H2 (Build 22631+), 24H2 (Build 26100+), 25H2 (Build 26200+), and future Insider preview branches.
+- **Target Platforms:** Windows 11 23H2 (Build 22631+), 24H2 (Build 26100+), 25H2 (Build 26200+), and Windows 10 (all versions, Build 10240 through 19045 22H2).
 - **Engine Architecture:**
-  - [`unslop.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.ps1): Pure PowerShell 5.1 & PowerShell 7+ execution engine. Features 18 modular debloat and restoration stages, structured JSON/text logging (`.\logs\`), non-elevated read-only auditing (`-DryRun`), and 1-click restoration (`-Undo`). Verified across dual-runtime matrix in CI (Windows PowerShell 5.1 Desktop & PowerShell 7 Core).
-  - [`unslop.bat`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.bat): Dual-mode launcher and UAC elevation wrapper. Auto-detects admin rights, enforces CRLF, invokes `unslop.ps1`, captures exit codes, and manages post-execution reboot lifecycle.
-  - [`scripts/Test-MasterGate.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Test-MasterGate.ps1): 7-pillar local quality gate (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun test, Undo DryRun test, Batch launcher passthrough audit). Dynamically binds subprocess execution to the active host engine and static rules to `PSScriptAnalyzerSettings.psd1`.
-  - [`PSScriptAnalyzerSettings.psd1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/PSScriptAnalyzerSettings.psd1): Version-controlled static analysis ruleset enforcing security and code quality standards across local and CI environments.
-  - [`tests/unslop.Tests.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/tests/unslop.Tests.ps1): Pester 5/6 unit, mocking & static AST parity test suite verifying registry/service/task helpers, parameter flags (-KeepXbox, -KeepOneDrive), non-elevated exit contracts, and 100% Symmetrical Restoration AST invariants.
-  - [`scripts/Install-GitHooks.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/scripts/Install-GitHooks.ps1): Git hook orchestrator configuring `.githooks/pre-push`.
+  - [`unslop.ps1`](file:///d:/Programming/unslop-windows/unslop.ps1): Pure PowerShell 5.1 & PowerShell 7+ execution engine for Windows 11. Features 18 modular debloat and restoration stages, structured JSON/text logging (`.\logs\`), non-elevated read-only auditing (`-DryRun`), and 1-click restoration (`-Undo`).
+  - [`unslop-win10.ps1`](file:///d:/Programming/unslop-windows/unslop-win10.ps1): Standalone execution engine for Windows 10 (Build 10240+). Features Cortana complete purge, People bar/Meet Now/News & Interests suppression, Win10-adapted AppX de-provisioning, and 100% symmetrical restoration.
+  - [`unslop.bat`](file:///d:/Programming/unslop-windows/unslop.bat): Unified dual-mode launcher and UAC elevation wrapper. Interactive OS selection menu (Win10 vs Win11), auto-detects admin rights, enforces CRLF, captures exit codes, and supports `-Win10` CLI pass-through.
+  - [`scripts/Test-MasterGate.ps1`](file:///d:/Programming/unslop-windows/scripts/Test-MasterGate.ps1): 7-pillar local quality gate (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun test, Undo DryRun test, Batch launcher passthrough audit). Supports `-Win10` and `-SkipBuildCheck` flags.
+  - [`PSScriptAnalyzerSettings.psd1`](file:///d:/Programming/unslop-windows/PSScriptAnalyzerSettings.psd1): Version-controlled static analysis ruleset enforcing security and code quality standards across local and CI environments.
+  - [`tests/unslop.Tests.ps1`](file:///d:/Programming/unslop-windows/tests/unslop.Tests.ps1): Pester 6+ unit, mocking & static AST parity test suite for Windows 11.
+  - [`tests/unslop-win10.Tests.ps1`](file:///d:/Programming/unslop-windows/tests/unslop-win10.Tests.ps1): Pester 6+ unit, mocking & static AST parity test suite for Windows 10.
+  - [`scripts/Install-GitHooks.ps1`](file:///d:/Programming/unslop-windows/scripts/Install-GitHooks.ps1): Git hook orchestrator configuring `.githooks/pre-push`.
 - **Zero Third-Party Dependencies:** Zero compiled `.exe` or `.dll` binaries, zero third-party packages, zero cloud API dependencies. All operations rely strictly on native Win32 APIs, Windows Registry hives (`HKCU`, `HKLM`), AppX cmdlets, and built-in service controllers.
 
 ---
@@ -83,7 +85,7 @@ Master guide and non-negotiable architectural standards for **unslop-windows** ‚
 ### 10. The Zero-Advisory Invariant & Test-Driven Enforcement Principle
 - **No Advisory-Only Rules**: A policy or safety constraint must NEVER exist solely as markdown prose. Any invariant written in `AGENTS.md`, `decisions.md`, or skills MUST have a corresponding automated test in `tests/unslop.Tests.ps1` or `scripts/Test-MasterGate.ps1`. If it is not tested, it is an aspiration, not an invariant.
 - **Universal Mutating AST Audit**: State mutations (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) must NEVER appear as naked cmdlets in procedural script blocks. They must strictly route through approved bidirectional helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) that guarantee 100% `-Undo` symmetry and truthful failure logging (`$global:FailCount++`).
-- **Fail-Closed Tooling & CI Gate**: CI workflows and strict local checks (`-Strict`) must fail closed with exit code 1 if `PSScriptAnalyzer` or `Pester 5` is absent. Never allow graceful `SKIPPED` fallbacks in automated gates.
+- **Fail-Closed Tooling & CI Gate**: CI workflows and strict local checks (`-Strict`) must fail closed with exit code 1 if `PSScriptAnalyzer` or `Pester 6` is absent. Never allow graceful `SKIPPED` fallbacks in automated gates.
 - **Interactive Batch Validation Standard**: Changes to `unslop.bat` must be validated against both headless CLI execution (`cmd.exe /c "unslop.bat -DryRun"`) AND interactive menu elevation paths (`Start-Process -FilePath '%~f0' -Verb RunAs`), ensuring screens never vanish upon completion.
 
 ### 11. Documentation Co-Evolution & Clean Routing Standard
@@ -124,14 +126,23 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -TestResu
 # Run rapid quality gate (AST + Analyzer + CRLF only)
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 
+# Run Windows 10 Master Quality Gate
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Win10 -SkipBuildCheck
+
 # Install or test Git pre-push hook
 powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Test
 
-# Execute debloater with administrative elevation (apply tweaks)
+# Execute Windows 11 debloater with administrative elevation
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1
 
-# Execute symmetrical restoration (undo all tweaks)
+# Execute Windows 11 symmetrical restoration
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
+
+# Execute Windows 10 debloater with administrative elevation
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1
+
+# Execute Windows 10 symmetrical restoration
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo
 ```
 
 ---

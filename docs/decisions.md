@@ -287,7 +287,20 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Added active flags preview and quick reset in `unslop.bat` toggles menu.
 - **Consequences:** Closes path traversal vectors in diagnostic tools, hardens AppX provisioning across heterogeneous CPU architectures, and guarantees all contributor commits are verified before hitting GitHub.
 
+---
 
-
-
+## ADR-022: Windows 10 Multi-OS Support Architecture & Dual-Script Engine (2026-09-10)
+- **Status:** Accepted
+- **Context:** The unslop-windows project was exclusively designed for Windows 11 (23H2/24H2/25H2). Despite Windows 10 reaching official end of support in October 2025, millions of machines remain on Win10 with Microsoft's Extended Security Updates (ESU) program running through October 2027. Users requested Win10 debloating support following the same safe-tier principles, symmetrical undo, and quality standards.
+- **Alternatives Considered:**
+  1. *Unified script with OS branching:* Single `unslop.ps1` with `$isWin10` / `$isWin11` conditionals in every stage. Rejected due to: significantly increased complexity, conditional spaghetti across 18 stages, higher regression risk for stable Win11 users, and violation of Ponytail minimal-diff discipline on verified production code.
+  2. *Shared helper module:* Extracting helpers into `scripts/UnslopHelpers.psm1` imported by both scripts. Rejected to avoid modifying the Win11 dot-source guard, test harness, and AST verification architecture that has been production-verified.
+- **Decision:**
+  - **Separate scripts with duplicated helpers:** `unslop-win10.ps1` is a standalone Win10 debloater with all 6 helper functions (`Log`, `Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) duplicated for complete isolation. The existing `unslop.ps1` (Win11) remains completely unmodified — zero regression risk.
+  - **Unified batch launcher:** A single `unslop.bat` presents an OS choice menu (Win10 vs Win11) and routes to the appropriate `.ps1` script. CLI pass-through mode accepts `-Win10` flag to route to `unslop-win10.ps1`.
+  - **Win10 stages:** 18 modules adapted for Win10 — omitting Win11-only features (Recall, Copilot, Widgets via UCPD, classic context menu override) and adding Win10-specific debloating (Cortana complete purge, People bar, Meet Now, News & Interests, Timeline, Win10-specific AppX packages like Print3D, 3DBuilder, OneConnect, Paint 3D).
+  - **CI build gate bypass:** `-SkipBuildCheck` parameter allows CI runners (which run Windows Server 2022, build 20348) to execute DryRun pillars without OS build rejection.
+  - **Separate test suite:** `tests/unslop-win10.Tests.ps1` with adapted assertions for Win10 stage count, build gate, and AppX package list. Quality gate accepts `-Win10` flag.
+  - **All Win10 versions supported:** Build 10240+ (all Windows 10 releases from 1507 through 22H2).
+- **Consequences:** Provides complete Windows 10 debloating with zero regression risk to the stable Win11 engine, independent release cadence, and full CI/CD coverage. Accepts ~200 lines of helper code duplication as the cost of total isolation. Enables the repository to serve both Win10 and Win11 users from a single release package.
 

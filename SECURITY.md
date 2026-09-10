@@ -2,14 +2,15 @@
 
 ## Supported Versions
 
-`unslop-windows` targets modern Windows 11 builds.
+`unslop-windows` targets modern Windows 11 and Windows 10 builds.
 
-| Windows 11 Version | Build Range | Supported |
+| Operating System Version | Build Range | Supported Engine |
 | :--- | :--- | :--- |
-| **25H2** | Build 26200+ | Yes |
-| **24H2** | Build 26100 - 26120 | Yes |
-| **23H2** | Build 22631 | Yes |
-| Older builds / Windows 10 | < Build 22000 | Best effort (untested) |
+| **Windows 11 25H2** | Build 26200+ | Yes (`unslop.ps1`) |
+| **Windows 11 24H2** | Build 26100 - 26120 | Yes (`unslop.ps1`) |
+| **Windows 11 23H2** | Build 22631 | Yes (`unslop.ps1`) |
+| **Windows 10 22H2 / 21H2** | Build 19044 - 19045 | Yes (`unslop-win10.ps1`) |
+| **Windows 10 20H2 / 2004 / Legacy** | Build 10240 - 19043 | Yes (`unslop-win10.ps1`) |
 
 ---
 

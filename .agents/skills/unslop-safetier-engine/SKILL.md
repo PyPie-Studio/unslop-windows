@@ -5,7 +5,7 @@ description: Core debloater and hardening engine procedures, 18-module execution
 
 # unslop-safetier-engine
 
-This skill governs the core execution engine of **unslop-windows** ([`unslop.ps1`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.ps1) and [`unslop.bat`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/unslop.bat)).
+This skill governs the core execution engines of **unslop-windows** ([`unslop.ps1`](file:///d:/Programming/unslop-windows/unslop.ps1) for Windows 11 and [`unslop-win10.ps1`](file:///d:/Programming/unslop-windows/unslop-win10.ps1) for Windows 10, launched via [`unslop.bat`](file:///d:/Programming/unslop-windows/unslop.bat)). Both standalone engines share the same 6 core helper functions and adhere to identical safe-tier invariants and symmetrical undo contracts.
 
 ---
 

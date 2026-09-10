@@ -19,29 +19,34 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Ensure Required Modules Available (Pester 5 & PSScriptAnalyzer)
+      - name: Ensure Required Modules Available (Pester 6 & PSScriptAnalyzer)
         shell: pwsh
         run: |
-          $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
+          $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
           if (-not $pester) {
-            Write-Host "Installing Pester 5..."
-            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+            Write-Host "Installing Pester 6..."
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
           }
           if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
             Write-Host "Installing PSScriptAnalyzer..."
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
-      - name: Run 7-Pillar Master Quality Gate
+      - name: Run 7-Pillar Master Quality Gate (Win11)
         shell: pwsh
         run: |
-          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-release.xml"
+          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-release-win11.xml"
+
+      - name: Run 7-Pillar Master Quality Gate (Win10)
+        shell: pwsh
+        run: |
+          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -TestResultsPath "test-results/pester-release-win10.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
         shell: pwsh
         run: |
-          $xmlPath = "test-results/pester-release.xml"
+          $xmlPath = "test-results/pester-release-win11.xml"
           if (Test-Path $xmlPath) {
             [xml]$xml = Get-Content $xmlPath
             $total = $xml.'test-results'.total
@@ -98,13 +103,13 @@ jobs:
         shell: pwsh
         run: |
           $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          Compress-Archive -Path unslop.bat, unslop.ps1, README.md, LICENSE, tests -DestinationPath $zipName -Force
+          Compress-Archive -Path unslop.bat, unslop.ps1, unslop-win10.ps1, README.md, LICENSE, tests -DestinationPath $zipName -Force
 
       - name: Generate Cryptographic SHA-256 Checksums
         shell: pwsh
         run: |
           $zipName = "unslop-windows-$($env:GITHUB_REF_NAME).zip"
-          $files = @($zipName, "unslop.ps1", "unslop.bat")
+          $files = @($zipName, "unslop.ps1", "unslop-win10.ps1", "unslop.bat")
           $checksums = foreach ($file in $files) {
               $hash = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLowerInvariant()
               "$hash  $file"

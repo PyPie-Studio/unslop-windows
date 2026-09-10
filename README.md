@@ -3,44 +3,42 @@
 # 🧹 unslop-windows
 
 ### Stop Microsoft from turning your PC into an ad-riddled, AI-telemetry terminal.
-**The Safe-Tier Universal Windows 11 23H2, 24H2 & 25H2 Debloater and Privacy Hardener.**
+**The Safe-Tier Windows 11 (23H2/24H2/25H2) & Windows 10 Debloater and Privacy Hardener.**
 
 [![GitHub stars](https://img.shields.io/github/stars/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/network/members)
 [![GitHub release](https://img.shields.io/github/v/release/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=green)](https://github.com/PyPie-Studio/unslop-windows/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/PyPie-Studio/unslop-windows/lint.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/PyPie-Studio/unslop-windows/actions)
 [![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
+[![Windows 10](https://img.shields.io/badge/Windows%2010-All%20Versions-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.5.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.0.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
 ---
 
 > [!TIP]
-> ⭐ **Reclaiming your system from Windows 11 bloat?**
+> ⭐ **Reclaiming your system from Windows bloat?**
 > Give this repository a star on GitHub! It helps more users find a clean, open-source alternative that doesn't break Cumulative Updates or the Microsoft Store.
 
 ---
 
 ```text
 ============================================================
-  unslop-windows (v1.1.5) - PyPie Studio
-  Universal Windows 11 23H2 / 24H2 / 25H2 Debloat & Privacy
+  unslop-windows (v1.2.0) - PyPie Studio
+  Universal Windows Debloat & Privacy Hardener
 ============================================================
 
-  [1] Full Debloat (Purge OneDrive, telemetry, and bloatware)
-  [2] Gamer Preset (Debloat, but Keep Xbox & Gaming Services)
-  [3] Productivity Preset (Debloat, but Keep OneDrive & To-Do)
-  [4] Interactive Toggles (Configure custom feature combinations)
-  [5] Safe Dry-Run Audit (Inspect changes safely, zero modifications)
-  [6] Full Restore / Undo (Revert all tweaks back to defaults)
-  [7] Custom CLI Flags (Manually enter parameter switches)
+  Select your Windows version:
+
+  [1] Windows 11 (23H2 / 24H2 / 25H2)
+  [2] Windows 10 (All Versions)
   [0] Exit
 
 ============================================================
-Select an option [0-7]: 
+Select an option [0-2]: 
 ```
 
 ---
@@ -77,26 +75,41 @@ Run directly from an **Administrator Command Prompt** or an **Elevated PowerShel
 
 **Command Prompt (CMD - Run as Administrator):**
 ```cmd
+:: Interactive launcher (shows OS selection menu)
 unslop.bat
+
+:: Windows 11 Direct Execution
 unslop.bat -DryRun
-unslop.bat -KeepTodos
-unslop.bat -NoRestart
+unslop.bat -KeepXbox -KeepOneDrive
 unslop.bat -Undo
+
+:: Windows 10 Direct Execution (use -Win10 switch)
+unslop.bat -Win10 -DryRun
+unslop.bat -Win10 -KeepXbox
+unslop.bat -Win10 -Undo
 ```
 
 **PowerShell (Run as Administrator):**
 ```powershell
-# Full default debloat (notifies and prompts for reboot upon completion)
+# --- Windows 11 Execution ---
+# Full default debloat (prompts for reboot upon completion)
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1
 
-# Full default debloat without automatic reboot prompt (restart manually later)
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -NoRestart
-
-# Dry-run audit (safe inspection, zero changes written, no elevation required)
+# Dry-run audit (safe inspection, zero changes, non-elevated)
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
 
-# Full restore back to Windows defaults (prompts for reboot upon completion)
+# Full restore back to Windows 11 defaults
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
+
+# --- Windows 10 Execution ---
+# Full default debloat for Windows 10
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1
+
+# Dry-run audit for Windows 10
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -DryRun
+
+# Full restore back to Windows 10 defaults
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo
 ```
 
 ---
@@ -117,15 +130,17 @@ How `unslop-windows` compares to other popular debloaters:
 | Feature / Capability | unslop-windows | Chris Titus WinUtil | Sophia Script | Tron Script |
 | :--- | :---: | :---: | :---: | :---: |
 | **Windows 11 25H2 / 24H2 Support** | ✅ Full Native | ⚠️ Partial / Lagging | ❌ Broken / Lagging | ❌ Deprecated |
+| **Windows 10 Support (All Versions)** | ✅ Full Native | ⚠️ Generic | ⚠️ Legacy Sophia | ❌ Deprecated |
 | **Windows Recall & Copilot Killswitch** | ✅ Full GPO + Registry | ⚠️ Registry Only | ⚠️ Partial | ❌ No |
+| **Cortana Complete Purge (Win10)** | ✅ GPO + AppX | ⚠️ Partial | ⚠️ AppX Only | ❌ Unclean |
 | **Servicing Stack Safe (No WinSxS cuts)** | ✅ 100% Safe | ⚠️ Mixed | ⚠️ Mixed | ❌ Strips Components |
-| **Single-File Zero Dependency** | ✅ Yes (`unslop.ps1`) | ❌ GUI / Multi-file | ❌ Module Suite | ❌ Multi-GB Archive |
+| **Zero Third-Party Dependencies** | ✅ Pure Native PS/Batch | ❌ GUI / Multi-file | ❌ Module Suite | ❌ Multi-GB Archive |
 | **Symmetrical 1-Click Undo Engine** | ✅ Yes (`-Undo`) | ⚠️ Partial | ⚠️ Partial | ❌ No |
 | **Safe Non-Elevated Dry-Run** | ✅ Yes (`-DryRun`) | ❌ No | ❌ No | ❌ No |
 | **Untouchable Whitelist Enforced** | ✅ Guaranteed | ⚠️ User Config | ⚠️ User Config | ❌ High Break Risk |
 | **Safe Delivery Optimization (No Store breaks)** | ✅ GPO `DODownloadMode=0` | ❌ Disables Service | ⚠️ Mixed | ❌ Disables Service |
 | **Decoupled Autonomous Logging** | ✅ Local `logs/` or `$TEMP` | ⚠️ GUI Logs | ⚠️ Flat File | ⚠️ Flat Text |
-| **Test-Driven Invariants & Fail-Closed CI** | ✅ 36 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
+| **Test-Driven Invariants & Fail-Closed CI** | ✅ 74 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
 
 ---
 

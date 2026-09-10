@@ -5,7 +5,7 @@
     Enables local quality gate enforcement prior to pushing to protected branches.
 
 .PARAMETER InstallPrerequisites
-    Automatically installs required local testing modules (Pester 5+ and PSScriptAnalyzer)
+    Automatically installs required local testing modules (Pester 6+ and PSScriptAnalyzer)
     for the current user via PowerShell Gallery.
 
 .PARAMETER Test
@@ -72,11 +72,11 @@ try {
     if ($InstallPrerequisites) {
         Write-Host "Checking and installing required testing modules..." -ForegroundColor Yellow
 
-        $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
+        $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
         if (-not $pester) {
-            Write-Host "  Installing Pester 5+ (Scope: CurrentUser)..." -ForegroundColor Cyan
-            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
-            Write-Host "  Pester 5+ installed successfully." -ForegroundColor Green
+            Write-Host "  Installing Pester 6+ (Scope: CurrentUser)..." -ForegroundColor Cyan
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
+            Write-Host "  Pester 6+ installed successfully." -ForegroundColor Green
         } else {
             Write-Host "  Pester $($pester.Version) is already installed." -ForegroundColor Green
         }

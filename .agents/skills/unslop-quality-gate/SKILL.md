@@ -45,8 +45,11 @@ Every change to the repository must satisfy `scripts/Test-MasterGate.ps1`:
 ## ⚡ Execution Modes
 
 ```powershell
-# Full 7-pillar gate (recommended before git commit / git push):
+# Full 7-pillar gate for Windows 11 (recommended before git commit / git push):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
+
+# Full 7-pillar gate for Windows 10:
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Win10 -SkipBuildCheck
 
 # Full 7-pillar gate with Pester NUnit XML test export & JaCoCo Code Coverage:
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -TestResultsPath "test-results\pester.xml" -CodeCoveragePath "test-results\coverage.xml"
@@ -54,7 +57,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -TestResu
 # Rapid gate (steps 1-3 only; executes in < 0.2s):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 
-# Strict fail-closed gate (fails if PSScriptAnalyzer or Pester 5 is missing; auto-enabled in CI):
+# Strict fail-closed gate (fails if PSScriptAnalyzer or Pester 6 is missing; auto-enabled in CI):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
 
 # Gate with analyzer bypassed:
