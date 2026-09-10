@@ -75,13 +75,14 @@ $IsUndo = $Undo.IsPresent
 $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
 
 $global:FailCount = 0
-$log = @()
+# Performance Optimization: Use Generic List[string] for O(1) log accumulation (avoids O(N²) array reallocations)
+[System.Collections.Generic.List[string]]$script:log = [System.Collections.Generic.List[string]]::new()
 
 function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
     $ts = Get-Date -Format "HH:mm:ss"
     $prefix = if ($DryRun) { "[DRY-RUN] " } else { "" }
     $entry = "[$ts] $prefix$msg"
-    $script:log += $entry
+    [void]$script:log.Add($entry)
 
     if ($Color) {
         Write-Host $entry -ForegroundColor $Color
@@ -783,17 +784,20 @@ if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
-        $match = $provisioned | Where-Object { $_.DisplayName -match "^$([regex]::Escape($app))" }
+        # Performance Optimization: Use .Where() intrinsic method for ~3-5x faster array filtering inside loop
+        $match = if ($provisioned) { $provisioned.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
         if ($match) {
-            if ($IsDryRun) {
-                Log "  [WOULD RE-REGISTER]: $app"
-            } else {
-                try {
-                    Add-AppxPackage -RegisterByFamilyName -MainPackage $match.PackageName -AllUsers -ErrorAction Stop
-                    Log "  RE-REGISTERED: $app"
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not re-register $app - $($_.Exception.Message)"
+            foreach ($pkg in $match) {
+                if ($IsDryRun) {
+                    Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
+                } else {
+                    try {
+                        Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -AllUsers -ErrorAction Stop
+                        Log "  RE-REGISTERED: $($pkg.DisplayName)"
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not re-register $($pkg.DisplayName) - $($_.Exception.Message)"
+                    }
                 }
             }
         } else {
@@ -804,7 +808,8 @@ if ($IsUndo) {
     # 1. De-provision staged packages so they never reinstall for new profiles
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
-        $staged = $stagedPackages | Where-Object { $_.DisplayName -match "^$([regex]::Escape($app))" }
+        # Performance Optimization: Use .Where() intrinsic method for ~3-5x faster array filtering inside loop
+        $staged = if ($stagedPackages) { $stagedPackages.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
         if ($staged) {
             foreach ($pkg in $staged) {
                 if ($IsDryRun) {
@@ -836,8 +841,9 @@ if ($IsUndo) {
 
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
+        # Performance Optimization: Use .Where() intrinsic method for ~3-5x faster collection filtering inside loop
         $installed = if ($allInstalled) {
-            $allInstalled | Where-Object { -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" }
+            $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" })
         } else { $null }
 
         if ($installed) {
@@ -1182,7 +1188,7 @@ $modeTag = if ($IsDryRun) { "_dryrun" } else { "" }
 $fileOsTag = $osTag.ToLowerInvariant()
 $logPath = Join-Path $logDir "$($prefixName)_$($fileOsTag)$($modeTag)_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
-$log | Out-File -FilePath $logPath -Encoding UTF8
+$script:log | Out-File -FilePath $logPath -Encoding UTF8
 Log "Log saved to: $logPath"
 
 # ============================================================

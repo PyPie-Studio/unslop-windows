@@ -71,8 +71,10 @@ function Get-SystemMetrics {
     $processCount = if ($processes) { $processes.Count } else { 0 }
     $threadCount = 0
     if ($processes) {
-        $threadMeasure = $processes | ForEach-Object { $_.Threads.Count } | Measure-Object -Sum
-        $threadCount = $threadMeasure.Sum
+        # Performance Optimization: Fast direct iteration over processes (avoids pipeline allocation overhead)
+        foreach ($proc in $processes) {
+            $threadCount += $proc.Threads.Count
+        }
     }
 
     # Telemetry services audit
