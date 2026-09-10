@@ -12,6 +12,7 @@ This document outlines the specialized skills configured for the **unslop-window
 | **[`unslop-windows-internals`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-windows-internals/SKILL.md)** | Windows 11 OS Policies | Deep Windows 11 internals across 23H2 (22631), 24H2 (26100), and 25H2 (26200). ConsentStore privacy capabilities, Recall snapshot policies, Copilot suppression, telemetry endpoints, Cumulative Update invariants, hardware driver & firmware CVE patch preservation, and intentional privacy hardening boundaries. |
 | **[`unslop-quality-gate`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-quality-gate/SKILL.md)** | `scripts/`, `.githooks/` | Master Quality Gate (`scripts/Test-MasterGate.ps1`), 7-pillar verification (AST syntax, PSScriptAnalyzer, CRLF audit, Pester unit tests & code coverage, non-elevated DryRun, symmetrical Undo DryRun, and Batch launcher passthrough), fail-closed strict CI mode (`-Strict`), fast mode, and Git pre-push hook management (`.githooks/pre-push`). |
 | **[`unslop-agent-workflow`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-agent-workflow/SKILL.md)** | Workflow & Pair Programming | Antigravity AI pair programming procedures: zero-advisory invariant mandate, plan-first for architectural changes, direct execution for verified tasks, Ponytail minimal-diff discipline (PowerShell stdlib first, zero external dependencies), documentation clean routing standard, and SemVer release management. |
+| **[`unslop-pr-review`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-pr-review/SKILL.md)** | PR Review & Hardening | Mandatory review protocols, bot clutter depuration (`.jules/`), safe-tier AST symmetry audit, exit code contracts (`exit 1` vs `return`), symlink traversal guards, AppX multi-architecture array bindings, batch CRLF verification, and PR merge playbook. |
 
 ---
 
@@ -23,6 +24,7 @@ This document outlines the specialized skills configured for the **unslop-window
 | `unslop-windows-internals` | [`.agents/skills/unslop-windows-internals/SKILL.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-windows-internals/SKILL.md) |
 | `unslop-quality-gate` | [`.agents/skills/unslop-quality-gate/SKILL.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-quality-gate/SKILL.md) |
 | `unslop-agent-workflow` | [`.agents/skills/unslop-agent-workflow/SKILL.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-agent-workflow/SKILL.md) |
+| `unslop-pr-review` | [`.agents/skills/unslop-pr-review/SKILL.md`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-pr-review/SKILL.md) |
 
 ---
 

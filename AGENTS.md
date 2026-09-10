@@ -105,6 +105,7 @@ Master guide and non-negotiable architectural standards for **unslop-windows** â
 2. **[`unslop-windows-internals`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-windows-internals/SKILL.md):** Deep Windows 11 (23H2/24H2/25H2/26H2) internals, ConsentStore permissions, Recall (`DisableAIDataAnalysis`), Copilot policies, Defender SmartScreen balance, Windows Update invariants, and telemetry registry keys.
 3. **[`unslop-quality-gate`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-quality-gate/SKILL.md):** Local quality gate (`scripts/Test-MasterGate.ps1`), AST verification, PSScriptAnalyzer integration, CRLF integrity, git hook pipeline (`.githooks/pre-push`), and dry-run execution testing.
 4. **[`unslop-agent-workflow`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-agent-workflow/SKILL.md):** Antigravity pair programming guidelines for unslop-windows, direct execution, plan-first for architectural shifts, Ponytail minimal-diff discipline (prefer PowerShell stdlib/built-in cmdlets, zero extra dependencies), and release versioning discipline.
+5. **[`unslop-pr-review`](file:///c:/Users/tryku/Desktop/Coding/Projects/unslop-windows/.agents/skills/unslop-pr-review/SKILL.md):** Pull request inspection checklists and merge playbooks: bot clutter scrub (`.jules/`), safe-tier AST symmetry audit, exit code contracts (`exit 1` vs `return`), symlink traversal guards, AppX multi-architecture array bindings, and batch CRLF verification.
 
 ---
 
