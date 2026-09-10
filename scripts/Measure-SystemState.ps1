@@ -207,7 +207,15 @@ if ($isCompare) {
         $mdContent = $mdLines -join "`n"
         $targetPath = if ([System.IO.Path]::IsPathRooted($ExportMarkdown)) { $ExportMarkdown } else { Join-Path $root $ExportMarkdown }
         $mdDir = Split-Path -Parent $targetPath
-        if (-not (Test-Path $mdDir)) { New-Item -Path $mdDir -ItemType Directory -Force | Out-Null }
+        if (-not (Test-Path $mdDir)) {
+            New-Item -Path $mdDir -ItemType Directory -Force | Out-Null
+        } else {
+            $dirItem = Get-Item -Path $mdDir -ErrorAction SilentlyContinue
+            if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                Write-Error "[SECURITY ERROR] Target directory '$mdDir' is a reparse point or junction. Aborting export to prevent symlink redirection."
+                return
+            }
+        }
         [System.IO.File]::WriteAllText($targetPath, $mdContent, [System.Text.UTF8Encoding]::new($false))
         Write-Host "`nExported Markdown report to: $targetPath" -ForegroundColor Green
     }
@@ -255,7 +263,15 @@ foreach ($taskKey in $metrics.ScheduledTasks.Keys) {
 # Save snapshot if requested
 if ($Snapshot) {
     $logsDir = Join-Path $root "logs"
-    if (-not (Test-Path $logsDir)) { New-Item -Path $logsDir -ItemType Directory -Force | Out-Null }
+    if (-not (Test-Path $logsDir)) {
+        New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
+    } else {
+        $dirItem = Get-Item -Path $logsDir -ErrorAction SilentlyContinue
+        if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+            Write-Error "[SECURITY ERROR] Logs directory '$logsDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
+            return
+        }
+    }
 
     $fileName = if ($Snapshot.EndsWith(".json")) { $Snapshot } else { "$Snapshot.json" }
     $snapshotPath = if ([System.IO.Path]::IsPathRooted($fileName)) { $fileName } else { Join-Path $logsDir $fileName }

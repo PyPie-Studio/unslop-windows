@@ -541,14 +541,24 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $setupCalls.Count | Should -BeGreaterThan 0 -Because "Script must enforce Authenticode signature verification on user-space executables"
     }
 
-    It 'Log path resolution protects against reparse point / symlink redirection' {
-        $reparseChecks = $script:ast.FindAll({
+    It 'Log and output path resolutions protect against reparse point / symlink redirection' {
+        $measureScript = Join-Path $script:repoRoot "scripts/Measure-SystemState.ps1"
+        $measureAst = [System.Management.Automation.Language.Parser]::ParseFile($measureScript, [ref]$null, [ref]$null)
+
+        $reparseChecksEngine = $script:ast.FindAll({
             param($node)
             $node -is [System.Management.Automation.Language.MemberExpressionAst] -and
             $node.Member.Extent.Text -eq 'ReparsePoint'
         }, $true)
 
-        $reparseChecks.Count | Should -BeGreaterThan 0 -Because "Log initialization must inspect directory attributes for ReparsePoint to prevent symlink attacks"
+        $reparseChecksMeasure = $measureAst.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.MemberExpressionAst] -and
+            $node.Member.Extent.Text -eq 'ReparsePoint'
+        }, $true)
+
+        $reparseChecksEngine.Count | Should -BeGreaterThan 0 -Because "Engine log initialization must inspect directory attributes for ReparsePoint to prevent symlink attacks"
+        $reparseChecksMeasure.Count | Should -BeGreaterThan 0 -Because "Measure-SystemState script must inspect directory attributes for ReparsePoint to prevent symlink attacks"
     }
 
     It 'Windows Update driver updates are preserved and legacy ExcludeWUDrivers policy is cleaned up' {
