@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.5] - 2026-09-10
+
+### Security
+- **Reparse Point & Symlink Traversal Defense (`scripts/Measure-SystemState.ps1`)**: Resolved `$snapshotPath` before checking directory attributes and enforced `exit 1` fail-closed termination when a reparse point or directory junction is encountered in user profiles, neutralizing symlink redirection attacks (OPSEC-01).
+
+### Added
+- **Local Pre-Commit Git Hook (`.githooks/pre-commit`)**: Added automated pre-commit quality gate execution running rapid AST, PSScriptAnalyzer, and CRLF integrity checks on feature branches and full 7-pillar gates on `main`.
+- **Automated Developer Prerequisite Installer (`scripts/Install-GitHooks.ps1`)**: Added `-InstallPrerequisites` switch to automatically discover and install `Pester 5+` and `PSScriptAnalyzer` into the current user's profile and configure Git hook paths in a single command.
+- **Production PR Standards Documentation (`CONTRIBUTING.md`)**: Comprehensive testing guidelines, Git hook lifecycles, and mandatory pull request checklist requiring 0 failures under `Test-MasterGate.ps1 -Strict`.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-021 detailing diagnostic benchmark security, multi-architecture AppX array binding, and local developer hook gates.
+
+### Fixed
+- **AppX Multi-Architecture Parameter Binding (`unslop.ps1`)**: Handled multi-architecture AppX matches safely by iterating over matched packages (`foreach ($pkg in $match)`) rather than binding package arrays directly to `Add-AppxPackage -PackagePath`.
+- **Log Buffer Variable Scoping (`unslop.ps1`)**: Explicitly scoped `$script:log` in the log buffer export routine, guaranteeing complete log flushing even when called across nested scopes.
+
+### Changed
+- **Interactive Batch Toggles Sub-Menu UX (`unslop.bat`)**: Added a dynamic active flags preview banner, a quick reset toggle (`[0] Reset all options to default`), and streamlined argument construction by directly reusing validated active switches.
+
+---
+
 ## [1.1.4] - 2026-09-09
 
 ### Fixed
@@ -235,7 +255,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.1...v1.1.2

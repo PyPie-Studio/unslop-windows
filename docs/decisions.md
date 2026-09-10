@@ -272,6 +272,22 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Added Pester tests in `tests/unslop.Tests.ps1` enforcing the removal of `SdbinstMergeDbTask`, forbidding unmounted `HKCR:` paths, asserting the presence of `AllowNewsAndInterests`, and adding `Photon`, `CoreAI`, and `UndockedDevKit` to the non-removable package invariants.
 - **Consequences:** Eliminates all 6 live run warnings on 24H2 and 25H2, aligns debloating with Microsoft's official Group Policy management paths, avoids kernel driver blocking, and retains 100% of telemetry blocks, debloat effectiveness, and restoration symmetry.
 
+---
+
+## ADR-021: Diagnostic Benchmark Reparse Point Defense, Multi-Arch AppX Binding, and Local Hook Automation (2026-09-10)
+- **Status:** Accepted
+- **Context:**
+  1. *Benchmark Reparse Point Vulnerability (OPSEC-01):* `scripts/Measure-SystemState.ps1` wrote diagnostic snapshots without verifying whether `$snapshotDir` was a reparse point or directory junction, creating a potential symlink redirection vector. Additionally, using `return` in standalone scripts exited with code `0` instead of failing closed with `exit 1`.
+  2. *Multi-Architecture AppX Array Binding Bug:* In environments where provisioned AppX package directories match multiple architectures, passing `$match` directly to `Add-AppxPackage -PackagePath` failed parameter binding.
+  3. *Contributor Gate Friction:* Developers contributing PRs needed an automated way to install required testing dependencies (`Pester 5+` and `PSScriptAnalyzer`) and install pre-commit / pre-push hooks without manual intervention.
+- **Decision:**
+  - Resolved `$snapshotPath` and guarded snapshot directories against reparse points in `scripts/Measure-SystemState.ps1`, enforcing `exit 1` fail-closed error handling.
+  - Iterated over matched packages with `foreach ($pkg in $match)` in `unslop.ps1` AppX installation blocks, and explicitly scoped `$script:log`.
+  - Added `.githooks/pre-commit` and updated `scripts/Install-GitHooks.ps1` with `-InstallPrerequisites` to auto-install modules and register hooks.
+  - Added active flags preview and quick reset in `unslop.bat` toggles menu.
+- **Consequences:** Closes path traversal vectors in diagnostic tools, hardens AppX provisioning across heterogeneous CPU architectures, and guarantees all contributor commits are verified before hitting GitHub.
+
+
 
 
 

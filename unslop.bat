@@ -96,7 +96,7 @@ if not "%~1"=="" (
 :menu
 cls
 echo ============================================================
-echo   unslop-windows (v1.1.4) - PyPie Studio
+echo   unslop-windows (v1.1.5) - PyPie Studio
 echo   Universal Windows 11 23H2 / 24H2 / 25H2 Debloat ^& Privacy
 echo ============================================================
 echo.
