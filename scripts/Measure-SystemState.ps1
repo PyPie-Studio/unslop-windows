@@ -213,7 +213,7 @@ if ($isCompare) {
             $dirItem = Get-Item -Path $mdDir -ErrorAction SilentlyContinue
             if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
                 Write-Error "[SECURITY ERROR] Target directory '$mdDir' is a reparse point or junction. Aborting export to prevent symlink redirection."
-                return
+                exit 1
             }
         }
         [System.IO.File]::WriteAllText($targetPath, $mdContent, [System.Text.UTF8Encoding]::new($false))
@@ -262,19 +262,19 @@ foreach ($taskKey in $metrics.ScheduledTasks.Keys) {
 
 # Save snapshot if requested
 if ($Snapshot) {
-    $logsDir = Join-Path $root "logs"
-    if (-not (Test-Path $logsDir)) {
-        New-Item -Path $logsDir -ItemType Directory -Force | Out-Null
+    $fileName = if ($Snapshot.EndsWith(".json")) { $Snapshot } else { "$Snapshot.json" }
+    $snapshotPath = if ([System.IO.Path]::IsPathRooted($fileName)) { $fileName } else { Join-Path (Join-Path $root "logs") $fileName }
+    $snapshotDir = Split-Path -Parent $snapshotPath
+
+    if (-not (Test-Path $snapshotDir)) {
+        New-Item -Path $snapshotDir -ItemType Directory -Force | Out-Null
     } else {
-        $dirItem = Get-Item -Path $logsDir -ErrorAction SilentlyContinue
+        $dirItem = Get-Item -Path $snapshotDir -ErrorAction SilentlyContinue
         if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-            Write-Error "[SECURITY ERROR] Logs directory '$logsDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
-            return
+            Write-Error "[SECURITY ERROR] Target snapshot directory '$snapshotDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
+            exit 1
         }
     }
-
-    $fileName = if ($Snapshot.EndsWith(".json")) { $Snapshot } else { "$Snapshot.json" }
-    $snapshotPath = if ([System.IO.Path]::IsPathRooted($fileName)) { $fileName } else { Join-Path $logsDir $fileName }
 
     $metricsJson = $metrics | ConvertTo-Json -Depth 5
     [System.IO.File]::WriteAllText($snapshotPath, $metricsJson, [System.Text.UTF8Encoding]::new($false))
