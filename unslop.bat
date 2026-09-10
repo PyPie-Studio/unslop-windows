@@ -137,6 +137,13 @@ set "TOGGLE_DRYRUN=0"
 
 :toggles_menu
 cls
+set "ACTIVE_FLAGS="
+if "!TOGGLE_XBOX!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepXbox"
+if "!TOGGLE_ONEDRIVE!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepOneDrive"
+if "!TOGGLE_TODOS!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepTodos"
+if "!TOGGLE_CLASSIC!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -ClassicContextMenu"
+if "!TOGGLE_DRYRUN!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -DryRun"
+
 echo ============================================================
 echo   unslop-windows - Interactive Feature Toggles
 echo ============================================================
@@ -147,13 +154,21 @@ if "!TOGGLE_TODOS!"=="1" ( echo   [3] Preserve Microsoft To-Do            : [ ON
 if "!TOGGLE_CLASSIC!"=="1" ( echo   [4] Enable Classic Context Menu         : [ ON  ] ) else ( echo   [4] Enable Classic Context Menu         : [ OFF ] )
 if "!TOGGLE_DRYRUN!"=="1" ( echo   [5] Dry-Run Inspection Mode (Read-Only) : [ ON  ] ) else ( echo   [5] Dry-Run Inspection Mode (Read-Only) : [ OFF ] )
 echo.
+if defined ACTIVE_FLAGS (
+    echo   Active Flags: !ACTIVE_FLAGS!
+) else (
+    echo   Active Flags: (None - Full Default Debloat)
+)
+echo.
 echo ============================================================
 echo   [R] Run with selected configuration
+echo   [C] Clear / Reset all toggles
 echo   [B] Back to Main Menu
 echo ============================================================
 set /p "tchoice=Select an option to toggle, or [R] to run: "
 
 if /i "!tchoice!"=="b" goto :menu
+if /i "!tchoice!"=="c" goto :toggles
 if /i "!tchoice!"=="1" (
     if "!TOGGLE_XBOX!"=="1" ( set "TOGGLE_XBOX=0" ) else ( set "TOGGLE_XBOX=1" )
     goto :toggles_menu
