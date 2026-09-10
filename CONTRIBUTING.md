@@ -55,35 +55,62 @@ The following components must remain functional and un-targeted:
 
 ## Local Development & Testing Workflow
 
-### 1. Automated Master Quality Gate
-Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun, and Batch launcher passthrough):
+### 1. Prerequisites & Toolchain Setup
+
+Every change must pass our unified 7-pillar quality gate. You have two options for testing:
+
+#### Option A: 1-Command Automated Setup (Recommended)
+Automatically install required testing modules (`Pester 5+` and `PSScriptAnalyzer`), configure Git hooks (`pre-commit` and `pre-push`), and verify the test gate:
 
 ```powershell
-# Full gate: AST syntax, PSScriptAnalyzer, line-endings/conflict check, Pester tests, and dry-run tests
-powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
-
-# Strict fail-closed mode (fails if analyzer or Pester 5 is missing; auto-enabled in CI):
-powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
-
-# Rapid lint mode (skips dry-run execution and Pester tests):
-powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
+powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -InstallPrerequisites -Test
 ```
 
-### 2. Git Pre-Push Hook Setup
-Install the local pre-push hook to automatically block accidental pushes with failing tests:
+#### Option B: Manual Module Installation
+If you prefer to manage PowerShell modules manually, install them in your user profile:
 
 ```powershell
+# Install Pester 5+ and PSScriptAnalyzer
+Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+
+# Activate repository Git hooks
 powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Test
 ```
 
-### 3. Dry-Run Execution Test
-Run both standard debloat and symmetrical restoration dry-run modes:
+> [!NOTE]
+> **Remote CI/CD Automation**: Even if you do not install testing modules locally, our GitHub Actions CI pipeline (`.github/workflows/lint.yml`) automatically provisions fresh Windows environments, installs Pester 5 and PSScriptAnalyzer, and runs the full 7-pillar gate across both PowerShell 7 (Core) and Windows PowerShell 5.1 (Desktop) in `-Strict` mode on every pull request and push.
+
+### 2. Automated Master Quality Gate
+Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun, and Batch launcher passthrough):
 
 ```powershell
-# Verify audit output for your feature
+# Full 7-pillar gate: AST syntax, PSScriptAnalyzer, CRLF integrity, Pester tests, and dry-run tests
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1
+
+# Strict fail-closed mode (fails if analyzer or Pester 5 is missing; enforced in CI):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
+
+# Rapid lint mode (skips dry-run execution and Pester tests; AST, Analyzer & CRLF only):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
+```
+
+### 3. Git Hook Lifecycle (`pre-commit` & `pre-push`)
+When initialized via `Install-GitHooks.ps1`, your repository enforces quality checks automatically:
+* **`pre-commit`**:
+  * On feature branches: Runs rapid lint (`Test-MasterGate.ps1 -Fast`) to catch syntax, CRLF, and conflict errors immediately upon every commit (<1s).
+  * On `main`/`master`: Enforces the full 7-pillar Master Quality Gate before any commit is finalized.
+* **`pre-push`**:
+  * Blocks any `git push` targeting `main` or `master` if the full 7-pillar gate fails.
+
+### 4. Dry-Run Execution Test
+Verify both standard debloat and symmetrical restoration audit output:
+
+```powershell
+# Verify debloat audit output
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
 
-# Verify inverse restore output
+# Verify inverse restore audit output
 powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo -DryRun
 ```
 
@@ -101,6 +128,8 @@ powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo -DryRun
    git commit -m "feat(telemetry): disable novel 25h2 activity tracking task"
    ```
 4. **Push and Open a PR**:
+   * Verify all 7 pillars pass locally with zero skips via:
+     `powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict`
    * Follow the checklists provided in our [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md).
    * Include the Windows build number tested (e.g. 24H2 Build 26100 or 25H2 Build 26200).
    * Include the relevant excerpt from `.\logs\unslop_25h2_dryrun_*.log`.

@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+# ==============================================================================
+# Git Pre-Commit Hook for unslop-windows
+# Runs local Master Quality Gate before changes are committed.
+# - On main/master: Enforces full 7-pillar quality gate.
+# - On feature branches: Enforces fast AST syntax, CRLF, and conflict audits.
+# ==============================================================================
+
+# Determine best PowerShell executable
+if command -v pwsh >/dev/null 2>&1; then
+    PS_CMD="pwsh"
+elif command -v powershell.exe >/dev/null 2>&1; then
+    PS_CMD="powershell.exe"
+elif command -v powershell >/dev/null 2>&1; then
+    PS_CMD="powershell"
+else
+    echo "[pre-commit] ERROR: Neither pwsh nor powershell.exe found in PATH." >&2
+    exit 1
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+
+if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+    echo "============================================================"
+    echo "  [pre-commit] Commit on protected branch '$CURRENT_BRANCH' detected."
+    echo "  [pre-commit] Running full unslop-windows Master Quality Gate..."
+    echo "============================================================"
+    "$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File "$REPO_ROOT/scripts/Test-MasterGate.ps1"
+    GATE_STATUS=$?
+else
+    echo "============================================================"
+    echo "  [pre-commit] Running rapid quality audit on '$CURRENT_BRANCH'..."
+    echo "============================================================"
+    "$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File "$REPO_ROOT/scripts/Test-MasterGate.ps1" -Fast
+    GATE_STATUS=$?
+fi
+
+if [ $GATE_STATUS -ne 0 ]; then
+    echo "" >&2
+    echo "============================================================" >&2
+    echo "  [pre-commit] GATE BLOCKED: Code quality checks failed.    " >&2
+    echo "  Fix reported findings before committing.                 " >&2
+    echo "  (Bypass if urgent with: git commit --no-verify)           " >&2
+    echo "============================================================" >&2
+    exit 1
+fi
+
+exit 0

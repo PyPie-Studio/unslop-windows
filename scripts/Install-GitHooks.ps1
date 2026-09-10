@@ -4,8 +4,12 @@
     Configures git hooks for unslop-windows repository.
     Enables local quality gate enforcement prior to pushing to protected branches.
 
+.PARAMETER InstallPrerequisites
+    Automatically installs required local testing modules (Pester 5+ and PSScriptAnalyzer)
+    for the current user via PowerShell Gallery.
+
 .PARAMETER Test
-    Immediately tests the pre-push hook after installation.
+    Immediately tests the git hooks pipeline after installation.
 
 .PARAMETER Fast
     When used with -Test, runs the gate in -Fast mode.
@@ -15,11 +19,12 @@
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File scripts/Install-GitHooks.ps1
-    powershell -ExecutionPolicy Bypass -File scripts/Install-GitHooks.ps1 -Test
+    powershell -ExecutionPolicy Bypass -File scripts/Install-GitHooks.ps1 -InstallPrerequisites -Test
     powershell -ExecutionPolicy Bypass -File scripts/Install-GitHooks.ps1 -Uninstall
 #>
 [CmdletBinding()]
 param(
+    [switch]$InstallPrerequisites,
     [switch]$Test,
     [switch]$Fast,
     [switch]$Uninstall
@@ -51,26 +56,54 @@ try {
         Write-Host "Uninstalling unslop-windows git hooks..." -ForegroundColor Yellow
         git config --unset core.hooksPath 2>$null
 
-        $targetHook = Join-Path $root ".git\hooks\pre-push"
-        if (Test-Path $targetHook) {
-            Remove-Item $targetHook -Force
-            Write-Host "  Removed: .git/hooks/pre-push" -ForegroundColor DarkGray
+        foreach ($hookName in @("pre-commit", "pre-push")) {
+            $targetHook = Join-Path $root ".git\hooks\$hookName"
+            if (Test-Path $targetHook) {
+                Remove-Item $targetHook -Force
+                Write-Host "  Removed: .git/hooks/$hookName" -ForegroundColor DarkGray
+            }
         }
 
         Write-Host "SUCCESS: Git hooks uninstalled. core.hooksPath reset to default." -ForegroundColor Green
         return
     }
 
-    $sourceHookDir = Join-Path $root ".githooks"
-    $sourceHook = Join-Path $sourceHookDir "pre-push"
+    # 0. Optional: Install local test prerequisites
+    if ($InstallPrerequisites) {
+        Write-Host "Checking and installing required testing modules..." -ForegroundColor Yellow
 
-    if (-not (Test-Path $sourceHook)) {
-        Write-Host "ERROR: Pre-push hook file not found at: $sourceHook" -ForegroundColor Red
-        exit 1
+        $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 5 } | Select-Object -First 1
+        if (-not $pester) {
+            Write-Host "  Installing Pester 5+ (Scope: CurrentUser)..." -ForegroundColor Cyan
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+            Write-Host "  Pester 5+ installed successfully." -ForegroundColor Green
+        } else {
+            Write-Host "  Pester $($pester.Version) is already installed." -ForegroundColor Green
+        }
+
+        $analyzer = Get-Module -ListAvailable -Name PSScriptAnalyzer | Select-Object -First 1
+        if (-not $analyzer) {
+            Write-Host "  Installing PSScriptAnalyzer (Scope: CurrentUser)..." -ForegroundColor Cyan
+            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+            Write-Host "  PSScriptAnalyzer installed successfully." -ForegroundColor Green
+        } else {
+            Write-Host "  PSScriptAnalyzer $($analyzer.Version) is already installed." -ForegroundColor Green
+        }
+    }
+
+    $sourceHookDir = Join-Path $root ".githooks"
+    $hooks = @("pre-commit", "pre-push")
+
+    foreach ($hook in $hooks) {
+        $sourceHook = Join-Path $sourceHookDir $hook
+        if (-not (Test-Path $sourceHook)) {
+            Write-Host "ERROR: Hook file not found at: $sourceHook" -ForegroundColor Red
+            exit 1
+        }
     }
 
     # 1. Configure git core.hooksPath to .githooks
-    Write-Host "Configuring git core.hooksPath to .githooks..." -ForegroundColor Yellow
+    Write-Host "`nConfiguring git core.hooksPath to .githooks..." -ForegroundColor Yellow
     git config core.hooksPath .githooks
     $configuredPath = git config core.hooksPath
     Write-Host "  core.hooksPath = $configuredPath" -ForegroundColor Green
@@ -78,12 +111,15 @@ try {
     # 2. Also copy to .git/hooks for tools that bypass core.hooksPath
     $gitHooksDir = Join-Path $root ".git\hooks"
     if (Test-Path $gitHooksDir) {
-        $destHook = Join-Path $gitHooksDir "pre-push"
-        Copy-Item -Path $sourceHook -Destination $destHook -Force
-        Write-Host "  Synchronized fallback to: .git/hooks/pre-push" -ForegroundColor Green
+        foreach ($hook in $hooks) {
+            $src = Join-Path $sourceHookDir $hook
+            $dst = Join-Path $gitHooksDir $hook
+            Copy-Item -Path $src -Destination $dst -Force
+            Write-Host "  Synchronized fallback to: .git/hooks/$hook" -ForegroundColor Green
+        }
     }
 
-    Write-Host "SUCCESS: Pre-push hook is active and protecting 'main' and 'master' branches." -ForegroundColor Green
+    Write-Host "SUCCESS: Pre-commit and pre-push hooks are active and protecting repository." -ForegroundColor Green
 
     # 3. Optional Test execution
     if ($Test) {
