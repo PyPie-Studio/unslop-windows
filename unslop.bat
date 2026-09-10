@@ -155,7 +155,7 @@ if "!TOGGLE_CLASSIC!"=="1" ( echo   [4] Enable Classic Context Menu         : [ 
 if "!TOGGLE_DRYRUN!"=="1" ( echo   [5] Dry-Run Inspection Mode (Read-Only) : [ ON  ] ) else ( echo   [5] Dry-Run Inspection Mode (Read-Only) : [ OFF ] )
 echo.
 if defined ACTIVE_FLAGS (
-    echo   Active Flags: !ACTIVE_FLAGS!
+    echo   Active Flags:!ACTIVE_FLAGS!
 ) else (
     echo   Active Flags: (None - Full Default Debloat)
 )
@@ -196,15 +196,8 @@ timeout /t 1 >nul
 goto :toggles_menu
 
 :toggles_run
-set "ARGS="
-if "!TOGGLE_XBOX!"=="1" set "ARGS=!ARGS! -KeepXbox"
-if "!TOGGLE_ONEDRIVE!"=="1" set "ARGS=!ARGS! -KeepOneDrive"
-if "!TOGGLE_TODOS!"=="1" set "ARGS=!ARGS! -KeepTodos"
-if "!TOGGLE_CLASSIC!"=="1" set "ARGS=!ARGS! -ClassicContextMenu"
-if "!TOGGLE_DRYRUN!"=="1" (
-    set "ARGS=!ARGS! -DryRun"
-    goto :run_dry
-)
+set "ARGS=!ACTIVE_FLAGS!"
+if "!TOGGLE_DRYRUN!"=="1" goto :run_dry
 goto :run
 
 :: ------------------------------------------------------------
