@@ -20,7 +20,7 @@
 ---
 
 > [!TIP]
-> ⭐ **Reclaiming your system from Windows bloat?**
+> ⭐ **Reclaiming your system from Windows Slop?**
 > Give this repository a star on GitHub! It helps more users find a clean, open-source alternative that doesn't break Cumulative Updates or the Microsoft Store.
 
 ---
