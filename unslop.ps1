@@ -1,4 +1,4 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.1.5)
+# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.2.0)
 # Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -355,7 +355,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.1.5: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.2.0: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================

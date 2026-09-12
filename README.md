@@ -54,10 +54,10 @@ Select an option [0-2]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.1.5.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.1.5.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.2.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
-4. In the console menu, type `1` for Full Debloat, `2` for Gamer Preset, `3` for Productivity Preset, or `4` to interactively toggle features on/off.
+4. In the console menu, select from: `1` Full Debloat, `2` Gamer Preset, `3` Productivity Preset, `4` Interactive Toggles, `5` Safe Dry-Run Audit, `6` Full Restore / Undo, or `7` Custom CLI Flags.
 5. When the script completes, ensure your work is saved: press **`n`** to postpone rebooting and return to the menu, or press **Enter** (or `Y`) to start the 30-second countdown (during the countdown, tap **`A`** to abort or **`R`** to reboot immediately).
 
 ### Method 2: Git Clone (Developers & Terminal Users)
@@ -156,20 +156,20 @@ Most debloaters break future Windows updates or leave background services in uns
 
 ---
 
-## ⚙️ What Gets Hardened (18 Modules)
+## ⚙️ What Gets Hardened (18 Modules per Engine)
 
 1. **Services (6)**: Disables `SysMain`, `WSearch`, `dmwappushservice`, `DiagTrack`, `TrkWks`, and `lfsvc`. Start Menu app search remains functional via shell in-memory index.
-2. **Windows Recall & Copilot**: Sets `DisableAIDataAnalysis = 1`, `AllowRecall = 0`, `TurnOffWindowsCopilot = 1`, and removes the Copilot taskbar button.
+2. **Windows Recall & Copilot** *(Win11)* / **Cortana Complete Purge** *(Win10)*: On Win11, sets `DisableAIDataAnalysis = 1`, `AllowRecall = 0`, `TurnOffWindowsCopilot = 1`, and removes the Copilot taskbar button. On Win10, sets `AllowCortana = 0`, hides the search box, and dual-stage de-provisions the Cortana UWP app.
 3. **Telemetry & Diagnostics**: Disables `AllowTelemetry`, CEIP, Application Impact Telemetry, and OneSettings telemetry flighting downloads.
 4. **Settings Recommendations & Offers**: Disables lockscreen tips, start menu recommendations, account notification badges, and Content Delivery Manager promotions.
 5. **Speech & Inking Personalization**: Disables cloud speech recognition and removes typing/inking dictionary collection.
 6. **Search History & Cloud Integration**: Disables local search history tracking, MSA cloud search, and Bing web suggestions.
 7. **Network Security & Wi-Fi Sense**: Disables LLMNR (`EnableMulticast = 0`) to mitigate NTLM hash theft on local networks. Disables Wi-Fi hotspot reporting and auto-connect beacons.
 8. **Windows Update Driver & Firmware Integrity**: Preserves Windows Update delivery of hardware driver and firmware updates so critical security patches and hardware CVE mitigations install cleanly, while proactively clearing legacy overwrite blocks.
-9. **Explorer & Taskbar Cleanliness**: Disables Widgets via official GPO policy (`AllowNewsAndInterests = 0`) and hides Chat (`TaskbarMn = 0`). Ensures file extensions are visible (`HideFileExt = 0`).
-10. **ConsentStore Permissions (12)**: Revokes background access for location, diagnostics, contacts, calendar, phone, and 25H2 screen text scraping (`foregroundTextAccess`), OS AI model execution (`systemAIModels`), and borderless screen capture (`graphicsCaptureWithoutBorder`).
+9. **Explorer & Taskbar Cleanliness**: On Win11, disables Widgets via GPO (`AllowNewsAndInterests = 0`) and hides Chat (`TaskbarMn = 0`). On Win10, suppresses News & Interests (`ShellFeedsTaskbarViewMode = 2`), hides People bar and Meet Now. Both engines ensure file extensions are visible (`HideFileExt = 0`).
+10. **ConsentStore Permissions**: Revokes background access for location, diagnostics, contacts, calendar, and phone capabilities. Win11 manages 12 capabilities including 25H2 screen text scraping (`foregroundTextAccess`), OS AI model execution (`systemAIModels`), and borderless screen capture (`graphicsCaptureWithoutBorder`). Win10 manages 9 core capabilities.
 11. **Scheduled Tasks**: Disables 20+ telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience, and Disk Diagnostics.
-12. **Dual-Stage AppX Purge**: Removes installed packages for all existing user profiles and de-provisions staged packages from the Windows image (TikTok, Spotify, Instagram, Netflix, Solitaire, News, Weather, Get Help, Tips, Feedback Hub).
+12. **Dual-Stage AppX Purge**: Removes installed packages for all existing user profiles and de-provisions staged packages from the Windows image. Win11 targets 34 packages including 24H2/25H2 AI injections (aimgr, AIFabric, AugLoop, WidgetsPlatformRuntime, StartExperiencesApp), sponsored bloat (TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video), Microsoft consumer apps (Clipchamp, Outlook, Solitaire, News, BingSearch, BingFinance, BingSports, PC Manager, DevHome, Phone Link), and Office push services. Win10 targets 39 packages including legacy apps (Print3D, 3DBuilder, Skype, Maps, Alarms, Mail & Calendar, Mixed Reality Portal, Cortana). Both engines add Xbox (+2 packages) unless `-KeepXbox` is specified.
 13. **OneDrive Purge Engine**: Terminates running processes, runs the silent uninstaller, unpins the Explorer sidebar icon (`{018D5C66-4533-4307-9B53-224DE2ED1FE6}`), sets sync block policies (`DisableFileSyncNGSC = 1`), and removes startup registry entries.
 14. **Startup Entries & Edge Background**: Disables Edge background application access. Removed startup run keys are safely archived under `HKCU:\Software\unslop-windows\StartupBackup` and symmetrically restored on `-Undo` (zero data loss).
 15. **Microsoft Defender Telemetry**: Configures `SubmitSamplesConsent = 2` (NeverSend) to block automatic memory and sample file uploads while keeping real-time antivirus active.
@@ -197,16 +197,17 @@ Most debloaters break future Windows updates or leave background services in uns
 
 ## 🎛️ Optional Parameters
 
-| Parameter | Type | Default | Description |
+| Parameter | OS | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `-DryRun` | Switch | `False` | Audits planned modifications without writing changes. Runs without admin rights. |
-| `-Undo` | Switch | `False` | Restores all disabled services, scheduled tasks, and policies back to Windows defaults. |
-| `-KeepOneDrive` | Switch | `False` | Skips OneDrive uninstallation, registry unpinning, and sync blocking policies. |
-| `-KeepTodos` | Switch | `False` | Preserves Microsoft To-Do (`Microsoft.Todos`) during AppX cleanup. |
-| `-KeepXbox` | Switch | `False` | Preserves Xbox app and Gaming Services for Game Pass users. |
-| `-ClassicContextMenu`| Switch | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
-| `-NoRestart` | Switch | `False` | Suppresses the post-execution restart prompt (user must manually restart computer). |
-| `-ForceRestart` | Switch | `False` | Bypasses confirmation and immediately restarts the computer (`shutdown /r /t 0`). |
+| `-DryRun` | Both | `False` | Audits planned modifications without writing changes. Runs without admin rights. |
+| `-Undo` | Both | `False` | Restores all disabled services, scheduled tasks, and policies back to Windows defaults. |
+| `-KeepOneDrive` | Both | `False` | Skips OneDrive uninstallation, registry unpinning, and sync blocking policies. |
+| `-KeepTodos` | Both | `False` | Preserves Microsoft To-Do (`Microsoft.Todos`) during AppX cleanup. |
+| `-KeepXbox` | Both | `False` | Preserves Xbox app and Gaming Services for Game Pass users. |
+| `-ClassicContextMenu`| Win11 | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
+| `-NoRestart` | Both | `False` | Suppresses the post-execution restart prompt (user must manually restart computer). |
+| `-ForceRestart` | Both | `False` | Bypasses confirmation and immediately restarts the computer (`shutdown /r /t 0`). |
+| `-SkipBuildCheck` | Win10 | `False` | Bypasses OS build verification. Used for CI/CD and cross-OS testing. |
 
 ### Parameter Examples
 
