@@ -2,33 +2,33 @@
 
 Thank you for your interest in improving `unslop-windows`.
 
-To maintain stability across Windows 11 updates, all contributions must adhere to our strict **Safe-Tier** engineering standards.
+To maintain system stability across Windows updates, all contributions must adhere to our strict **Safety Standards**.
 
 ---
 
 ## Non-Negotiable Core Rules
 
-Every Pull Request must meet these seven requirements:
+Every Pull Request must meet these eight requirements:
 
-### 1. The Safe-Tier Mandate
+### 1. Safety Rules (Never Break Windows)
 * **Never touch WinSxS or DISM servicing components.**
 * **Never break Windows Update.** Cumulative updates and security patches must install cleanly.
 * **Never break the Microsoft Store.** Do not disable `DoSvc` (*Delivery Optimization* service); use GPO `DODownloadMode = 0` to block peer-to-peer uploads instead.
 * **Never disable critical security hardware or system drivers.**
 
-### 2. Symmetrical Restoration (`-Undo`)
-Any modification added to `unslop-win11.ps1` or `unslop-win10.ps1` must have an exact inverse restore path. If you disable a service, scheduled task, firewall rule, or registry key in the main debloat path, you must restore it to its default state in the `$IsUndo` block.
+### 2. Symmetrical Rollback (`-Undo`)
+Any modification added to `unslop-win11.ps1` or `unslop-win10.ps1` must have an exact inverse restore path. If you disable a service, scheduled task, firewall rule or registry key in the main debloat path, you must restore it to its default state in the `$IsUndo` block.
 
 ### 3. Zero Binary Dependencies
-The project is pure PowerShell. Pull requests introducing external `.exe`, `.dll`, or third-party binary dependencies will be rejected. Use native Windows APIs, Group Policy registry paths, or PowerShell cmdlets.
+The project is pure PowerShell. Pull requests introducing external `.exe`, `.dll` or third-party binary dependencies will be rejected. Use native Windows APIs, Group Policy registry paths or PowerShell cmdlets.
 
-### 4. Respect the Untouchable Whitelist
+### 4. Protected Apps & Components (What We Never Touch)
 The following components must remain functional and un-targeted:
-* Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`).
-* Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`).
-* Microphone and webcam access (for Discord, Teams, OBS).
+* Windows Terminal, Microsoft Store and WinGet (`DesktopAppInstaller`).
+* Calculator, Photos, Paint and Snipping Tool (`ScreenSketch`).
+* Microphone and webcam access (for Discord, Teams and OBS).
 * Hardware noise suppression and GPU control panels (AMD / NVIDIA).
-* Developer toolchains (VS Code, Git, Docker, Ollama).
+* Developer toolchains (VS Code, Git, Docker and Ollama).
 
 ### 5. Idempotent & Auditable
 * Your additions must be safe to execute multiple times without corrupting keys or failing on missing elements.
@@ -45,10 +45,10 @@ The following components must remain functional and un-targeted:
 * **Batch Parameter Whitelisting:** Batch launchers must never pass unfiltered CLI parameters (`%*`) to dynamic execution strings or elevated commands. All switches must be validated against a strict allowlist.
 * **Strictly Offline-First:** Pull requests introducing dynamic script fetching (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) will be rejected. The debloater must execute completely offline.
 * **Preserve Driver Security Updates:** Do not disable Windows Update driver/firmware patches (`ExcludeWUDriversInQualityUpdate`). Hardware CVE updates must flow freely.
-* **Symlink / Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks/junctions before writing files.
+* **Symlink & Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks or junctions before writing files.
 
-### 8. The Zero-Advisory Invariant Mandate
-* **Automated Test Enforcement:** No policy, privacy rule, or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop-win11.Tests.ps1` (or `tests/unslop-win10.Tests.ps1`) or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
+### 8. Automated Test Enforcement
+* **Automated Test Enforcement:** No policy, privacy rule or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop-win11.Tests.ps1` (or `tests/unslop-win10.Tests.ps1`) or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
 * **Universal Mutating AST Audit:** Naked calls to mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) outside approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) will fail the AST quality gate.
 
 ---

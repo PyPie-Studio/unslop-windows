@@ -30,3 +30,6 @@ test-results/
 testResults.xml
 coverage*.xml
 
+# Graphify output
+graphify-out/
+
