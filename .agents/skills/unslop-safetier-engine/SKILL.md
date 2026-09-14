@@ -5,12 +5,12 @@ description: Core debloater and hardening engine procedures, 18-module execution
 
 # unslop-safetier-engine
 
-This skill governs the core execution engines of **unslop-windows** ([`unslop.ps1`](file:///d:/Programming/unslop-windows/unslop.ps1) for Windows 11 and [`unslop-win10.ps1`](file:///d:/Programming/unslop-windows/unslop-win10.ps1) for Windows 10, launched via [`unslop.bat`](file:///d:/Programming/unslop-windows/unslop.bat)). Both standalone engines share the same 6 core helper functions and adhere to identical safe-tier invariants and symmetrical undo contracts.
+This skill governs the core execution engines of **unslop-windows** ([`unslop-win11.ps1`](file:///d:/Programming/unslop-windows/unslop-win11.ps1) for Windows 11 and [`unslop-win10.ps1`](file:///d:/Programming/unslop-windows/unslop-win10.ps1) for Windows 10, launched via [`unslop.bat`](file:///d:/Programming/unslop-windows/unslop.bat)). Both standalone engines share the same 6 core helper functions and adhere to identical safe-tier invariants and symmetrical undo contracts.
 
 ---
 
 ## 🛡 The 18 Hardening Modules
-`unslop.ps1` executes 18 distinct modular stages in a deterministic sequence:
+Both `unslop-win11.ps1` and `unslop-win10.ps1` execute 18 distinct modular stages in a deterministic sequence:
 
 1. **Telemetry & Diagnostics:** DiagTrack, dmwappushservice, Connected User Experiences and Telemetry.
 2. **Advertising & Privacy ID:** Tailored experiences, Advertising ID, typing/inking telemetry.
@@ -39,7 +39,7 @@ This skill governs the core execution engines of **unslop-windows** ([`unslop.ps
 - Every new tweak or modification added to an existing module **MUST** include an exact inverse implementation in the `if ($Undo)` block.
 - When creating a registry key that didn't previously exist in clean Windows, the `-Undo` routine must use `Remove-ItemProperty` or `Remove-Item` to restore original state.
 - When changing a default Windows value, the `-Undo` routine must set it back to the exact default value.
-- Never add a one-way modification to `unslop.ps1`.
+- Never add a one-way modification to `unslop-win11.ps1` or `unslop-win10.ps1`.
 
 ### 2. Defensive Mutation Architecture & Universal AST Symmetry
 - **Universal Helper Routing:** State mutations (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) must NEVER be called as bare/naked cmdlets in procedural modules. They must route through approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`). The AST gate will reject any bare mutating calls.
@@ -126,10 +126,10 @@ for %%A in (%*) do (
 ```
 
 ### 3. Fail-Closed Offline Architecture (VULN-03)
-The debloater must operate in strictly isolated, air-gapped, or offline environments. Never implement automatic fallback downloads (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) in scripts or batch launchers. If required companion scripts (e.g. `unslop.ps1`) are missing:
+The debloater must operate in strictly isolated, air-gapped, or offline environments. Never implement automatic fallback downloads (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) in scripts or batch launchers. If required companion scripts (e.g. `unslop-win11.ps1`) are missing:
 ```cmd
-if not exist "%~dp0unslop.ps1" (
-    echo [!] ERROR: unslop.ps1 not found in directory: %~dp0
+if not exist "%~dp0unslop-win11.ps1" (
+    echo [!] ERROR: unslop-win11.ps1 not found in directory: %~dp0
     echo [*] Please verify all files are extracted together before running.
     exit /b 1
 )

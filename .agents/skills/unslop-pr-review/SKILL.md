@@ -151,7 +151,7 @@ Confirm that no orphan local branches or deleted remote branches remain.
 
 | PR Type | Priority Checks | Mandatory Tests |
 | :--- | :--- | :--- |
-| **Engine / Registry (`unslop.ps1`)** | Helper routing, 100% `-Undo` symmetry, non-elevated `-DryRun` check, whitelist preservation | AST parity test, helper unit mock |
+| **Engine / Registry (`unslop-win11.ps1` / `unslop-win10.ps1`)** | Helper routing, 100% `-Undo` symmetry, non-elevated `-DryRun` check, whitelist preservation | AST parity test, helper unit mock |
 | **Batch Launcher (`unslop.bat`)** | CRLF line endings, argument whitelist loop, anti-screen-amnesia (`-FromMenu`), UAC elevation error handling | Headless batch audit (Pillar 7) |
 | **Diagnostic Scripts (`scripts/`)** | Reparse point symlink check, `exit 1` fail-closed exit contract, absolute path resolution | Reparse point unit mock test |
 | **CI / Workflows (`.github/`, `.githooks/`)** | Module installation logic (`Pester 6+`, `PSScriptAnalyzer`), strict failure rules, runner matrix | Dual-runtime local gate |

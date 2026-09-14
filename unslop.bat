@@ -5,9 +5,9 @@ title unslop-windows Launcher
 :: Change directory to script directory
 cd /d "%~dp0"
 
-:: Ensure unslop.ps1 and unslop-win10.ps1 exist locally
+:: Ensure unslop-win11.ps1 and unslop-win10.ps1 exist locally
 set "MISSING=0"
-if not exist "%~dp0unslop.ps1" set "MISSING=1"
+if not exist "%~dp0unslop-win11.ps1" set "MISSING=1"
 if not exist "%~dp0unslop-win10.ps1" set "MISSING=1"
 
 if "!MISSING!"=="1" (
@@ -15,7 +15,7 @@ if "!MISSING!"=="1" (
     echo ============================================================
     echo   [ERROR] MISSING REQUIRED SCRIPTS
     echo ============================================================
-    echo   unslop.ps1 and/or unslop-win10.ps1 were not found in:
+    echo   unslop-win11.ps1 and/or unslop-win10.ps1 were not found in:
     echo   %~dp0
     echo.
     echo   For your security, unslop-windows will not download code
@@ -28,30 +28,61 @@ if "!MISSING!"=="1" (
 )
 
 :: ------------------------------------------------------------
+:: DETECT HOST WINDOWS OS BUILD
+:: ------------------------------------------------------------
+set "HOST_BUILD=0"
+for /f "tokens=3" %%A in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v CurrentBuildNumber 2^>nul') do (
+    set "HOST_BUILD=%%A"
+)
+if "!HOST_BUILD!"=="0" (
+    for /f "tokens=3" %%A in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v CurrentBuild 2^>nul') do (
+        set "HOST_BUILD=%%A"
+    )
+)
+
+set "HOST_OS=UNKNOWN"
+set "HOST_OS_LABEL="
+if !HOST_BUILD! geq 22000 (
+    set "HOST_OS=WIN11"
+    set "HOST_OS_LABEL=Windows 11 (Build !HOST_BUILD!)"
+) else if !HOST_BUILD! gtr 0 (
+    set "HOST_OS=WIN10"
+    set "HOST_OS_LABEL=Windows 10 (Build !HOST_BUILD!)"
+)
+
+:: ------------------------------------------------------------
 :: CLI PASS-THROUGH MODE
 :: If arguments are passed via command-line, bypass menu
 :: ------------------------------------------------------------
 if not "%~1"=="" (
-    set "TARGET_SCRIPT=unslop.ps1"
+    set "TARGET_SCRIPT=unslop-win11.ps1"
     set "OS_MODE=WIN11"
 
     :: Validate arguments against strict switch whitelist
     for %%A in (%*) do (
         set "ARG_VALID=0"
-        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -RunDirect -FromMenu -Win10 -SkipBuildCheck) do (
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck) do (
             if /i "%%~A"=="%%V" set "ARG_VALID=1"
         )
         if "!ARG_VALID!"=="0" (
             echo.
             echo [ERROR] Unrecognized or illegal parameter switch: "%%~A"
-            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart, -Win10, -SkipBuildCheck
+            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart, -Win11, -Win10, -SkipBuildCheck
             exit /b 1
         )
         if /i "%%~A"=="-Win10" (
             set "TARGET_SCRIPT=unslop-win10.ps1"
             set "OS_MODE=WIN10"
         )
+        if /i "%%~A"=="-Win11" (
+            set "TARGET_SCRIPT=unslop-win11.ps1"
+            set "OS_MODE=WIN11"
+        )
     )
+
+    :: Check for OS mismatch in CLI mode
+    if "!OS_MODE!"=="WIN10" if "!HOST_OS!"=="WIN11" echo [WARNING] OS Mismatch: Running on Windows 11 [Build !HOST_BUILD!], but Windows 10 mode [-Win10] was specified.
+    if "!OS_MODE!"=="WIN11" if "!HOST_OS!"=="WIN10" echo [WARNING] OS Mismatch: Running on Windows 10 [Build !HOST_BUILD!], but Windows 11 mode [-Win11] was specified.
 
     :: Check if invoked from interactive menu
     set "IS_FROM_MENU=0"
@@ -62,6 +93,8 @@ if not "%~1"=="" (
         ) else if /i "%%~A"=="-RunDirect" (
             set "IS_FROM_MENU=1"
         ) else if /i "%%~A"=="-Win10" (
+            REM Skip adding it to FORWARD_ARGS
+        ) else if /i "%%~A"=="-Win11" (
             REM Skip adding it to FORWARD_ARGS
         ) else (
             set "FORWARD_ARGS=!FORWARD_ARGS! %%~A"
@@ -107,16 +140,21 @@ if not "%~1"=="" (
 :: OS SELECTION MENU
 :: ------------------------------------------------------------
 :os_select
+set "OVERRIDE_BUILD_CHECK=0"
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.0) - PyPie Studio
+echo   unslop-windows (v1.2.1) - PyPie Studio
 echo   Universal Windows Debloat ^& Privacy Hardener
 echo ============================================================
 echo.
+if not "!HOST_OS_LABEL!"=="" (
+    echo   Detected System: !HOST_OS_LABEL!
+    echo.
+)
 echo   Select your Windows version:
 echo.
-echo   [1] Windows 11 (23H2 / 24H2 / 25H2)
-echo   [2] Windows 10 (All Versions)
+echo   [1] Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2)
+echo   [2] Windows 10 (22H2 / 21H2 / 20H2 / Enterprise LTSC / Builds 10240-19045)
 echo   [0] Exit
 echo.
 echo ============================================================
@@ -124,11 +162,13 @@ set /p "os_choice=Select an option [0-2]: "
 
 if "%os_choice%"=="0" exit /b
 if "%os_choice%"=="1" (
-    set "TARGET_SCRIPT=unslop.ps1"
+    if "!HOST_OS!"=="WIN10" goto :warn_win11_on_win10
+    set "TARGET_SCRIPT=unslop-win11.ps1"
     set "OS_MODE=WIN11"
     goto :menu_WIN11
 )
 if "%os_choice%"=="2" (
+    if "!HOST_OS!"=="WIN11" goto :warn_win10_on_win11
     set "TARGET_SCRIPT=unslop-win10.ps1"
     set "OS_MODE=WIN10"
     goto :menu_WIN10
@@ -139,13 +179,72 @@ timeout /t 2 >nul
 goto :os_select
 
 :: ------------------------------------------------------------
+:: OS MISMATCH WARNING HANDLERS
+:: ------------------------------------------------------------
+:warn_win10_on_win11
+cls
+echo ============================================================
+echo   [WARNING] OPERATING SYSTEM MISMATCH DETECTED
+echo ============================================================
+echo.
+echo   Current System:   Windows 11 (Build !HOST_BUILD!)
+echo   Selected Script:  Windows 10 (unslop-win10.ps1)
+echo.
+echo   Notice:
+echo   - unslop-win10.ps1 targets Windows 10 components (Cortana,
+echo     News ^& Interests, People bar, Meet Now).
+echo   - It does NOT include Windows 11 features (Recall, Copilot,
+echo     UCPD Widgets policy, or modern context menu).
+echo   - unslop-win10.ps1 will abort on Windows 11 by default.
+echo     Proceeding will automatically enable -SkipBuildCheck.
+echo.
+echo ============================================================
+echo.
+set /p "mismatch_confirm=Are you sure you want to proceed with Windows 10? [y/N]: "
+if /i "!mismatch_confirm!"=="y" (
+    set "TARGET_SCRIPT=unslop-win10.ps1"
+    set "OS_MODE=WIN10"
+    set "OVERRIDE_BUILD_CHECK=1"
+    goto :menu_WIN10
+)
+goto :os_select
+
+:warn_win11_on_win10
+cls
+echo ============================================================
+echo   [WARNING] OPERATING SYSTEM MISMATCH DETECTED
+echo ============================================================
+echo.
+echo   Current System:   Windows 10 (Build !HOST_BUILD!)
+echo   Selected Script:  Windows 11 (unslop-win11.ps1)
+echo.
+echo   Notice:
+echo   - unslop-win11.ps1 targets Windows 11 components (Recall,
+echo     Copilot, UCPD Widgets policy, modern context menu).
+echo   - It does NOT include Windows 10 debloating (Cortana purge,
+echo     Feeds / News ^& Interests, People bar, Meet Now).
+echo   - unslop-win11.ps1 will abort on Windows 10 by default.
+echo     Proceeding will automatically enable -SkipBuildCheck.
+echo.
+echo ============================================================
+echo.
+set /p "mismatch_confirm=Are you sure you want to proceed with Windows 11? [y/N]: "
+if /i "!mismatch_confirm!"=="y" (
+    set "TARGET_SCRIPT=unslop-win11.ps1"
+    set "OS_MODE=WIN11"
+    set "OVERRIDE_BUILD_CHECK=1"
+    goto :menu_WIN11
+)
+goto :os_select
+
+:: ------------------------------------------------------------
 :: WIN 11 MAIN MENU
 :: ------------------------------------------------------------
 :menu_WIN11
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.0) - PyPie Studio
-echo   Universal Windows 11 23H2 / 24H2 / 25H2 Debloat ^& Privacy
+echo   unslop-windows (v1.2.1) - PyPie Studio
+echo   Universal Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2) Debloat ^& Privacy
 echo ============================================================
 echo.
 echo   [1] Full Debloat (Purge OneDrive, telemetry, and bloatware)
@@ -181,8 +280,8 @@ goto :menu_WIN11
 :menu_WIN10
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.0) - PyPie Studio
-echo   Universal Windows 10 Debloat ^& Privacy
+echo   unslop-windows (v1.2.1) - PyPie Studio
+echo   Universal Windows 10 (22H2 / 21H2 / Enterprise LTSC / Builds 10240-19045) Debloat ^& Privacy
 echo ============================================================
 echo.
 echo   [1] Full Debloat (Purge OneDrive, telemetry, and bloatware)
@@ -432,7 +531,9 @@ goto :run
 :run_dry
 echo.
 echo Starting Dry-Run Audit (Non-Elevated)...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !ARGS!
+set "FINAL_ARGS=!ARGS!"
+if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !FINAL_ARGS!
 echo.
 echo Audit complete. Review the inspection results above or check the log file.
 echo Press [Enter] to return to the menu, or [Q] to exit...
@@ -448,17 +549,19 @@ net session >nul 2>&1
 if !errorlevel! neq 0 (
     echo.
     echo Administrator privileges required. Prompting for UAC elevation...
+    set "FINAL_ARGS=!ARGS!"
+    if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
     if "!OS_MODE!"=="WIN10" (
-        if defined ARGS (
-            set "UAC_ARGS=-Win10 -FromMenu !ARGS!"
+        if defined FINAL_ARGS (
+            set "UAC_ARGS=-Win10 -FromMenu !FINAL_ARGS!"
         ) else (
             set "UAC_ARGS=-Win10 -FromMenu"
         )
     ) else (
-        if defined ARGS (
-            set "UAC_ARGS=-FromMenu !ARGS!"
+        if defined FINAL_ARGS (
+            set "UAC_ARGS=-Win11 -FromMenu !FINAL_ARGS!"
         ) else (
-            set "UAC_ARGS=-FromMenu"
+            set "UAC_ARGS=-Win11 -FromMenu"
         )
     )
     powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '!UAC_ARGS!' -Verb RunAs"
@@ -474,7 +577,9 @@ if !errorlevel! neq 0 (
 )
 
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !ARGS!
+set "FINAL_ARGS=!ARGS!"
+if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !FINAL_ARGS!
 if !errorlevel! equ 100 exit /b 0
 echo.
 pause

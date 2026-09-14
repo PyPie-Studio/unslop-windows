@@ -17,7 +17,7 @@ Every Pull Request must meet these seven requirements:
 * **Never disable critical security hardware or system drivers.**
 
 ### 2. Symmetrical Restoration (`-Undo`)
-Any modification added to `unslop.ps1` must have an exact inverse restore path. If you disable a service, scheduled task, firewall rule, or registry key in the main debloat path, you must restore it to its default state in the `$IsUndo` block.
+Any modification added to `unslop-win11.ps1` or `unslop-win10.ps1` must have an exact inverse restore path. If you disable a service, scheduled task, firewall rule, or registry key in the main debloat path, you must restore it to its default state in the `$IsUndo` block.
 
 ### 3. Zero Binary Dependencies
 The project is pure PowerShell. Pull requests introducing external `.exe`, `.dll`, or third-party binary dependencies will be rejected. Use native Windows APIs, Group Policy registry paths, or PowerShell cmdlets.
@@ -48,7 +48,7 @@ The following components must remain functional and un-targeted:
 * **Symlink / Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks/junctions before writing files.
 
 ### 8. The Zero-Advisory Invariant Mandate
-* **Automated Test Enforcement:** No policy, privacy rule, or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop.Tests.ps1` or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
+* **Automated Test Enforcement:** No policy, privacy rule, or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop-win11.Tests.ps1` (or `tests/unslop-win10.Tests.ps1`) or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
 * **Universal Mutating AST Audit:** Naked calls to mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) outside approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) will fail the AST quality gate.
 
 ---
@@ -111,8 +111,8 @@ Verify both standard debloat and symmetrical restoration audit output:
 
 ```powershell
 # Windows 11: Verify debloat and inverse restore audit output
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo -DryRun
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -DryRun
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -Undo -DryRun
 
 # Windows 10: Verify debloat and inverse restore audit output
 powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -DryRun

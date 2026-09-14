@@ -16,7 +16,7 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
 - [x] **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`):** Unified AST parse, PSScriptAnalyzer, DryRun, and Undo DryRun check.
 - [x] **Git Pre-Push Hook (`.githooks/pre-push`):** Blocks pushes to `main` if the local Master Gate fails.
 - [x] **Agent Governance (`AGENTS.md` & `SKILLS.md`):** System harness, skills registry, and `.agents/skills/` for AI pair programming.
-- [x] **Universal Mutating AST Audit & Negative Error-Trap Tests (`tests/unslop.Tests.ps1`):** Enforces 100% helper routing and failure honesty.
+- [x] **Universal Mutating AST Audit & Negative Error-Trap Tests (`tests/unslop-win11.Tests.ps1`):** Enforces 100% helper routing and failure honesty.
 - [x] **Fail-Closed CI Tooling (`scripts/Test-MasterGate.ps1`):** Strict automated gate preventing skipped static analysis and uninstalled test frameworks.
 
 ---
@@ -47,19 +47,19 @@ All additions must strictly follow the **Safe-Tier Design Principles** outlined 
   - Active telemetry services and background thread counts.
   - Uninstalled vs. provisioned AppX package totals.
   - Generates verifiable Markdown audit reports (`docs/benchmarks.md`).
-- [ ] **Automated Windows Sandbox Smoke Testing:** Launch `unslop.ps1 -DryRun` inside a clean Windows Sandbox instance via script.
+- [ ] **Automated Windows Sandbox Smoke Testing:** Launch `unslop-win11.ps1 -DryRun` inside a clean Windows Sandbox instance via script.
 - [x] **Cryptographic Release Hashes:** Automate SHA-256 checksum generation in `.github/workflows/release.yml`.
 
 ---
 
-## 🪟 Milestone 5: Windows 10 Multi-OS Support (Completed)
-- [x] **Universal Windows 10 Engine (`unslop-win10.ps1`):** Complete debloat and hardening engine for all Windows 10 releases (Build 10240 through 19045 22H2).
+## 🪟 Milestone 5: Windows 10 Multi-OS Support & Symmetrical Script Architecture (Completed)
+- [x] **Dedicated Windows 10 Engine (`unslop-win10.ps1`):** Complete debloat and hardening engine for Windows 10 releases (22H2, 21H2, 21H1, 20H2, 2004, 1909, 1809, 1607, 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC, Builds 10240 through 19045).
 - [x] **Cortana Complete Purge & Taskbar Suppression:** Group Policy and AppX neutralization of Cortana, Feeds / News & Interests, People Bar, and Meet Now.
-- [x] **Unified Dual-OS Launcher (`unslop.bat`):** Interactive OS selection menu (Win10 vs Win11) and `-Win10` CLI pass-through routing.
-- [x] **Dedicated Win10 Pester Test Suite (`tests/unslop-win10.Tests.ps1`):** 38 unit, mocking, and AST parity tests.
+- [x] **Unified Dual-OS Launcher (`unslop.bat`):** Interactive OS selection menu with `-Win10` and `-Win11` CLI pass-through routing.
+- [x] **Symmetrical Dual-OS Test Suites (`tests/unslop-win11.Tests.ps1` & `tests/unslop-win10.Tests.ps1`):** 74 unit, mocking, and AST parity tests.
 - [x] **CI/CD Multi-OS Quad Matrix (`.github/workflows/lint.yml`):** Automated validation across both PowerShell 7 Core and Windows PowerShell 5.1 for both OS targets.
 
 ---
 
 ## 📄 Completed Architectural Decisions
-See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-022) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.
+See [`docs/decisions.md`](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-023) and [`CONTRIBUTING.md`](CONTRIBUTING.md) for core engineering rules and safe-tier guidelines.

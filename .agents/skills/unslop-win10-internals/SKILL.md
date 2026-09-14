@@ -11,12 +11,24 @@ This skill governs Windows 10 operating system internals, telemetry subsystems, 
 
 ## 💻 Target Windows 10 Builds
 
-| Version | OS Build Range | Key Architecture Notes |
+| Version / Milestone | OS Build | Platform Servicing & Architecture Notes |
 | :--- | :--- | :--- |
 | **Windows 10 22H2** | Build 19045 | Final mainstream Windows 10 feature release (ESU active through Oct 2027). |
 | **Windows 10 21H2** | Build 19044 | Vibranium platform servicing release. |
-| **Windows 10 21H1 / 20H2 / 2004** | Build 19041 - 19043 | Vibranium convergence baseline; shared servicing stack with 22H2. |
-| **Windows 10 Legacy (1507 - 1909)** | Build 10240 - 18363 | Pre-Vibranium legacy releases; supported via generic registry and service debloat fallbacks. |
+| **Windows 10 21H1** | Build 19043 | Vibranium platform servicing release. |
+| **Windows 10 20H2** | Build 19042 | First release with Chromium-based Edge integrated. |
+| **Windows 10 2004** | Build 19041 | Vibranium convergence baseline; shared servicing stack with 20H2-22H2. |
+| **Windows 10 1909** | Build 18363 | 19H2 servicing update. |
+| **Windows 10 1903** | Build 18362 | 19H1 release (Light Theme, Windows Sandbox). |
+| **Windows 10 1809 / LTSC 2019** | Build 17763 | Enterprise LTSC 2019 baseline; extended servicing. |
+| **Windows 10 1803** | Build 17134 | Redstone 4 (April 2018 Update). |
+| **Windows 10 1709** | Build 16299 | Redstone 3 (Fall Creators Update). |
+| **Windows 10 1703** | Build 15063 | Redstone 2 (Creators Update). |
+| **Windows 10 1607 / LTSB 2016** | Build 14393 | Enterprise LTSB 2016 baseline; anniversary update. |
+| **Windows 10 1511** | Build 10586 | First major update (Threshold 2). |
+| **Windows 10 1507 / LTSB 2015** | Build 10240 | Windows 10 RTM release; original LTSB. |
+| **Enterprise LTSC 2021** | Build 19044 | Long-Term Servicing Channel; supported through 2027. |
+| **IoT Enterprise LTSC** | Build 19044 / 17763 | IoT long-term release; supported through 2032. |
 
 ---
 

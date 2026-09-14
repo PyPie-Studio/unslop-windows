@@ -13,9 +13,10 @@ This skill governs Windows 11 operating system internals, telemetry subsystems, 
 
 | Milestone | OS Build Range | Key Architecture Notes |
 | :--- | :--- | :--- |
-| **Windows 11 23H2** | Build 22631 | Momentum 4 updates, initial Copilot preview, Search Highlights, ContentDeliveryManager. |
-| **Windows 11 24H2** | Build 26100 | Germanium platform release, Windows Recall preview architecture, Copilot web app encapsulation, sudo for Windows. |
 | **Windows 11 25H2** | Build 26200+ | Dilithium / Bromine preview branch, new ConsentStore AI model permissions, Screenray snapshot capture engine. |
+| **Windows 11 24H2** | Build 26100 - 26120 | Germanium platform release, Windows Recall preview architecture, Copilot web app encapsulation, sudo for Windows. |
+| **Windows 11 23H2** | Build 22631 | Momentum 4 updates, initial Copilot preview, Search Highlights, ContentDeliveryManager. |
+| **Windows 11 22H2 / 21H2** | Build 22621 / 22000 | Initial Windows 11 platform releases, Sun Valley UI, basic telemetry endpoints, classic context menu override. |
 
 ---
 
@@ -80,7 +81,7 @@ Debloating and telemetry neutralization must never impair critical platform secu
 ### 1. Hardware Driver & Firmware Patch Inviolability (REG-02)
 - Setting `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\ExcludeWUDriversInQualityUpdate = 1` stops Windows Update from installing hardware drivers.
 - **Why this violates Safe-Tier standards:** While often deployed to prevent display driver regressions, it blinds the OS to essential security updates for hardware: GPU vulnerability patches, WiFi/Bluetooth stack CVE mitigations, and CPU microcode updates delivered via Windows Update.
-- **The unslop standard:** Never set this policy. If present from legacy debloater scripts, `unslop.ps1` actively removes the property to restore security patch delivery.
+- **The unslop standard:** Never set this policy. If present from legacy debloater scripts, `unslop-win11.ps1` actively removes the property to restore security patch delivery.
 
 ### 2. Intentional Privacy Hardening vs. Telemetry Trade-Offs
 The following policies represent intentional privacy guardrails that must **not** be treated as bugs or removed:

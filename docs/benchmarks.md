@@ -10,7 +10,7 @@ The following benchmark represents empirical measurements taken on a stock, fres
 
 - **Hardware Profile:** 8-Core x86_64, 32 GB RAM, NVMe SSD
 - **Baseline State:** Stock Windows 11 clean install with default pre-installed OEM apps, widgets, Edge background processes, and active telemetry services at system idle.
-- **Post-Hardening State:** Immediately following `.\unslop.ps1` debloat pass and required reboot.
+- **Post-Hardening State:** Immediately following `.\unslop-win11.ps1` (or `.\unslop-win10.ps1`) debloat pass and required reboot.
 
 ### Resource Utilization Metrics
 
@@ -62,7 +62,8 @@ You can generate a personalized before-and-after benchmark report on your machin
 powershell -ExecutionPolicy Bypass -File .\scripts\Measure-SystemState.ps1 -Snapshot "before"
 
 # Step 2: Run the debloater (and complete the recommended reboot)
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1
+# (Or for Windows 10: powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1)
 
 # Step 3: Capture debloated state AFTER reboot
 powershell -ExecutionPolicy Bypass -File .\scripts\Measure-SystemState.ps1 -Snapshot "after"

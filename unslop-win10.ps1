@@ -1,15 +1,17 @@
-# unslop-windows: Universal Windows 10 Debloat & Privacy Hardener (v1.2.0)
-# Targets Windows 10 all versions (Build 10240+)
+# unslop-windows: Dedicated Windows 10 Debloat & Privacy Hardener (v1.2.1)
+# Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
+# 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
+# 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021, and IoT Enterprise LTSC
 # Safe tier - no core system files touched, all changes reversible
 
 <#
 .SYNOPSIS
-    unslop-windows: Safe-Tier Universal Windows 10 Debloater & Privacy Hardener.
+    unslop-windows: Safe-Tier Dedicated Windows 10 Debloater & Privacy Hardener.
 
 .DESCRIPTION
-    Safely debloats Windows 10 by removing telemetry,
-    disabling unnecessary services and background tasks, de-provisioning sponsored
-    bloatware, neutralizing Cortana, and securing ConsentStore permissions.
+    Safely debloats Windows 10 (22H2 through 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC,
+    Builds 10240 through 19045) by removing telemetry, disabling unnecessary services and background
+    tasks, de-provisioning sponsored bloatware, neutralizing Cortana, and securing ConsentStore permissions.
     All operations adhere to the Safe-Tier invariant (zero WinSxS / DISM corruption)
     and support 100% symmetrical restoration via -Undo.
 
@@ -352,16 +354,16 @@ if (-not $isAdmin) {
 $build = [System.Environment]::OSVersion.Version.Build
 if (-not $SkipBuildCheck) {
     if ($build -ge 22000) {
-        Write-Host "ABORT: This script is for Windows 10 (Build < 22000). For Windows 11, use unslop.ps1." -ForegroundColor Red
+        Write-Host "ABORT: This script is for Windows 10 (Build < 22000). For Windows 11, use unslop-win11.ps1." -ForegroundColor Red
         exit 1
     }
 }
-$osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } elseif ($build -ge 19043) { "21H1" } elseif ($build -ge 19042) { "20H2" } elseif ($build -ge 19041) { "2004" } else { "Legacy" }
+$osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } elseif ($build -ge 19043) { "21H1" } elseif ($build -ge 19042) { "20H2" } elseif ($build -ge 19041) { "2004" } elseif ($build -ge 18362) { "1909/1903" } elseif ($build -ge 17763) { "1809/LTSC2019" } elseif ($build -ge 14393) { "1607/LTSB2016" } elseif ($build -ge 10240) { "1507/LTSB2015" } else { "Legacy" }
 
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.0: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.2.1: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================

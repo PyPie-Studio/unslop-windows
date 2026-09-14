@@ -1,14 +1,14 @@
-# unslop-windows: Universal Windows 11 Debloat & Privacy Hardener (v1.2.0)
-# Targets Windows 11 23H2, 24H2, and 25H2 (Build 26100 - 26200+)
+# unslop-windows: Dedicated Windows 11 Debloat & Privacy Hardener (v1.2.1)
+# Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
 
 <#
 .SYNOPSIS
-    unslop-windows: Safe-Tier Universal Windows 11 Debloater & Privacy Hardener.
+    unslop-windows: Safe-Tier Dedicated Windows 11 Debloater & Privacy Hardener.
 
 .DESCRIPTION
-    Safely debloats Windows 11 23H2, 24H2, and 25H2+ by removing telemetry,
+    Safely debloats Windows 11 25H2, 24H2, 23H2, 22H2, and 21H2 by removing telemetry,
     disabling unnecessary services and background tasks, de-provisioning sponsored
     bloatware, neutralizing Windows Recall and Copilot, and securing ConsentStore permissions.
     All operations adhere to the Safe-Tier invariant (zero WinSxS / DISM corruption)
@@ -34,6 +34,9 @@
 .PARAMETER ClassicContextMenu
     Restores the classic Windows 10 style full context menu in File Explorer.
 
+.PARAMETER SkipBuildCheck
+    Bypasses the OS build version check (useful for CI/CD and cross-build testing).
+
 .PARAMETER NoRestart
     Suppresses the post-execution restart prompt and countdown.
 
@@ -41,20 +44,20 @@
     Automatically initiates an immediate system restart upon completion without prompting.
 
 .EXAMPLE
-    powershell -ExecutionPolicy Bypass -File .\unslop.ps1
-    Runs full debloat with default settings and prompts for restart upon completion.
+    powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1
+    Runs full Windows 11 debloat with default settings and prompts for restart upon completion.
 
 .EXAMPLE
-    powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
-    Safely audits proposed debloat changes in non-elevated user mode.
+    powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -DryRun
+    Safely audits proposed Windows 11 debloat changes in non-elevated user mode.
 
 .EXAMPLE
-    powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -KeepXbox -KeepOneDrive
-    Debloats system while preserving Xbox gaming services and OneDrive.
+    powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -KeepXbox -KeepOneDrive
+    Debloats Windows 11 while preserving Xbox gaming services and OneDrive.
 
 .EXAMPLE
-    powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
-    Fully restores system policies and services back to clean Windows defaults.
+    powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -Undo
+    Fully restores Windows 11 policies and services back to clean Windows defaults.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -66,6 +69,7 @@ param(
     [switch]$KeepOneDrive,
     [switch]$KeepTodos,
     [switch]$ClassicContextMenu,
+    [switch]$SkipBuildCheck,
     [switch]$NoRestart,
     [switch]$ForceRestart
 )
@@ -351,11 +355,17 @@ if (-not $isAdmin) {
 }
 
 $build = [System.Environment]::OSVersion.Version.Build
-$osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } else { "Universal" }
+if (-not $SkipBuildCheck) {
+    if ($build -lt 22000) {
+        Write-Host "ABORT: This script is for Windows 11 (Build >= 22000). For Windows 10, use unslop-win10.ps1." -ForegroundColor Red
+        exit 1
+    }
+}
+$osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } elseif ($build -ge 22621) { "22H2" } elseif ($build -ge 22000) { "21H2" } else { "Dev/Canary" }
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.0: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.2.1: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================

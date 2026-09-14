@@ -78,7 +78,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### :bar_chart: Code Coverage: unslop.ps1",
+                "### :bar_chart: Code Coverage: unslop-win11.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -93,7 +93,7 @@ jobs:
             if ([int]$failures -gt 0) {
               foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
                 $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+                Write-Host "::error file=tests/unslop-win11.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
               }
             }
           }
@@ -178,7 +178,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### :bar_chart: Code Coverage: unslop.ps1",
+                "### :bar_chart: Code Coverage: unslop-win11.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -193,7 +193,7 @@ jobs:
             if ([int]$failures -gt 0) {
               foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
                 $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+                Write-Host "::error file=tests/unslop-win11.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
               }
             }
           }

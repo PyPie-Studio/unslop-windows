@@ -57,14 +57,14 @@ This skill governs the Antigravity AI agent workflow, engineering philosophy, an
 
 ### What Triggers a Version Bump & Tagged Release
 Version bumps, changelog entries, annotated tags, and GitHub Releases are reserved strictly for **verified code changes** at the conclusion of a work session:
-- `unslop.ps1`, `unslop.bat` (core engine and launcher)
+- `unslop-win11.ps1`, `unslop-win10.ps1`, `unslop.bat` (core engines and launcher)
 - `scripts/*.ps1` (quality gate, benchmarking, git hooks)
 - `tests/*.ps1` (Pester unit tests)
 - `.github/workflows/*.yml` (CI/CD pipelines)
 - `PSScriptAnalyzerSettings.psd1` (static analysis rules)
 
 **Release sequence** (executed ONCE at the end of the session):
-1. **Version Alignment:** Bump version in `unslop.ps1` (header + log banner), `unslop.bat` (menu banner), and `README.md` (download links + ASCII menu).
+1. **Version Alignment:** Bump version in `unslop-win11.ps1`, `unslop-win10.ps1` (header + log banner), `unslop.bat` (menu banner), and `README.md` (download links + ASCII menu).
 2. **Changelog:** Add a consolidated version block with current date in `CHANGELOG.md` following Keep a Changelog standard.
 3. **Master Gate:** Run `pwsh -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1`.
 4. **Commit, Tag & Push:** `git add .` → `git commit -m "feat/fix(...): <summary>"` → `git tag -a vX.Y.Z -m "..."` → `git push origin main --tags`.

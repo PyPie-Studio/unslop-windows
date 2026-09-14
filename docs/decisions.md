@@ -304,3 +304,26 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **All Win10 versions supported:** Build 10240+ (all Windows 10 releases from 1507 through 22H2).
 - **Consequences:** Provides complete Windows 10 debloating with zero regression risk to the stable Win11 engine, independent release cadence, and full CI/CD coverage. Accepts ~200 lines of helper code duplication as the cost of total isolation. Enables the repository to serve both Win10 and Win11 users from a single release package.
 
+---
+
+## ADR-023: Symmetrical Dual-Engine Architecture (`unslop-win11.ps1` & `unslop-win10.ps1`), Removal of Ambiguous `unslop.ps1`, and Granular Version Documentation Standard (2026-09-14)
+- **Status:** Accepted
+- **Context:** While ADR-022 introduced `unslop-win10.ps1`, the Windows 11 engine retained the legacy name `unslop.ps1`. This introduced asymmetry and ambiguity:
+  1. Script naming was confusing: users and automation tools could not immediately tell which script targeted Windows 11 vs Windows 10 without reading internal comments.
+  2. Documentation across README, Security, Contributing, Roadmap, and skills spoke in broad, blunt generalities ("all versions", "Windows 11 and Windows 10") without providing exact milestone releases, build numbers, and architecture-specific servicing details.
+  3. `unslop.bat` routing whitelisted only `-Win10` while implicitly treating all other calls as default.
+- **Alternatives Considered:**
+  1. *Keep `unslop.ps1` as a forwarding shim/alias:* Rejected per user directive. Eliminates legacy clutter and dead wrapper layers; the release archive must be clean and explicit (`unslop.bat`, `unslop-win11.ps1`, `unslop-win10.ps1`).
+  2. *Maintain vague "all versions" documentation:* Rejected. Network and systems engineers require exact build boundaries and platform servicing lifecycles (e.g. 25H2 Build 26200+ canary/insider vs 24H2 Build 26100+ GE vs 23H2 Build 22631 NI, and Windows 10 22H2 19045 down to 1507 10240, Enterprise LTSC 2021/2019/2016/2015, IoT LTSC).
+- **Decision:**
+  - **Symmetrical Renaming:** Renamed `unslop.ps1` to `unslop-win11.ps1` and `tests/unslop.Tests.ps1` to `tests/unslop-win11.Tests.ps1`. Removed `unslop.ps1` completely from release archives and workflows.
+  - **Bidirectional OS Build Gating:** Added an explicit pre-flight OS build check to `unslop-win11.ps1` enforcing `Build >= 22000`, with informative redirection to `unslop-win10.ps1` if executed on Windows 10, plus `-SkipBuildCheck` parameter for CI/testing. Windows 10 engine similarly validates `Build < 22000`.
+  - **Unified Launcher Modernization:** `unslop.bat` updated to validate presence of both `unslop-win11.ps1` and `unslop-win10.ps1`, whitelisting `-Win11` and `-Win10` CLI arguments, with an explicit interactive selection menu showing granular version brackets.
+  - **Master Quality Gate Parameterization:** `scripts/Test-MasterGate.ps1` defaults to `unslop-win11.ps1` / `tests/unslop-win11.Tests.ps1`, supports `-Win11` explicitly, and routes to `unslop-win10.ps1` / `tests/unslop-win10.Tests.ps1` via `-Win10`.
+  - **Comprehensive Granular Documentation Standard:** Replaced all instances of vague "all versions" across `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `ROADMAP.md`, `AGENTS.md`, and `.agents/skills/` with complete tables of Windows 11 (25H2, 24H2, 23H2, 22H2, 21H2) and Windows 10 (22H2, 21H2, 21H1, 20H2, 2004, 1909, 1903, 1809/LTSC 2019, 1803, 1709, 1703, 1607/LTSB 2016, 1511, 1507/LTSB 2015, Enterprise LTSC 2021, IoT Enterprise LTSC).
+- **Consequences:**
+  - Establishes perfect symmetry between Windows 11 and Windows 10 script names and test suites.
+  - Eliminates user error from running the wrong script on the wrong OS via bidirectional build verification guards.
+  - Release zip bundles are cleaner: `unslop.bat`, `unslop-win11.ps1`, `unslop-win10.ps1`, `README.md`, `LICENSE`.
+  - Quality gates, CI workflows, and developer harnesses remain 100% fail-closed and test-enforced.
+

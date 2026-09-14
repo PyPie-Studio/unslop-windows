@@ -1,14 +1,14 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    Pester Unit & Mocking Test Suite for unslop-windows.
+    Pester Unit & Mocking Test Suite for unslop-windows (Windows 11 Edition).
     Tests engine functions, dot-sourcing isolation, mock-intercepted mutations,
-    parameter switches, and the non-elevated security contract.
+    parameter switches, and the non-elevated security contract for unslop-win11.ps1.
 #>
 
 BeforeAll {
     $script:repoRoot = Split-Path -Parent $PSScriptRoot
-    $script:targetScript = Join-Path $script:repoRoot "unslop.ps1"
+    $script:targetScript = Join-Path $script:repoRoot "unslop-win11.ps1"
 
     if (-not (Test-Path $script:targetScript)) {
         throw "Target engine script not found at: $script:targetScript"
@@ -21,7 +21,7 @@ BeforeAll {
     . $script:targetScript
 }
 
-Describe 'unslop-windows: Engine Architecture & Dot-Sourcing' -Tag 'Unit', 'Core' {
+Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit', 'Core' {
     It 'Dot-sourcing exports all core engine functions into caller scope' {
         $expectedFunctions = @(
             'Log',
@@ -34,7 +34,7 @@ Describe 'unslop-windows: Engine Architecture & Dot-Sourcing' -Tag 'Unit', 'Core
 
         foreach ($fn in $expectedFunctions) {
             $cmd = Get-Command -Name $fn -ErrorAction SilentlyContinue
-            $cmd | Should -Not -BeNullOrEmpty -Because "Function '$fn' must be exported when unslop.ps1 is dot-sourced"
+            $cmd | Should -Not -BeNullOrEmpty -Because "Function '$fn' must be exported when unslop-win11.ps1 is dot-sourced"
             $cmd.CommandType.ToString() | Should -Be 'Function'
         }
     }

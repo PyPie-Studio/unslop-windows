@@ -3,17 +3,17 @@
 # 🧹 unslop-windows
 
 ### Stop Microsoft from turning your PC into an ad-riddled, AI-telemetry terminal.
-**The Safe-Tier Windows 11 (23H2/24H2/25H2) & Windows 10 Debloater and Privacy Hardener.**
+**The Safe-Tier Windows 11 (25H2/24H2/23H2/22H2) & Windows 10 (22H2/21H2/LTSC/Build 10240+) Debloater and Privacy Hardener.**
 
 [![GitHub stars](https://img.shields.io/github/stars/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/network/members)
 [![GitHub release](https://img.shields.io/github/v/release/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=green)](https://github.com/PyPie-Studio/unslop-windows/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/PyPie-Studio/unslop-windows/lint.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/PyPie-Studio/unslop-windows/actions)
-[![Windows 11](https://img.shields.io/badge/Windows%2011-23H2%20%7C%2024H2%20%7C%2025H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
-[![Windows 10](https://img.shields.io/badge/Windows%2010-All%20Versions-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
+[![Windows 11](https://img.shields.io/badge/Windows%2011-25H2%20%7C%2024H2%20%7C%2023H2%20%7C%2022H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
+[![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.0.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.1.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules-per-engine) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
@@ -27,14 +27,14 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.2.0) - PyPie Studio
+  unslop-windows (v1.2.1) - PyPie Studio
   Universal Windows Debloat & Privacy Hardener
 ============================================================
 
   Select your Windows version:
 
-  [1] Windows 11 (23H2 / 24H2 / 25H2)
-  [2] Windows 10 (All Versions)
+  [1] Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2)
+  [2] Windows 10 (22H2 / 21H2 / 20H2 / Enterprise LTSC / Builds 10240-19045)
   [0] Exit
 
 ============================================================
@@ -54,11 +54,23 @@ Select an option [0-2]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.2.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.2.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
-4. In the console menu, select from: `1` Full Debloat, `2` Gamer Preset, `3` Productivity Preset, `4` Interactive Toggles, `5` Safe Dry-Run Audit, `6` Full Restore / Undo, or `7` Custom CLI Flags.
-5. When the script completes, ensure your work is saved: press **`n`** to postpone rebooting and return to the menu, or press **Enter** (or `Y`) to start the 30-second countdown (during the countdown, tap **`A`** to abort or **`R`** to reboot immediately).
+4. Select your operating system from the selection menu:
+   - `[1]` **Windows 11** (25H2 / 24H2 / 23H2 / 22H2 / 21H2)
+   - `[2]` **Windows 10** (22H2 / 21H2 / 20H2 / Enterprise LTSC / Builds 10240–19045)
+5. Choose an option from the OS feature menu:
+   - **[1] Full Debloat**: Purge OneDrive, telemetry, and provisioned bloatware.
+   - **[2] Gamer Preset**: Debloat, but Keep Xbox & Gaming Services (`-KeepXbox`).
+   - **[3] Productivity Preset**: Debloat, but Keep OneDrive & Microsoft To-Do (`-KeepOneDrive -KeepTodos`).
+   - **[4] Interactive Toggles**: Configure custom feature combinations with visual toggle states.
+   - **[5] Safe Dry-Run Audit**: Inspect all changes safely with zero system modifications (`-DryRun`).
+   - **[6] Full Restore / Undo**: Symmetrically revert all tweaks back to defaults (`-Undo`).
+   - **[7] Custom CLI Flags**: Manually enter parameter switches (e.g. `-KeepTodos -KeepXbox -NoRestart`).
+   - **[8] Back to OS Selection**: Return to the main OS choice screen.
+   - **[0] Exit**: Close the launcher.
+6. When the script completes, ensure your work is saved: press **`n`** to postpone rebooting and return to the menu, or press **Enter** (or `Y`) to start the 30-second countdown (during the countdown, tap **`A`** to abort or **`R`** to reboot immediately).
 
 ### Method 2: Git Clone (Developers & Terminal Users)
 Clone and run straight from an elevated terminal:
@@ -75,15 +87,16 @@ Run directly from an **Administrator Command Prompt** or an **Elevated PowerShel
 
 **Command Prompt (CMD - Run as Administrator):**
 ```cmd
-:: Interactive launcher (shows OS selection menu)
+:: Unified interactive launcher (prompts for Windows 10 vs 11)
 unslop.bat
 
-:: Windows 11 Direct Execution
+:: Windows 11 Direct Execution (targets unslop-win11.ps1)
 unslop.bat -DryRun
+unslop.bat -Win11 -DryRun
 unslop.bat -KeepXbox -KeepOneDrive
 unslop.bat -Undo
 
-:: Windows 10 Direct Execution (use -Win10 switch)
+:: Windows 10 Direct Execution (targets unslop-win10.ps1)
 unslop.bat -Win10 -DryRun
 unslop.bat -Win10 -KeepXbox
 unslop.bat -Win10 -Undo
@@ -91,26 +104,66 @@ unslop.bat -Win10 -Undo
 
 **PowerShell (Run as Administrator):**
 ```powershell
-# --- Windows 11 Execution ---
-# Full default debloat (prompts for reboot upon completion)
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1
+# ============================================================
+# Windows 11 Execution (unslop-win11.ps1)
+# Targets: 25H2, 24H2, 23H2, 22H2, 21H2 (Build 22000+)
+# ============================================================
+
+# Full default debloat (prompts for restart countdown upon completion)
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1
 
 # Dry-run audit (safe inspection, zero changes, non-elevated)
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -DryRun
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -DryRun
 
-# Full restore back to Windows 11 defaults
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -Undo
+# Debloat while preserving Xbox gaming services and OneDrive
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -KeepXbox -KeepOneDrive
 
-# --- Windows 10 Execution ---
+# Restore classic Windows 10 full context menu
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -ClassicContextMenu
+
+# Full symmetrical restore back to clean Windows 11 defaults
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -Undo
+
+# ============================================================
+# Windows 10 Execution (unslop-win10.ps1)
+# Targets: 22H2, 21H2, 20H2, 2004, 1909, 1809, 1607, 1507, LTSC (Builds 10240-19045)
+# ============================================================
+
 # Full default debloat for Windows 10
 powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1
 
-# Dry-run audit for Windows 10
+# Dry-run audit for Windows 10 (safe inspection, non-elevated)
 powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -DryRun
 
-# Full restore back to Windows 10 defaults
+# Debloat Windows 10 while keeping Xbox gaming services
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -KeepXbox
+
+# Full symmetrical restore back to clean Windows 10 defaults
 powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo
 ```
+
+---
+
+## 💻 Supported OS Releases, Builds & Script Architecture
+
+`unslop-windows` provides dedicated, isolated PowerShell engines for Windows 11 and Windows 10 to ensure zero feature regressions, clean servicing stack safety, and 100% symmetrical restoration:
+
+| Operating System Version | Build Numbers | Supported Engine Script | Batch Launcher Option | Key OS-Specific Modules |
+| :--- | :--- | :--- | :--- | :--- |
+| **Windows 11 25H2** | Build 26200+ | [`unslop-win11.ps1`](unslop-win11.ps1) | `unslop.bat [1]` or `-Win11` | AI Agent telemetry, Recall killswitch, ConsentStore `foregroundTextAccess` / `systemAIModels` |
+| **Windows 11 24H2** | Build 26100 - 26120 | [`unslop-win11.ps1`](unslop-win11.ps1) | `unslop.bat [1]` or `-Win11` | Recall snapshotting killswitch, Copilot removal, UCPD Widgets GPO defense |
+| **Windows 11 23H2** | Build 22631 | [`unslop-win11.ps1`](unslop-win11.ps1) | `unslop.bat [1]` or `-Win11` | Chat taskbar button suppression, Bing search history, 23H2 AppX purge |
+| **Windows 11 22H2 / 21H2** | Build 22621 / 22000 | [`unslop-win11.ps1`](unslop-win11.ps1) | `unslop.bat [1]` or `-Win11` | Initial Win11 telemetry endpoints, Widgets GPO, classic context menu option |
+| **Windows 10 22H2 (Current / ESU)** | Build 19045 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Complete Cortana de-provisioning, News & Interests suppression, Meet Now hide |
+| **Windows 10 21H2 / 21H1** | Build 19044 / 19043 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | News & Interests Feeds suppression, People Band removal, OneDrive purge |
+| **Windows 10 20H2 / 2004** | Build 19042 / 19041 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Cortana UWP decoupling, Meet Now icon suppression, Edge background tasks |
+| **Windows 10 1909 / 1903** | Build 18363 / 18362 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Search box cloud telemetry, Timeline cross-device sync disablement |
+| **Windows 10 1809 / LTSC 2019** | Build 17763 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Enterprise LTSC telemetry compliance, Cloud Clipboard sync disablement |
+| **Windows 10 1803 / 1709 / 1703** | Build 17134 / 16299 / 15063 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Diagnostic data tracking, AppX 3DBuilder / Print3D legacy de-provisioning |
+| **Windows 10 1607 / LTSB 2016** | Build 14393 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Enterprise LTSB 2016 safe debloat, DiagTrack & dmwappushservice suppression |
+| **Windows 10 1511 / 1507 / LTSB 2015**| Build 10586 / 10240 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Base Windows 10 release compatibility, legacy telemetry task cleanup |
+| **Windows 10 Enterprise LTSC 2021** | Build 19044.1288+ | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | Safe LTSC debloat preserving enterprise store and activation mechanisms |
+| **Windows 10 IoT Enterprise LTSC** | Build 19044 / 19045 | [`unslop-win10.ps1`](unslop-win10.ps1) | `unslop.bat [2]` or `-Win10` | IoT embedded debloat, hardware driver preservation, zero broken components |
 
 ---
 
@@ -129,8 +182,8 @@ How `unslop-windows` compares to other popular debloaters:
 
 | Feature / Capability | unslop-windows | Chris Titus WinUtil | Sophia Script | Tron Script |
 | :--- | :---: | :---: | :---: | :---: |
-| **Windows 11 25H2 / 24H2 Support** | ✅ Full Native | ⚠️ Partial / Lagging | ❌ Broken / Lagging | ❌ Deprecated |
-| **Windows 10 Support (All Versions)** | ✅ Full Native | ⚠️ Generic | ⚠️ Legacy Sophia | ❌ Deprecated |
+| **Windows 11 (25H2 / 24H2 / 23H2 / 22H2)** | ✅ Full Native | ⚠️ Partial / Lagging | ❌ Broken / Lagging | ❌ Deprecated |
+| **Windows 10 (22H2 / 21H2 / LTSC / 10240+)**| ✅ Full Native | ⚠️ Generic | ⚠️ Legacy Sophia | ❌ Deprecated |
 | **Windows Recall & Copilot Killswitch** | ✅ Full GPO + Registry | ⚠️ Registry Only | ⚠️ Partial | ❌ No |
 | **Cortana Complete Purge (Win10)** | ✅ GPO + AppX | ⚠️ Partial | ⚠️ AppX Only | ❌ Unclean |
 | **Servicing Stack Safe (No WinSxS cuts)** | ✅ 100% Safe | ⚠️ Mixed | ⚠️ Mixed | ❌ Strips Components |
@@ -207,19 +260,22 @@ Most debloaters break future Windows updates or leave background services in uns
 | `-ClassicContextMenu`| Win11 | `False` | Restores Windows 10 style full right-click context menu (bypasses "Show more options"). |
 | `-NoRestart` | Both | `False` | Suppresses the post-execution restart prompt (user must manually restart computer). |
 | `-ForceRestart` | Both | `False` | Bypasses confirmation and immediately restarts the computer (`shutdown /r /t 0`). |
-| `-SkipBuildCheck` | Win10 | `False` | Bypasses OS build verification. Used for CI/CD and cross-OS testing. |
+| `-SkipBuildCheck` | Both | `False` | Bypasses OS build verification. Used for CI/CD and cross-OS testing. |
 
 ### Parameter Examples
 
 ```powershell
-# Debloat without triggering automatic restart prompt
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -NoRestart
+# Debloat Windows 11 without triggering automatic restart prompt
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -NoRestart
 
-# Keep Xbox gaming services and OneDrive
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -KeepXbox -KeepOneDrive
+# Keep Xbox gaming services and OneDrive on Windows 11
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -KeepXbox -KeepOneDrive
 
-# Debloat and restore the Windows 10 right-click context menu
-powershell -ExecutionPolicy Bypass -File .\unslop.ps1 -ClassicContextMenu
+# Debloat Windows 11 and restore the classic Windows 10 right-click context menu
+powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -ClassicContextMenu
+
+# Debloat Windows 10 with Xbox gaming services preserved
+powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -KeepXbox
 ```
 
 ---

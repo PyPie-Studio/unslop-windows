@@ -24,17 +24,17 @@ Every change to the repository must satisfy `scripts/Test-MasterGate.ps1`:
 3. **[3/7] Line-Ending & File Integrity Audit:**
    - Validates that `unslop.bat` uses CRLF (`\r\n`) line endings (preventing `cmd.exe` block parsing errors).
    - Scans all text files for lingering Git merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
-4. **[4/7] Pester Unit, Mocking & AST Symmetry Suite (`tests/unslop.Tests.ps1`):**
-   - Dot-sources `unslop.ps1` via the non-elevated dot-source guard.
+4. **[4/7] Pester Unit, Mocking & AST Symmetry Suite (`tests/unslop-win11.Tests.ps1` or `tests/unslop-win10.Tests.ps1`):**
+   - Dot-sources target engine (`unslop-win11.ps1` or `unslop-win10.ps1`) via the non-elevated dot-source guard.
    - Verifies helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`) with mock assertions.
    - Validates parameter flags (`-KeepXbox`, `-KeepOneDrive`) and non-elevated exit code contracts.
    - Executes static AST parity analysis asserting 100% Symmetrical Restoration Contract invariants (zero naked mutating cmdlets, mandatory debloat & undo value pairs, valid service recovery types).
    - Supports native JaCoCo code coverage instrumentation via `-CodeCoveragePath`.
 5. **[5/7] Safe Non-Elevated Dry-Run Execution Test:**
-   - Executes `pwsh -File .\unslop.ps1 -DryRun` to ensure all 18 modules run end-to-end without throwing exceptions in user mode.
+   - Executes `pwsh -File .\unslop-win11.ps1 -DryRun` (or `.\unslop-win10.ps1 -DryRun`) to ensure all debloat modules run end-to-end without throwing exceptions in user mode.
    - Verifies standard completion banner.
 6. **[6/7] Symmetrical Restoration Dry-Run Execution Test:**
-   - Executes `pwsh -File .\unslop.ps1 -Undo -DryRun` to verify inverse restoration logic runs cleanly.
+   - Executes `pwsh -File .\unslop-win11.ps1 -Undo -DryRun` (or `.\unslop-win10.ps1 -Undo -DryRun`) to verify inverse restoration logic runs cleanly.
    - Verifies restore completion banner.
 7. **[7/7] Batch Launcher CLI Parameter Passthrough Audit:**
    - Executes `cmd.exe /c ".\unslop.bat -DryRun"`.

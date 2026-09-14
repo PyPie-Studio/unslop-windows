@@ -3,12 +3,12 @@
 .SYNOPSIS
     Local quality gate for unslop-windows developers and AI agents.
     Runs:
-      [1/7] AST Syntax & Parser Verification (unslop.ps1 + scripts/*.ps1 + tests/*.ps1)
+      [1/7] AST Syntax & Parser Verification (unslop-win11.ps1 + unslop-win10.ps1 + scripts/*.ps1 + tests/*.ps1)
       [2/7] Static Code Analysis (PSScriptAnalyzer error/warning scan)
       [3/7] Line-Ending & File Integrity Audit (CRLF for .bat/.ps1, merge conflicts)
-      [4/7] Pester Unit & Mocking Test Suite (tests/unslop.Tests.ps1)
-      [5/7] Safe Non-Elevated Dry-Run Execution Test (.\unslop.ps1 -DryRun)
-      [6/7] Symmetrical Restoration Dry-Run Execution Test (.\unslop.ps1 -Undo -DryRun)
+      [4/7] Pester Unit & Mocking Test Suite (tests/unslop-win11.Tests.ps1 / tests/unslop-win10.Tests.ps1)
+      [5/7] Safe Non-Elevated Dry-Run Execution Test (.\unslop-win11.ps1 -DryRun / .\unslop-win10.ps1 -DryRun)
+      [6/7] Symmetrical Restoration Dry-Run Execution Test (.\unslop-win11.ps1 -Undo -DryRun / .\unslop-win10.ps1 -Undo -DryRun)
       [7/7] Batch Launcher CLI Parameter Passthrough Audit (cmd.exe /c ".\unslop.bat -DryRun")
     Exit code 0 = Safe to push to main, 1+ = Gate blocked; fix reported findings first.
 
@@ -30,6 +30,7 @@
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Fast
+    powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck
 #>
 [CmdletBinding()]
 param(
@@ -37,6 +38,7 @@ param(
     [switch]$SkipAnalyzer,
     [switch]$SkipUnitTests,
     [switch]$Strict,
+    [switch]$Win11,
     [switch]$Win10,
     [switch]$SkipBuildCheck,
     [string]$TestResultsPath,
@@ -60,9 +62,9 @@ $psExec = if ($PSVersionTable.PSEdition -eq 'Desktop' -or -not (Get-Command pwsh
     "pwsh"
 }
 
-$targetEngine = if ($Win10) { "unslop-win10.ps1" } else { "unslop.ps1" }
-$targetTests  = if ($Win10) { "tests\unslop-win10.Tests.ps1" } else { "tests\unslop.Tests.ps1" }
-$targetBatArgs = if ($Win10) { "-DryRun -Win10" } else { "-DryRun" }
+$targetEngine = if ($Win10) { "unslop-win10.ps1" } else { "unslop-win11.ps1" }
+$targetTests  = if ($Win10) { "tests\unslop-win10.Tests.ps1" } else { "tests\unslop-win11.Tests.ps1" }
+$targetBatArgs = if ($Win10) { "-DryRun -Win10" } else { "-DryRun -Win11" }
 $engineExtraArgs = @()
 if ($SkipBuildCheck) {
     $engineExtraArgs += "-SkipBuildCheck"

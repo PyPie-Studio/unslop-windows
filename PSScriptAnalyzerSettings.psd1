@@ -26,7 +26,7 @@
 
     # Exclude rules that do not apply to monolithic debloater scripts
     ExcludeRules = @(
-        # Internal helper functions in unslop.ps1 do not require separate comment-based help blocks
+        # Internal helper functions in unslop-win11.ps1 and unslop-win10.ps1 do not require separate comment-based help blocks
         'PSProvideCommentHelp',
         # Intentional positional parameter usage in internal helper function calls
         'PSAvoidUsingPositionalParameters',

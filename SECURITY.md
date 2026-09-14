@@ -6,11 +6,20 @@
 
 | Operating System Version | Build Range | Supported Engine |
 | :--- | :--- | :--- |
-| **Windows 11 25H2** | Build 26200+ | Yes (`unslop.ps1`) |
-| **Windows 11 24H2** | Build 26100 - 26120 | Yes (`unslop.ps1`) |
-| **Windows 11 23H2** | Build 22631 | Yes (`unslop.ps1`) |
-| **Windows 10 22H2 / 21H2** | Build 19044 - 19045 | Yes (`unslop-win10.ps1`) |
-| **Windows 10 20H2 / 2004 / Legacy** | Build 10240 - 19043 | Yes (`unslop-win10.ps1`) |
+| **Windows 11 25H2** | Build 26200+ | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
+| **Windows 11 24H2** | Build 26100 - 26120 | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
+| **Windows 11 23H2** | Build 22631 | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
+| **Windows 11 22H2 / 21H2** | Build 22621 / 22000 | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
+| **Windows 10 22H2 (Current / ESU)** | Build 19045 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 21H2 / 21H1** | Build 19044 / 19043 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 20H2 / 2004** | Build 19042 / 19041 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 1909 / 1903** | Build 18363 / 18362 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 1809 / LTSC 2019** | Build 17763 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 1803 / 1709 / 1703** | Build 17134 / 16299 / 15063 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 1607 / LTSB 2016** | Build 14393 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 1511 / 1507 / LTSB 2015**| Build 10586 / 10240 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 Enterprise LTSC 2021** | Build 19044.1288+ | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 IoT Enterprise LTSC** | Build 19044 / 19045 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
 
 ---
 

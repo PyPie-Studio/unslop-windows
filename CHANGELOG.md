@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-09-15
+
+### Added
+- **Dedicated Windows 11 Engine (`unslop-win11.ps1`)**: Standalone, symmetrically named Windows 11 debloater and privacy hardening engine targeting Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000).
+- **Bidirectional OS Build Gating (`unslop-win11.ps1`)**: Added pre-flight OS build guard validating build $\ge 22000$, providing actionable redirection to `unslop-win10.ps1` when executed on Windows 10, accompanied by `-SkipBuildCheck` switch for CI and offline test harnesses.
+- **Dedicated `-Win11` CLI Parameter (`unslop.bat`, `scripts/Test-MasterGate.ps1`)**: Whitelisted `-Win11` switch in `unslop.bat` and parameterized `scripts/Test-MasterGate.ps1` to allow explicit headless testing of the Windows 11 engine.
+- **Granular OS Version & Build Documentation**: Replaced vague "all versions" text across all documentation (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `ROADMAP.md`, `AGENTS.md`, and `.agents/skills/`) with comprehensive build tables, platform codenames (Germanium, Nickel, Sun Valley, Vibranium, Threshold, Redstone), and servicing schedules (Enterprise LTSC 2021/2019/2016/2015, IoT Enterprise LTSC).
+- **Host OS Detection & Mismatch Warning (`unslop.bat`)**: Automatically queries `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\CurrentBuildNumber` on startup, renders detected system information on the main selection menu, issues explicit warning prompts when an OS mismatch occurs (e.g., selecting Windows 10 while running Windows 11 or vice versa) with confirmation prompts, passes `-SkipBuildCheck` when explicitly confirmed by the user, and emits informative warning notices in CLI mode.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-023 detailing symmetrical dual-engine architecture, removal of `unslop.ps1`, and granular version documentation standard.
+
+### Changed
+- **Removed Ambiguous `unslop.ps1`**: Retired `unslop.ps1` in favor of pure symmetrical dual standalone engines (`unslop-win11.ps1` and `unslop-win10.ps1`) launched and elevated via `unslop.bat`.
+- **Symmetrical Test Harnesses**: Renamed `tests/unslop.Tests.ps1` to `tests/unslop-win11.Tests.ps1` to pair symmetrically with `tests/unslop-win10.Tests.ps1`.
+- **Unified Batch Launcher Modernization (`unslop.bat`)**: Enforces presence of both `unslop-win11.ps1` and `unslop-win10.ps1`, modernizes the interactive OS selection menu with exact release brackets, and maintains CRLF integrity.
+- **Release Documentation Alignment (`.github/workflows/release.yml`, `README.md`)**: Updated the "Quick Installation & Usage" release notes template and README usage steps to include the interactive OS selection step before preset selection.
+- **CI / Automation Alignment (`.github/workflows/lint.yml`, `release.yml`)**: Updated JaCoCo code coverage paths and release archive bundle lists to package `unslop.bat`, `unslop-win11.ps1`, and `unslop-win10.ps1`.
+
+---
+
 ## [1.2.0] - 2026-09-10
 
 ### Added
@@ -273,7 +292,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.5...v1.2.0
 [1.1.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.2...v1.1.3
