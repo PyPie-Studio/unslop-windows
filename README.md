@@ -2,7 +2,7 @@
 
 # 🧹 unslop-windows
 
-### Stop Microsoft from turning your PC into an ad-riddled, AI-telemetry terminal.
+### Stop Microsoft from harvesting your data and eating your RAM.
 **The Safe-Tier Windows 11 (25H2/24H2/23H2/22H2) & Windows 10 (22H2/21H2/LTSC/Build 10240+) Unslopper, Debloater, and Privacy Hardener.**
 
 [![GitHub stars](https://img.shields.io/github/stars/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/stargazers)
@@ -13,14 +13,14 @@
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.2.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules-per-engine) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.2.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 How It Compares](#-how-it-compares) • [🛡️ Safety Principles](#-safety-principles-what-keeps-windows-working) • [⚙️ All 18 Modules](#-what-unslop-windows-tweaks--cleans-18-modules-per-engine) • [🔒 Protected Components](#-protected-apps--components-what-we-never-touch)
 
 </div>
 
 ---
 
 > [!TIP]
-> ⭐ **Reclaiming your system from Windows Slop?**
+> ⭐ **Reclaiming your Windows from Microslop?**
 > Give this repository a star on GitHub! It helps more users find a clean, open-source alternative that doesn't break Cumulative Updates or the Microsoft Store.
 
 ---
@@ -28,7 +28,7 @@
 ```text
 ============================================================
   unslop-windows (v1.2.2) - PyPie Studio
-  Universal Windows Unslopper, Debloater & Privacy Hardener
+  Windows 10 & 11 Unslopper, Debloater and Privacy Tool
 ============================================================
 
   Select your Windows version:
@@ -170,13 +170,13 @@ powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo
 ## 🚀 Measured Real-World Impact
 
 * 📉 **~50% Lower Idle RAM**: Drops idle memory usage from **~10 GB down to ~5 GB** on a typical Windows 11 system (tested on 25H2 with 32 GB RAM).
-* 🚫 **Zero Bloatware Respawns**: Dual-stage AppX de-provisioning ensures consumer bloatware (TikTok, Spotify, Candy Crush) never reinstalls after Windows updates.
-* ⚡ **Eliminated Background Thrashing**: Stops idle `svchost` telemetry threads, `SearchIndexer` disk crawls, and `SysMain` (Superfetch) prefetch bloat.
-* 🧠 **More Headroom for Heavy Workloads**: Frees up vital host RAM for local LLMs (Ollama / vLLM), Docker containers, compilation, and high-performance gaming.
+* 🚫 **Zero Bloatware Respawns**: De-provisioning packages from the system image ensures consumer apps (TikTok, Spotify, Candy Crush) never reinstall after Windows updates.
+* ⚡ **Eliminated Background Thrashing**: Stops idle `svchost` telemetry threads, `SearchIndexer` disk crawls and `SysMain` (Superfetch) prefetch bloat.
+* 🧠 **More Headroom for Heavy Workloads**: Frees up vital host RAM for local LLMs (Ollama / vLLM), Docker containers, compilation and gaming.
 
 ---
 
-## 📊 Comparison Matrix
+## 📊 How It Compares
 
 How `unslop-windows` compares to other popular debloaters:
 
@@ -184,55 +184,55 @@ How `unslop-windows` compares to other popular debloaters:
 | :--- | :---: | :---: | :---: | :---: |
 | **Windows 11 (25H2 / 24H2 / 23H2 / 22H2)** | ✅ Full Native | ⚠️ Partial / Lagging | ❌ Broken / Lagging | ❌ Deprecated |
 | **Windows 10 (22H2 / 21H2 / LTSC / 10240+)**| ✅ Full Native | ⚠️ Generic | ⚠️ Legacy Sophia | ❌ Deprecated |
-| **Windows Recall & Copilot Killswitch** | ✅ Full GPO + Registry | ⚠️ Registry Only | ⚠️ Partial | ❌ No |
-| **Cortana Complete Purge (Win10)** | ✅ GPO + AppX | ⚠️ Partial | ⚠️ AppX Only | ❌ Unclean |
-| **Servicing Stack Safe (No WinSxS cuts)** | ✅ 100% Safe | ⚠️ Mixed | ⚠️ Mixed | ❌ Strips Components |
+| **Disable Recall & Copilot (Win11)** | ✅ Full GPO + Registry | ⚠️ Registry Only | ⚠️ Partial | ❌ No |
+| **Remove Cortana (Win10)** | ✅ GPO + AppX | ⚠️ Partial | ⚠️ AppX Only | ❌ Unclean |
+| **Safe Servicing Stack (Keeps WinSxS & Updates intact)** | ✅ 100% Safe | ⚠️ Mixed | ⚠️ Mixed | ❌ Strips Components |
 | **Zero Third-Party Dependencies** | ✅ Pure Native PS/Batch | ❌ GUI / Multi-file | ❌ Module Suite | ❌ Multi-GB Archive |
-| **Symmetrical 1-Click Undo Engine** | ✅ Yes (`-Undo`) | ⚠️ Partial | ⚠️ Partial | ❌ No |
+| **Full 1-Click Rollback (-Undo)** | ✅ Yes (`-Undo`) | ⚠️ Partial | ⚠️ Partial | ❌ No |
 | **Safe Non-Elevated Dry-Run** | ✅ Yes (`-DryRun`) | ❌ No | ❌ No | ❌ No |
-| **Untouchable Whitelist Enforced** | ✅ Guaranteed | ⚠️ User Config | ⚠️ User Config | ❌ High Break Risk |
+| **Guaranteed Protection for Essential Apps** | ✅ Guaranteed | ⚠️ User Config | ⚠️ User Config | ❌ High Break Risk |
 | **Safe Delivery Optimization (No Store breaks)** | ✅ GPO `DODownloadMode=0` | ❌ Disables Service | ⚠️ Mixed | ❌ Disables Service |
-| **Decoupled Autonomous Logging** | ✅ Local `logs/` or `$TEMP` | ⚠️ GUI Logs | ⚠️ Flat File | ⚠️ Flat Text |
-| **Test-Driven Invariants & Fail-Closed CI** | ✅ 74 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
+| **Safe Logging (Auto-redirects if write-protected)** | ✅ Local `logs/` or `$TEMP` | ⚠️ GUI Logs | ⚠️ Flat File | ⚠️ Flat Text |
+| **Automated Test Suite & CI Validation** | ✅ 74 AST & Pester Invariants | ❌ None | ❌ None | ❌ None |
 
 ---
 
-## 🛡️ Safe-Tier Design Principles
+## 🛡️ Safety Principles (What Keeps Windows Working)
 
-Most debloaters break future Windows updates or leave background services in unstable states. `unslop-windows` follows five non-negotiable engineering mandates:
+Most debloaters break future Windows updates or leave background services in unstable states. `unslop-windows` follows five core engineering rules:
 
-1. **Servicing Stack Integrity**: Never strips WinSxS packages or tampers with DISM manifests. Monthly Cumulative Updates install cleanly without `0x800f0922` error rollbacks.
-2. **Dual-Stage AppX Removal**: Strips provisioned packages from the system image in addition to installed user profile apps. Bloatware does not regenerate when creating new accounts or installing Windows feature updates.
-3. **Safe Delivery Optimization**: Uses GPO policy `DODownloadMode = 0` (HTTP only) to kill background local and internet P2P seeding. The `DoSvc` service stays intact, preventing error `0x80d03805` in the Microsoft Store.
-4. **100% Symmetrical Restoration**: Every policy, registry key, service state, scheduled task, and firewall rule has an exact inverse `-Undo` mapping.
-5. **Auditable Non-Elevated Inspection**: `-DryRun` runs in standard user mode, allowing sysadmins to audit every single proposed change before granting administrative privileges.
-
----
-
-## ⚙️ What Gets Hardened (18 Modules per Engine)
-
-1. **Services (6)**: Disables `SysMain`, `WSearch`, `dmwappushservice`, `DiagTrack`, `TrkWks`, and `lfsvc`. Start Menu app search remains functional via shell in-memory index.
-2. **Windows Recall & Copilot** *(Win11)* / **Cortana Complete Purge** *(Win10)*: On Win11, sets `DisableAIDataAnalysis = 1`, `AllowRecall = 0`, `TurnOffWindowsCopilot = 1`, and removes the Copilot taskbar button. On Win10, sets `AllowCortana = 0`, hides the search box, and dual-stage de-provisions the Cortana UWP app.
-3. **Telemetry & Diagnostics**: Disables `AllowTelemetry`, CEIP, Application Impact Telemetry, and OneSettings telemetry flighting downloads.
-4. **Settings Recommendations & Offers**: Disables lockscreen tips, start menu recommendations, account notification badges, and Content Delivery Manager promotions.
-5. **Speech & Inking Personalization**: Disables cloud speech recognition and removes typing/inking dictionary collection.
-6. **Search History & Cloud Integration**: Disables local search history tracking, MSA cloud search, and Bing web suggestions.
-7. **Network Security & Wi-Fi Sense**: Disables LLMNR (`EnableMulticast = 0`) to mitigate NTLM hash theft on local networks. Disables Wi-Fi hotspot reporting and auto-connect beacons.
-8. **Windows Update Driver & Firmware Integrity**: Preserves Windows Update delivery of hardware driver and firmware updates so critical security patches and hardware CVE mitigations install cleanly, while proactively clearing legacy overwrite blocks.
-9. **Explorer & Taskbar Cleanliness**: On Win11, disables Widgets via GPO (`AllowNewsAndInterests = 0`) and hides Chat (`TaskbarMn = 0`). On Win10, suppresses News & Interests (`ShellFeedsTaskbarViewMode = 2`), hides People bar and Meet Now. Both engines ensure file extensions are visible (`HideFileExt = 0`).
-10. **ConsentStore Permissions**: Revokes background access for location, diagnostics, contacts, calendar, and phone capabilities. Win11 manages 12 capabilities including 25H2 screen text scraping (`foregroundTextAccess`), OS AI model execution (`systemAIModels`), and borderless screen capture (`graphicsCaptureWithoutBorder`). Win10 manages 9 core capabilities.
-11. **Scheduled Tasks**: Disables 20+ telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience, and Disk Diagnostics.
-12. **Dual-Stage AppX Purge**: Removes installed packages for all existing user profiles and de-provisions staged packages from the Windows image. Win11 targets 34 packages including 24H2/25H2 AI injections (aimgr, AIFabric, AugLoop, WidgetsPlatformRuntime, StartExperiencesApp), sponsored bloat (TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video), Microsoft consumer apps (Clipchamp, Outlook, Solitaire, News, BingSearch, BingFinance, BingSports, PC Manager, DevHome, Phone Link), and Office push services. Win10 targets 39 packages including legacy apps (Print3D, 3DBuilder, Skype, Maps, Alarms, Mail & Calendar, Mixed Reality Portal, Cortana). Both engines add Xbox (+2 packages) unless `-KeepXbox` is specified.
-13. **OneDrive Purge Engine**: Terminates running processes, runs the silent uninstaller, unpins the Explorer sidebar icon (`{018D5C66-4533-4307-9B53-224DE2ED1FE6}`), sets sync block policies (`DisableFileSyncNGSC = 1`), and removes startup registry entries.
-14. **Startup Entries & Edge Background**: Disables Edge background application access. Removed startup run keys are safely archived under `HKCU:\Software\unslop-windows\StartupBackup` and symmetrically restored on `-Undo` (zero data loss).
-15. **Microsoft Defender Telemetry**: Configures `SubmitSamplesConsent = 2` (NeverSend) to block automatic memory and sample file uploads while keeping real-time antivirus active.
-16. **Activity History, Cross-Device Resume & Cloud Clipboard**: Disables timeline feeds, activity publishing, Connected Devices Platform (`EnableCdp = 0`), and Cross-Device Resume (`DisableCrossDeviceResume = 1`), preventing `sihost.exe` from spawning `CrossDeviceResume.exe` at logon. Local multi-item clipboard history (`Win + V`) remains fully functional.
-17. **Delivery Optimization & Store Auto-Updates**: Disables local and internet peer-to-peer update distribution via GPO (`DODownloadMode = 0`) and throttles background Store app auto-downloads (`AutoDownload = 2`), preventing silent background NVMe write spikes from `wsappx` and `WinGet COM Server` while keeping manual Store updates fully functional.
-18. **Firewall Telemetry Rules**: Blocks 8 unnecessary outbound rules for SSDP, Remote Assistance, and Connected Devices Platform.
+1. **Servicing Stack Integrity**: Never strips WinSxS packages or modifies DISM manifests. Monthly Cumulative Updates install cleanly without error rollbacks.
+2. **Dual-Stage AppX Removal**: Removes packages from the Windows system image in addition to installed user apps. Bloatware does not regenerate when creating new user accounts or installing Windows feature updates.
+3. **Safe Delivery Optimization**: Uses GPO policy `DODownloadMode = 0` (HTTP only) to turn off background P2P update sharing. The `DoSvc` service stays active, preventing error `0x80d03805` in the Microsoft Store.
+4. **100% Symmetrical Restoration**: Every policy, registry key, service state, scheduled task and firewall rule has an exact inverse `-Undo` mapping.
+5. **Auditable Non-Elevated Inspection**: `-DryRun` runs in standard user mode, allowing you to audit every proposed change before granting administrative privileges.
 
 ---
 
-## 🔒 Untouchable Safety Whitelist
+## ⚙️ What unslop-windows Tweaks & Cleans (18 Modules per Engine)
+
+1. **Background Services (6)**: Disables heavy background services (`SysMain`, `WSearch`, `DiagTrack`, `dmwappushservice`, `TrkWks` and `lfsvc`). Start menu app search remains fast via the shell in-memory index.
+2. **Disable Recall & Copilot (Win11) / Remove Cortana (Win10)**: On Win11, turns off Recall snapshotting (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`) and removes Copilot policies and taskbar shortcuts. On Win10, disables Cortana policies (`AllowCortana = 0`) and cleanly uninstalls the Cortana app.
+3. **Telemetry & Diagnostic Tracking**: Turns off Windows diagnostic data collection (`AllowTelemetry = 0`), CEIP, Application Impact Telemetry and OneSettings telemetry configuration downloads.
+4. **Start Menu & Lock Screen Ads**: Disables lock screen tips, Start menu app recommendations, notification badge promotions and automatic sponsored app installations.
+5. **Speech & Typing Data Collection**: Disables cloud speech recognition and stops Windows from collecting inking and typing dictionaries.
+6. **Search Tracking & Bing Suggestions**: Disables local search history tracking, Microsoft account search integration and Bing web suggestions in the Start menu.
+7. **Local Network & Wi-Fi Privacy**: Disables LLMNR (`EnableMulticast = 0`) to protect against credential sniffing on local networks. Disables Wi-Fi hotspot reporting and automatic network beacons.
+8. **Driver & Firmware Updates (Kept Safe)**: Preserves Windows Update delivery of hardware driver and firmware updates so critical security patches install without issues, while proactively clearing legacy overwrite blocks.
+9. **Taskbar & File Explorer Cleanliness**: On Win11, disables Widgets via GPO (`AllowNewsAndInterests = 0`) and hides Chat (`TaskbarMn = 0`). On Win10, hides News & Interests (`ShellFeedsTaskbarViewMode = 2`), People bar and Meet Now. Both engines ensure file extensions are visible (`HideFileExt = 0`).
+10. **App Permissions (ConsentStore)**: Revokes background app access for location, diagnostics, contacts, calendar and phone capabilities. On Win11, blocks screen text scraping (`foregroundTextAccess`) and background OS AI models (`systemAIModels`). Win10 manages 9 core capabilities.
+11. **Diagnostic Scheduled Tasks**: Disables over 20 background telemetry tasks across OneSettings, PowerGridForecast, MareBackup, CEIP, Customer Experience and Disk Diagnostics.
+12. **Bloatware & Junk App Removal**: Deletes pre-installed sponsored bloatware (TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video) and consumer apps for current user profiles and future accounts. On Win11, removes AI integrations (aimgr, AIFabric, AugLoop, WidgetsPlatformRuntime). On Win10, cleans legacy apps (Print3D, 3DBuilder, Skype, Maps). Keeps Xbox when `-KeepXbox` is used.
+13. **Uninstall OneDrive & Clean Explorer**: Stops running OneDrive processes, runs the uninstaller, unpins the folder from File Explorer's sidebar (`{018D5C66-4533-4307-9B53-224DE2ED1FE6}`) and blocks background sync folders (`DisableFileSyncNGSC = 1`).
+14. **Startup Apps & Edge Background Tasks**: Stops Microsoft Edge from running in the background. Backs up removed startup items to the registry so `-Undo` restores them with zero data loss.
+15. **Defender Cloud Sample Submissions**: Configures `SubmitSamplesConsent = 2` (NeverSend) to block automatic memory dumps and sample file uploads, while keeping real-time antivirus fully active.
+16. **Activity History & Cross-Device Resume**: Disables timeline activity feeds, Connected Devices Platform (`EnableCdp = 0`) and Cross-Device Resume (`DisableCrossDeviceResume = 1`), stopping `sihost.exe` from spawning `CrossDeviceResume.exe` at logon. Local multi-item clipboard history (`Win + V`) remains fully functional.
+17. **Delivery Optimization & Store Auto-Downloads**: Disables peer-to-peer update distribution via GPO (`DODownloadMode = 0`) and throttles background Store app auto-downloads (`AutoDownload = 2`) to stop NVMe write spikes, while keeping manual Store updates fully functional.
+18. **Outbound Telemetry Firewall Rules**: Blocks outbound firewall rules for background diagnostics, SSDP discovery and connected device tracking.
+
+---
+
+## 🔒 Protected Apps & Components (What We Never Touch)
 
 `unslop-windows` explicitly protects core system applications and daily desktop tools:
 
@@ -241,8 +241,8 @@ Most debloaters break future Windows updates or leave background services in uns
 | **System Package Tools** | Windows Terminal, Microsoft Store, WinGet (`DesktopAppInstaller`) | Required for software installation and package management |
 | **Essential Desktop Apps** | Calculator, Photos, Paint, Snipping Tool (`ScreenSketch`) | Daily workflow tools with zero telemetry overhead |
 | **Productivity Features** | Local `Win + V` clipboard history buffer | Daily workflow convenience preserved; only cloud cross-device sync is disabled |
-| **System Experience Hosts** | `CloudExperienceHost`, `Photon`, `CoreAI`, `UndockedDevKit`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp` | Immutable system packages preserved to prevent AppX de-provisioning `0x80070032`/`0x80073CFA` errors (AI capabilities neutralized via GPO/ConsentStore) |
-| **Audio & Video Hardware** | Microphone access, Webcam access, AMD Noise Suppression / NVIDIA Broadcast | Prevents breaking Discord, OBS, Teams, and voice chat |
+| **System Experience Hosts** | `CloudExperienceHost`, `Photon`, `CoreAI`, `UndockedDevKit`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp` | Immutable system packages preserved to prevent AppX de-provisioning errors (AI capabilities neutralized via GPO and ConsentStore) |
+| **Audio & Video Hardware** | Microphone access, Webcam access, AMD Noise Suppression / NVIDIA Broadcast | Prevents breaking Discord, OBS, Teams and voice chat |
 | **Developer Environments** | Visual Studio, VS Code, Git, Docker Desktop, Ollama, existing toolchains, browsers | Developer toolchains and container runtimes |
 | **Application Runtimes** | WebView2, Edge Rendering Engine | Required by modern desktop applications to display web views |
 

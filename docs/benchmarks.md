@@ -29,8 +29,8 @@ The following benchmark represents empirical measurements taken on a stock, fres
 
 | Subsystem Component | Stock Baseline State | Post-Hardening State | Impact |
 | :--- | :--- | :--- | :--- |
-| `DiagTrack` (Connected User Experiences) | **Running** (Automatic) | **Stopped** (Disabled) | Neutralized telemetry uploads |
-| `dmwappushservice` (WAP Telemetry) | **Running** (Automatic) | **Stopped** (Disabled) | Neutralized background data routing |
+| `DiagTrack` (Connected User Experiences) | **Running** (Automatic) | **Stopped** (Disabled) | Disabled background telemetry uploads |
+| `dmwappushservice` (WAP Telemetry) | **Running** (Automatic) | **Stopped** (Disabled) | Disabled background data routing |
 | `diagnosticshub.standardcollector.service` | **Running** (Manual) | **Stopped** (Disabled) | Diagnostics hub polling disabled |
 | `SysMain` (Superfetch disk thrash) | **Running** (Automatic) | **Stopped** (Disabled) | Prefetch disk/RAM caching eliminated |
 | `WSearch` (Windows Search Indexer) | **Running** (Automatic) | **Stopped** (Disabled) | Eliminated idle background disk crawls |
@@ -45,7 +45,7 @@ The following benchmark represents empirical measurements taken on a stock, fres
 
 > [!NOTE]
 > **Measuring Already-Debloated or Workstation PCs:**
-> If you execute `Measure-SystemState.ps1` on a machine that has **already been debloated**, or on a developer workstation with heavy third-party software active (such as Docker Desktop, local LLMs like Ollama/vLLM, web browsers with multiple tabs, developer IDEs, or games):
+> If you execute `Measure-SystemState.ps1` on a machine that has **already been debloated**, or on a developer workstation with heavy third-party software active (such as Docker Desktop, local LLMs like Ollama/vLLM, web browsers with multiple tabs, developer IDEs or games):
 > - The measured baseline will naturally reflect those user-installed third-party workloads rather than stock Windows background bloat.
 > - Telemetry services will already be `Stopped` and scheduled tasks will already be `Disabled`, resulting in minimal to zero delta.
 >
