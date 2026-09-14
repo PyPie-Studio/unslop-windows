@@ -144,7 +144,7 @@ set "OVERRIDE_BUILD_CHECK=0"
 cls
 echo ============================================================
 echo   unslop-windows (v1.2.1) - PyPie Studio
-echo   Universal Windows Debloat ^& Privacy Hardener
+echo   Universal Windows Unslopper, Debloater ^& Privacy Hardener
 echo ============================================================
 echo.
 if not "!HOST_OS_LABEL!"=="" (

@@ -3,7 +3,7 @@
 # 🧹 unslop-windows
 
 ### Stop Microsoft from turning your PC into an ad-riddled, AI-telemetry terminal.
-**The Safe-Tier Windows 11 (25H2/24H2/23H2/22H2) & Windows 10 (22H2/21H2/LTSC/Build 10240+) Debloater and Privacy Hardener.**
+**The Safe-Tier Windows 11 (25H2/24H2/23H2/22H2) & Windows 10 (22H2/21H2/LTSC/Build 10240+) Unslopper, Debloater, and Privacy Hardener.**
 
 [![GitHub stars](https://img.shields.io/github/stars/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=blue)](https://github.com/PyPie-Studio/unslop-windows/network/members)
@@ -28,7 +28,7 @@
 ```text
 ============================================================
   unslop-windows (v1.2.1) - PyPie Studio
-  Universal Windows Debloat & Privacy Hardener
+  Universal Windows Unslopper, Debloater & Privacy Hardener
 ============================================================
 
   Select your Windows version:
