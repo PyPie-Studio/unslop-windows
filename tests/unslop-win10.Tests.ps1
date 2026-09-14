@@ -606,4 +606,9 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
         $script:ast.Extent.Text | Should -Match 'PeopleBand' -Because "People bar must be hidden"
         $script:ast.Extent.Text | Should -Match 'HideSCAMeetNow' -Because "Meet Now taskbar button must be hidden"
     }
+
+    It 'Suppresses Connected Devices Platform (EnableCdp) and Store AutoDownload symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'EnableCdp' -Because "Connected Devices Platform policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'AutoDownload' -Because "Microsoft Store AutoDownload policy must be configured"
+    }
 }

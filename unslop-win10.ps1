@@ -1,4 +1,4 @@
-# unslop-windows: Dedicated Windows 10 Debloat & Privacy Hardener (v1.2.1)
+# unslop-windows: Dedicated Windows 10 Debloat & Privacy Hardener (v1.2.2)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021, and IoT Enterprise LTSC
@@ -363,7 +363,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.1: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.2.2: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -961,6 +961,9 @@ $sysPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
 Set-RegDwordSafe -path $sysPath -name "EnableActivityFeed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $sysPath -name "PublishUserActivities" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
+# Connected Devices Platform (CDP) - Continue experiences on this device
+Set-RegDwordSafe -path $sysPath -name "EnableCdp" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
 $feedbackPath = "HKCU:\Software\Microsoft\Siuf\Rules"
 Set-RegDwordSafe -path $feedbackPath -name "NumberOfSIUFInPeriod" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $feedbackPath -name "PeriodInNanoSeconds" -debloatValue 0 -undoValue 0 -removeOnUndo $true
@@ -971,14 +974,18 @@ Set-RegDwordSafe -path $sysPath -name "AllowCrossDeviceClipboard" -debloatValue 
 Log ""
 
 # ============================================================
-# 17. DELIVERY OPTIMIZATION (P2P Update Sharing)
+# 17. DELIVERY OPTIMIZATION & STORE AUTO-UPDATES
 # ============================================================
-Log "--- 17. Delivery Optimization ---"
+Log "--- 17. Delivery Optimization & Store Updates ---"
 $doPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config"
 Set-RegDwordSafe -path $doPath -name "DODownloadMode" -debloatValue 0 -undoValue 1
 
 $doPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
 Set-RegDwordSafe -path $doPolicy -name "DODownloadMode" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# Microsoft Store Automatic App Updates Suppression (stops background wsappx / winget NVMe writes)
+$wsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
+Set-RegDwordSafe -path $wsPolicy -name "AutoDownload" -debloatValue 2 -undoValue 4 -removeOnUndo $true
 Log ""
 
 # ============================================================
@@ -1062,6 +1069,8 @@ if ($IsUndo) {
     Log "Cortana:               Cortana app re-registered and policies reverted"
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
+    Log "Activity & CDP:        Activity feed, Cross-Device experiences, and CDP policies restored"
+    Log "Store & Delivery:       Store update and Delivery Optimization policies reverted"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
     Log "Explorer & Taskbar:    News & Interests, People bar, Meet Now, File Extensions restored"
@@ -1084,6 +1093,8 @@ if ($IsUndo) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
+    Log "Activity & CDP:        Activity feed, Cross-Device (CDP), and Cloud Clipboard neutralized"
+    Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
     Log "ConsentStore:          9 capabilities blocked (Location, Diagnostics, Contacts, Tasks, etc.)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, News & Interests removed, People/Meet Now hidden"

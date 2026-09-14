@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.2] - 2026-09-15
+
+### Added
+- **Microsoft Store Background Auto-Download Suppression (`AutoDownload = 2`)**: Configured machine-wide policy `HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore\AutoDownload = 2` across both Windows 11 and Windows 10 engines to prevent silent background updates from waking up `wsappx` (`AppXSVC`) and `WinGet COM Server`, eliminating unprompted NVMe write spikes while preserving manual Store updates.
+- **Cross-Device Resume (XDR) & Connected Devices Platform Neutralization**:
+  - Configured MDM PolicyManager gate `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume\value = 1` in `unslop-win11.ps1`, preventing `sihost.exe` from spawning `CrossDeviceResume.exe` into RAM at user logon.
+  - Set Connected Devices Platform policy `HKLM:\SOFTWARE\Policies\Microsoft\Windows\System\EnableCdp = 0` across both engines to disable cross-device hand-off activities system-wide.
+  - Set user-level toggles `IsResumeAllowed = 0` and `IsOneDriveResumeAllowed = 0` under `HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration`.
+  - Added active process termination for `CrossDeviceResume.exe` during debloat runs.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-024 detailing Store auto-download throttling, Cross-Device Resume MDM/CDP neutralization, and WebExperience package alignment.
+
+### Fixed
+- **Windows Web Experience Pack (`WebExperience`) Package Typo**: Added `"MicrosoftWindows.Client.WebExperience"` to `$bloatApps` in `unslop-win11.ps1`, resolving a dot-notation mismatch that previously prevented Windows Widgets from being de-provisioned.
+
+---
+
 ## [1.2.1] - 2026-09-15
 
 ### Added
@@ -292,7 +308,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.5...v1.2.0
 [1.1.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.4...v1.1.5

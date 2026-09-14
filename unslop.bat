@@ -143,7 +143,7 @@ if not "%~1"=="" (
 set "OVERRIDE_BUILD_CHECK=0"
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.1) - PyPie Studio
+echo   unslop-windows (v1.2.2) - PyPie Studio
 echo   Universal Windows Unslopper, Debloater ^& Privacy Hardener
 echo ============================================================
 echo.
@@ -243,7 +243,7 @@ goto :os_select
 :menu_WIN11
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.1) - PyPie Studio
+echo   unslop-windows (v1.2.2) - PyPie Studio
 echo   Universal Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -280,7 +280,7 @@ goto :menu_WIN11
 :menu_WIN10
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.1) - PyPie Studio
+echo   unslop-windows (v1.2.2) - PyPie Studio
 echo   Universal Windows 10 (22H2 / 21H2 / Enterprise LTSC / Builds 10240-19045) Debloat ^& Privacy
 echo ============================================================
 echo.

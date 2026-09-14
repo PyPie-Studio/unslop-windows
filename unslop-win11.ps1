@@ -1,4 +1,4 @@
-# unslop-windows: Dedicated Windows 11 Debloat & Privacy Hardener (v1.2.1)
+# unslop-windows: Dedicated Windows 11 Debloat & Privacy Hardener (v1.2.2)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -365,7 +365,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.1: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.2.2: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -737,6 +737,7 @@ $bloatApps = @(
     "Microsoft.WidgetsPlatformRuntime"
     "Microsoft.MicrosoftPCManager"
     "Microsoft.Windows.DevHome"
+    "MicrosoftWindows.Client.WebExperience"
     "Microsoft.Windows.Client.WebExperience"
 
     # Sponsored third-party bloat
@@ -1014,12 +1015,37 @@ try {
 Log ""
 
 # ============================================================
-# 16. ACTIVITY HISTORY & CLOUD CLIPBOARD
+# 16. ACTIVITY HISTORY, RESUME & CROSS-DEVICE EXPERIENCES
 # ============================================================
-Log "--- 16. Activity History & Cloud Clipboard ---"
+Log "--- 16. Activity History & Cross-Device Experiences ---"
 $sysPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
 Set-RegDwordSafe -path $sysPath -name "EnableActivityFeed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $sysPath -name "PublishUserActivities" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# Connected Devices Platform (CDP) - Continue experiences on this device
+Set-RegDwordSafe -path $sysPath -name "EnableCdp" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# Cross-Device Resume MDM Policy (prevents sihost from spawning CrossDeviceResume.exe at logon)
+$connPolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume"
+Set-RegDwordSafe -path $connPolicy -name "value" -debloatValue 1 -undoValue 0
+
+# Cross-Device Resume Configuration (User-level preferences)
+$resumeConfig = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration"
+Set-RegDwordSafe -path $resumeConfig -name "IsResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $resumeConfig -name "IsOneDriveResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# Terminate active CrossDeviceResume host if running
+if (-not $IsUndo) {
+    $resumeProc = Get-Process -Name "CrossDeviceResume" -ErrorAction SilentlyContinue
+    if ($resumeProc) {
+        if ($IsDryRun) {
+            Log "  [WOULD STOP PROCESS]: CrossDeviceResume"
+        } else {
+            Stop-Process -Name "CrossDeviceResume" -Force -ErrorAction SilentlyContinue
+            Log "  STOPPED: CrossDeviceResume process"
+        }
+    }
+}
 
 # Feedback frequency = Never
 $feedbackPath = "HKCU:\Software\Microsoft\Siuf\Rules"
@@ -1033,14 +1059,18 @@ Set-RegDwordSafe -path $sysPath -name "AllowCrossDeviceClipboard" -debloatValue 
 Log ""
 
 # ============================================================
-# 17. DELIVERY OPTIMIZATION (P2P Update Sharing)
+# 17. DELIVERY OPTIMIZATION & STORE AUTO-UPDATES
 # ============================================================
-Log "--- 17. Delivery Optimization ---"
+Log "--- 17. Delivery Optimization & Store Updates ---"
 $doPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config"
 Set-RegDwordSafe -path $doPath -name "DODownloadMode" -debloatValue 0 -undoValue 1
 
 $doPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
 Set-RegDwordSafe -path $doPolicy -name "DODownloadMode" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# Microsoft Store Automatic App Updates Suppression (stops background wsappx / winget NVMe writes)
+$wsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
+Set-RegDwordSafe -path $wsPolicy -name "AutoDownload" -debloatValue 2 -undoValue 4 -removeOnUndo $true
 Log ""
 
 # ============================================================
@@ -1124,6 +1154,8 @@ if ($IsUndo) {
     Log "Recall & Copilot:      Windows Recall, Screenray, and Copilot policies reverted"
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
+    Log "Activity & Resume:     Activity feed, Cross-Device Resume, and CDP policies restored"
+    Log "Store & Delivery:       Store update and Delivery Optimization policies reverted"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
     Log "Explorer & Taskbar:    Widgets, Chat, and File Extensions restored to Windows default"
@@ -1146,6 +1178,8 @@ if ($IsUndo) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
+    Log "Activity & Resume:     Activity feed, Cross-Device Resume (MDM/CDP), and Cloud Clipboard neutralized"
+    Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
     Log "ConsentStore:          12 capabilities blocked (Location, Diagnostics, Contacts, Tasks, AI models)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, Taskbar Widgets & Chat removed"

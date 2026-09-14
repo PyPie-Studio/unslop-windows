@@ -56,6 +56,18 @@ Windows 11 25H2 introduces granular system capabilities under `ConsentStore`:
   - `\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser` $\rightarrow$ `Disable-ScheduledTask`
   - `\Microsoft\Windows\Application Experience\ProgramDataUpdater` $\rightarrow$ `Disable-ScheduledTask`
 
+### 5. Cross-Device Resume (XDR) & Connected Devices Platform (CDP)
+Windows 11 24H2 and 25H2 include `CrossDeviceResume.exe` (part of `MicrosoftWindows.Client.CBS`), registered as a `ShellUIHost` (`CrossDeviceResumeHost`) spawned automatically by `sihost.exe` at logon.
+- **Policies:**
+  - `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume` $\rightarrow$ `value = 1` (blocks `sihost.exe` from spawning host)
+  - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\System` $\rightarrow$ `EnableCdp = 0` (disables Connected Devices Platform)
+  - `HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration` $\rightarrow$ `IsResumeAllowed = 0`, `IsOneDriveResumeAllowed = 0`
+
+### 6. Microsoft Store Background Auto-Download Throttling
+Modern Windows 11 Store triggers unprompted background app and catalog updates (`Microsoft.Winget.Source`), spawning `wsappx` (`AppXSVC`) and `WinGet COM Server`, causing NVMe write spikes.
+- **Policy:**
+  - `HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore` $\rightarrow$ `AutoDownload = 2` (Turn off automatic download and install of updates). Manual Store updates remain fully functional.
+
 ---
 
 ## 🚫 The Cumulative Update Invariant

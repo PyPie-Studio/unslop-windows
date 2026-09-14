@@ -13,7 +13,7 @@
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.1.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules-per-engine) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.2.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 Comparison](#-comparison-matrix) • [🛡️ Safe-Tier Principles](#-safe-tier-design-principles) • [⚙️ All 18 Modules](#-what-gets-hardened-18-modules-per-engine) • [🔒 Untouchable Whitelist](#-untouchable-safety-whitelist)
 
 </div>
 
@@ -27,7 +27,7 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.2.1) - PyPie Studio
+  unslop-windows (v1.2.2) - PyPie Studio
   Universal Windows Unslopper, Debloater & Privacy Hardener
 ============================================================
 
@@ -54,7 +54,7 @@ Select an option [0-2]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.2.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.2.2.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.2.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
 4. Select your operating system from the selection menu:
@@ -226,8 +226,8 @@ Most debloaters break future Windows updates or leave background services in uns
 13. **OneDrive Purge Engine**: Terminates running processes, runs the silent uninstaller, unpins the Explorer sidebar icon (`{018D5C66-4533-4307-9B53-224DE2ED1FE6}`), sets sync block policies (`DisableFileSyncNGSC = 1`), and removes startup registry entries.
 14. **Startup Entries & Edge Background**: Disables Edge background application access. Removed startup run keys are safely archived under `HKCU:\Software\unslop-windows\StartupBackup` and symmetrically restored on `-Undo` (zero data loss).
 15. **Microsoft Defender Telemetry**: Configures `SubmitSamplesConsent = 2` (NeverSend) to block automatic memory and sample file uploads while keeping real-time antivirus active.
-16. **Activity History & Cloud Clipboard**: Disables timeline feeds, activity publishing, and cross-device clipboard sync. Local multi-item clipboard history (`Win + V`) remains fully functional.
-17. **Delivery Optimization**: Disables local and internet peer-to-peer update distribution via GPO (`DODownloadMode = 0`) without disabling the servicing daemon.
+16. **Activity History, Cross-Device Resume & Cloud Clipboard**: Disables timeline feeds, activity publishing, Connected Devices Platform (`EnableCdp = 0`), and Cross-Device Resume (`DisableCrossDeviceResume = 1`), preventing `sihost.exe` from spawning `CrossDeviceResume.exe` at logon. Local multi-item clipboard history (`Win + V`) remains fully functional.
+17. **Delivery Optimization & Store Auto-Updates**: Disables local and internet peer-to-peer update distribution via GPO (`DODownloadMode = 0`) and throttles background Store app auto-downloads (`AutoDownload = 2`), preventing silent background NVMe write spikes from `wsappx` and `WinGet COM Server` while keeping manual Store updates fully functional.
 18. **Firewall Telemetry Rules**: Blocks 8 unnecessary outbound rules for SSDP, Remote Assistance, and Connected Devices Platform.
 
 ---

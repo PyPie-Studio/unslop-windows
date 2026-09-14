@@ -619,4 +619,14 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
     It 'Does not include SYSTEM-only SdbinstMergeDbTask in debloat tasks' {
         $script:ast.Extent.Text | Should -Not -Match 'SdbinstMergeDbTask' -Because "SdbinstMergeDbTask is ACL-restricted to SYSTEM and is non-telemetry"
     }
+
+    It 'Targets MicrosoftWindows.Client.WebExperience in bloatApps array' {
+        $script:ast.Extent.Text | Should -Match '"MicrosoftWindows\.Client\.WebExperience"' -Because "WebExperience must be targeted without typo to remove Widgets"
+    }
+
+    It 'Suppresses Cross-Device Resume (DisableCrossDeviceResume and EnableCdp) and Store AutoDownload symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'DisableCrossDeviceResume' -Because "CrossDeviceResume MDM policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'EnableCdp' -Because "Connected Devices Platform policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'AutoDownload' -Because "Microsoft Store AutoDownload policy must be configured"
+    }
 }

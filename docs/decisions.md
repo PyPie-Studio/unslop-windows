@@ -327,3 +327,26 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Release zip bundles are cleaner: `unslop.bat`, `unslop-win11.ps1`, `unslop-win10.ps1`, `README.md`, `LICENSE`.
   - Quality gates, CI workflows, and developer harnesses remain 100% fail-closed and test-enforced.
 
+---
+
+## ADR-024: Store Auto-Download Suppression (AutoDownload=2), Cross-Device Resume (CDP/MDM) Neutralization, and WebExperience Package Alignment (2026-09-15)
+- **Status:** Accepted
+- **Context:**
+  1. *Microsoft Store Background NVMe Churn:* The Microsoft Store client in Windows 11 (24H2/25H2) automatically triggers silent background app updates (e.g. `Microsoft.Winget.Source` catalog refresh and inbox apps), waking up `wsappx` (`AppXSVC`), `WinGet COM Server`, `State Repository Service`, and Delivery Optimization (`DoSvc`), generating 2+ MB/s of unprompted disk I/O on NVMe drives.
+  2. *Cross-Device Resume Host Persistence:* Windows 11 24H2/25H2 shell infrastructure host (`sihost.exe`) automatically spawns `CrossDeviceResume.exe` at user logon via `ShellUIHosts` (`CrossDeviceResumeHost`) to listen for mobile hand-off activities (tabs, OneDrive docs, Spotify). The default user preference toggle (`IsResumeAllowed = 0`) fails to prevent `sihost.exe` from launching the binary into memory.
+  3. *WebExperience De-Provisioning Typo:* In `$bloatApps`, Windows Widgets was defined as `"Microsoft.Windows.Client.WebExperience"` (with an extra dot), failing to match the official package family name `"MicrosoftWindows.Client.WebExperience"` and causing Widgets to remain active on disk.
+- **Alternatives Considered:**
+  1. *Hard-disabling the `DoSvc` (Delivery Optimization) service:* Setting `DoSvc` to `Disabled` breaks Windows Update and causes Microsoft Store manual downloads to fail with error `0x80d02002` or `0x80070422`. Delivery Optimization must remain in `CdnOnly` mode (`DODownloadMode = 0`) on `Manual` startup to preserve safe-tier functionality.
+  2. *Hard-disabling or removing the Microsoft Store package:* Violates the Non-Negotiable Safe-Tier Whitelist Invariant (`Microsoft.WindowsStore` and `Microsoft.DesktopAppInstaller` must never be touched).
+- **Decision:**
+  - **Store Auto-Update Throttling:** Configured `HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore\AutoDownload = 2` (Turn off automatic download and install of updates). Disables silent background downloads and package updates while keeping manual Store updates 100% functional.
+  - **Cross-Device Resume & CDP Neutralization:**
+    - Set Connected Devices Platform policy `HKLM:\SOFTWARE\Policies\Microsoft\Windows\System\EnableCdp = 0` (undo `1`, `removeOnUndo = $true`).
+    - Set MDM PolicyManager gate `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume\value = 1` (undo `0`), directly instructing `sihost.exe` not to spawn `CrossDeviceResumeHost`.
+    - Set user-level toggles `IsResumeAllowed = 0` and `IsOneDriveResumeAllowed = 0` under `HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration`.
+    - Gracefully terminate active `CrossDeviceResume.exe` instances during debloat execution.
+  - **WebExperience Array Alignment:** Added `"MicrosoftWindows.Client.WebExperience"` to `$bloatApps` alongside `"Microsoft.Windows.Client.WebExperience"`, ensuring clean de-provisioning.
+  - **Windows 10 Parity:** Added `EnableCdp = 0` and `AutoDownload = 2` to `unslop-win10.ps1` with 100% symmetrical `-Undo` restoration.
+- **Consequences:** Eliminates silent background NVMe writes from Store auto-updates, suppresses `CrossDeviceResume.exe` from spawning into RAM, purges Windows Widgets reliably, and preserves full system stability and manual Store update functionality.
+
+
