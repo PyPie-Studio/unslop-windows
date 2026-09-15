@@ -97,6 +97,18 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Should -Invoke -CommandName Set-ItemProperty -Times 0
         }
 
+        It 'Undo Mode (removeOnUndo = $true): Gracefully skips if property does not exist without incrementing FailCount' {
+            $global:FailCount = 0
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.Management.Automation.PSArgumentException]::new("Property NonExistent does not exist at path HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Test.")
+            }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
+
+            $global:FailCount | Should -Be 0
+        }
+
         It 'Dry-Run Mode: Performs zero mutating registry calls' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { }
@@ -628,5 +640,18 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match 'DisableCrossDeviceResume' -Because "CrossDeviceResume MDM policy must be configured"
         $script:ast.Extent.Text | Should -Match 'EnableCdp' -Because "Connected Devices Platform policy must be configured"
         $script:ast.Extent.Text | Should -Match 'AutoDownload' -Because "Microsoft Store AutoDownload policy must be configured"
+    }
+
+    It 'Add-AppxPackage never binds invalid -AllUsers parameter' {
+        $appxCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Add-AppxPackage'
+        }, $true)
+
+        $appxCalls.Count | Should -BeGreaterThan 0 -Because "Add-AppxPackage calls must be present in undo routines"
+        foreach ($call in $appxCalls) {
+            $call.Extent.Text | Should -Not -Match '-AllUsers' -Because "Add-AppxPackage does not accept -AllUsers (only Remove-AppxPackage supports -AllUsers)"
+        }
     }
 }
