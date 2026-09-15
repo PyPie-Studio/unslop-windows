@@ -13,7 +13,7 @@
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.2.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 How It Compares](#-how-it-compares) • [🛡️ Safety Principles](#-safety-principles-what-keeps-windows-working) • [⚙️ All 18 Modules](#-what-unslop-windows-tweaks--cleans-18-modules-per-engine) • [🔒 Protected Components](#-protected-apps--components-what-we-never-touch)
+[⚡ Quick Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.3.zip) • [📋 Changelog](CHANGELOG.md) • [🗺️ Roadmap](ROADMAP.md) • [🚀 Real-World Impact](#-measured-real-world-impact) • [📊 How It Compares](#-how-it-compares) • [🛡️ Safety Principles](#-safety-principles-what-keeps-windows-working) • [⚙️ All 18 Modules](#-what-unslop-windows-tweaks--cleans-18-modules-per-engine) • [🔒 Protected Components](#-protected-apps--components-what-we-never-touch)
 
 </div>
 
@@ -27,7 +27,7 @@
 
 ```text
 ============================================================
-  unslop-windows (v1.2.2) - PyPie Studio
+  unslop-windows (v1.2.3) - PyPie Studio
   Windows 10 & 11 Unslopper, Debloater and Privacy Tool
 ============================================================
 
@@ -54,7 +54,7 @@ Select an option [0-2]:
 ### Method 1: Direct Download (1-Click / Non-Technical)
 No Git, terminal commands, or PowerShell knowledge needed:
 
-1. Download **[`unslop-windows-v1.2.2.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.2.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.2.3.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.2.3.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` archive to any folder.
 3. Right-click **`unslop.bat`** and select **Run as administrator** (or double-click and accept the UAC prompt).
 4. Select your operating system from the selection menu:
