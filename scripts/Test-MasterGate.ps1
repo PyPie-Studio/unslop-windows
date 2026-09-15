@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    Local quality gate for unslop-windows developers and AI agents.
+    Local quality gate for unslop-windows developers.
     Runs:
       [1/7] AST Syntax & Parser Verification (unslop-win11.ps1 + unslop-win10.ps1 + scripts/*.ps1 + tests/*.ps1)
       [2/7] Static Code Analysis (PSScriptAnalyzer error/warning scan)

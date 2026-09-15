@@ -1,19 +1,18 @@
-# unslop-windows: Dedicated Windows 10 Debloat & Privacy Hardener (v1.2.3)
+# unslop-windows: Windows 10 Debloater (v1.2.3)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021, and IoT Enterprise LTSC
-# Safe tier - no core system files touched, all changes reversible
+# No core system files touched, all changes reversible with -Undo
 
 <#
 .SYNOPSIS
-    unslop-windows: Safe-Tier Dedicated Windows 10 Debloater & Privacy Hardener.
+    unslop-windows: Windows 10 Debloater and Privacy Hardener.
 
 .DESCRIPTION
-    Safely debloats Windows 10 (22H2 through 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC,
-    Builds 10240 through 19045) by removing telemetry, disabling unnecessary services and background
-    tasks, de-provisioning sponsored bloatware, neutralizing Cortana, and securing ConsentStore permissions.
-    All operations adhere to the Safe-Tier invariant (zero WinSxS / DISM corruption)
-    and support 100% symmetrical restoration via -Undo.
+    Debloats Windows 10 (22H2 through 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC,
+    Builds 10240 through 19045) by disabling telemetry, stopping unnecessary services and background
+    tasks, removing pre-installed bloatware, disabling Cortana, and revoking ConsentStore permissions.
+    Does not touch WinSxS or DISM manifests. All changes reversible via -Undo.
 
 .PARAMETER Undo
     Reverts all debloat modifications, restores services, re-enables scheduled tasks,
@@ -76,7 +75,7 @@ $IsUndo = $Undo.IsPresent
 $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
 
 $global:FailCount = 0
-# Performance Optimization: Use Generic List[string] for O(1) log accumulation (avoids O(N²) array reallocations)
+# List avoids += array copy overhead
 [System.Collections.Generic.List[string]]$script:log = [System.Collections.Generic.List[string]]::new()
 
 function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
@@ -1097,7 +1096,7 @@ if ($IsUndo) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
-    Log "Activity & CDP:        Activity feed, Cross-Device (CDP), and Cloud Clipboard neutralized"
+    Log "Activity & CDP:        Activity feed, Cross-Device (CDP) and Cloud Clipboard disabled"
     Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
     Log "ConsentStore:          9 capabilities blocked (Location, Diagnostics, Contacts, Tasks, etc.)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
@@ -1108,7 +1107,7 @@ if ($IsUndo) {
     Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
 }
 Log ""
-Log "SAFE-TIER PRESERVED (Untouchable):"
+Log "PRESERVED (Never Touched):"
 Log "  Microphone & Webcam (Fully accessible for Discord, OBS, Teams)"
 Log "  Windows Terminal, Microsoft Store, Winget (DesktopAppInstaller)"
 Log "  Calculator, Photos, Paint, Snipping Tool"

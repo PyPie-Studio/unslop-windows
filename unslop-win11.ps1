@@ -1,18 +1,17 @@
-# unslop-windows: Dedicated Windows 11 Debloat & Privacy Hardener (v1.2.3)
+# unslop-windows: Windows 11 Debloater (v1.2.3)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000)
-# Safe tier - no core system files touched, all changes reversible
-# Run as Administrator after fresh install or every major Windows feature update
+# No core system files touched, all changes reversible with -Undo
+# Run as Administrator after fresh install or major Windows feature update
 
 <#
 .SYNOPSIS
-    unslop-windows: Safe-Tier Dedicated Windows 11 Debloater & Privacy Hardener.
+    unslop-windows: Windows 11 Debloater and Privacy Hardener.
 
 .DESCRIPTION
-    Safely debloats Windows 11 25H2, 24H2, 23H2, 22H2, and 21H2 by removing telemetry,
-    disabling unnecessary services and background tasks, de-provisioning sponsored
-    bloatware, neutralizing Windows Recall and Copilot, and securing ConsentStore permissions.
-    All operations adhere to the Safe-Tier invariant (zero WinSxS / DISM corruption)
-    and support 100% symmetrical restoration via -Undo.
+    Debloats Windows 11 25H2, 24H2, 23H2, 22H2 and 21H2 by disabling telemetry,
+    stopping unnecessary services and background tasks, removing pre-installed
+    bloatware, disabling Recall and Copilot, and revoking ConsentStore permissions.
+    Does not touch WinSxS or DISM manifests. All changes reversible via -Undo.
 
 .PARAMETER Undo
     Reverts all debloat modifications, restores services, re-enables scheduled tasks,
@@ -79,7 +78,7 @@ $IsUndo = $Undo.IsPresent
 $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
 
 $global:FailCount = 0
-# Performance Optimization: Use Generic List[string] for O(1) log accumulation (avoids O(N²) array reallocations)
+# List avoids += array copy overhead
 [System.Collections.Generic.List[string]]$script:log = [System.Collections.Generic.List[string]]::new()
 
 function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
@@ -579,7 +578,7 @@ Log ""
 # 9. TASKBAR, FILE EXTENSIONS & CONTEXT MENU
 # ============================================================
 Log "--- 9. Taskbar & Explorer Cleanliness ---"
-# Security Baseline: Always show file extensions (prevents .pdf.exe malware masking)
+# Always show file extensions
 Set-RegDwordSafe -path $explorerAdv -name "HideFileExt" -debloatValue 0 -undoValue 1
 
 # Clean Taskbar clutter (Hide Widgets via official GPO policy and Chat/Teams buttons)
@@ -799,7 +798,7 @@ if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
-        # Performance Optimization: Use .Where() intrinsic method for ~3-5x faster array filtering inside loop
+        # .Where() avoids pipeline overhead
         $match = if ($provisioned) { $provisioned.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
         if ($match) {
             foreach ($pkg in $match) {
@@ -823,7 +822,7 @@ if ($IsUndo) {
     # 1. De-provision staged packages so they never reinstall for new profiles
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
-        # Performance Optimization: Use .Where() intrinsic method for ~3-5x faster array filtering inside loop
+        # .Where() avoids pipeline overhead
         $staged = if ($stagedPackages) { $stagedPackages.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
         if ($staged) {
             foreach ($pkg in $staged) {
@@ -856,7 +855,7 @@ if ($IsUndo) {
 
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
-        # Performance Optimization: Use .Where() intrinsic method for ~3-5x faster collection filtering inside loop
+        # .Where() avoids pipeline overhead
         $installed = if ($allInstalled) {
             $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" })
         } else { $null }
@@ -1182,7 +1181,7 @@ if ($IsUndo) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
-    Log "Activity & Resume:     Activity feed, Cross-Device Resume (MDM/CDP), and Cloud Clipboard neutralized"
+    Log "Activity & Resume:     Activity feed, Cross-Device Resume (MDM/CDP) and Cloud Clipboard disabled"
     Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
     Log "ConsentStore:          12 capabilities blocked (Location, Diagnostics, Contacts, Tasks, AI models)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
@@ -1194,7 +1193,7 @@ if ($IsUndo) {
     Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
 }
 Log ""
-Log "SAFE-TIER PRESERVED (Untouchable):"
+Log "PRESERVED (Never Touched):"
 Log "  Microphone & Webcam (Fully accessible for Discord, OBS, Teams)"
 Log "  Windows Terminal, Microsoft Store, Winget (DesktopAppInstaller)"
 Log "  Calculator, Photos, Paint, Snipping Tool (ScreenSketch)"
