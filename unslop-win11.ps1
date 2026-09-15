@@ -1,4 +1,4 @@
-# unslop-windows: Dedicated Windows 11 Debloat & Privacy Hardener (v1.2.2)
+# unslop-windows: Dedicated Windows 11 Debloat & Privacy Hardener (v1.2.3)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000)
 # Safe tier - no core system files touched, all changes reversible
 # Run as Administrator after fresh install or every major Windows feature update
@@ -189,8 +189,12 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                         Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction Stop
                         Log "  REMOVED: $name from $path" -DryRun:$DryRun
                     } catch {
-                        $global:FailCount++
-                        Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
+                        if ($_.Exception.Message -match "does not exist" -or $_.FullyQualifiedErrorId -match "PSArgumentException.*RemoveItemPropertyCommand") {
+                            Log "  SKIP: $name not present in $path" -DryRun:$DryRun
+                        } else {
+                            $global:FailCount++
+                            Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
+                        }
                     }
                 }
             }
@@ -365,7 +369,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.2: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.2.3: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -803,7 +807,7 @@ if ($IsUndo) {
                     Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
                 } else {
                     try {
-                        Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -AllUsers -ErrorAction Stop
+                        Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -ErrorAction Stop
                         Log "  RE-REGISTERED: $($pkg.DisplayName)"
                     } catch {
                         $global:FailCount++

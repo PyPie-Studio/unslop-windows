@@ -1,4 +1,4 @@
-# unslop-windows: Dedicated Windows 10 Debloat & Privacy Hardener (v1.2.2)
+# unslop-windows: Dedicated Windows 10 Debloat & Privacy Hardener (v1.2.3)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021, and IoT Enterprise LTSC
@@ -186,8 +186,12 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                         Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction Stop
                         Log "  REMOVED: $name from $path" -DryRun:$DryRun
                     } catch {
-                        $global:FailCount++
-                        Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
+                        if ($_.Exception.Message -match "does not exist" -or $_.FullyQualifiedErrorId -match "PSArgumentException.*RemoveItemPropertyCommand") {
+                            Log "  SKIP: $name not present in $path" -DryRun:$DryRun
+                        } else {
+                            $global:FailCount++
+                            Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
+                        }
                     }
                 }
             }
@@ -363,7 +367,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.2: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.2.3: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -401,7 +405,7 @@ if ($IsUndo) {
                 Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
             } else {
                 try {
-                    Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -AllUsers -ErrorAction Stop
+                    Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -ErrorAction Stop
                     Log "  RE-REGISTERED: $($pkg.DisplayName)"
                 } catch {
                     $global:FailCount++
@@ -754,7 +758,7 @@ if ($IsUndo) {
                     Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
                 } else {
                     try {
-                        Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -AllUsers -ErrorAction Stop
+                        Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -ErrorAction Stop
                         Log "  RE-REGISTERED: $($pkg.DisplayName)"
                     } catch {
                         $global:FailCount++

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.3] - 2026-09-15
+
+### Fixed
+- **AppX Restoration Parameter Binding (`Add-AppxPackage`)**: Removed invalid `-AllUsers` parameter from `Add-AppxPackage -RegisterByFamilyName -MainPackage ...` in Stage 12 of `unslop-win11.ps1` and Stages 2 and 12 of `unslop-win10.ps1`. `Add-AppxPackage` does not support `-AllUsers` (only `Remove-AppxPackage` and `Get-AppxPackage` do), resolving 5 parameter binding exceptions during `-Undo` runs on provisioned packages (`aimgr`, `MicrosoftWindows.Client.WebExperience`, `Microsoft.Office.ActionsServer`, `Microsoft.OfficePushNotificationUtility`, `Microsoft.GamingApp`).
+- **Idempotent Registry Property Deletion (`Set-RegDwordSafe`)**: Updated `Set-RegDwordSafe`'s `-removeOnUndo` exception handler in both engines to recognize when a target registry property is already absent (`does not exist` or `PSArgumentException`), safely recording `SKIP: <name> not present in <path>` instead of emitting a hard `FAILED:` error and incrementing `$global:FailCount`. Real permission or mutation errors continue to be trapped and reported truthfully.
+
+### Added
+- **Automated Parameter Binding & Idempotency Tests**:
+  - Added unit test cases verifying that non-existent registry property deletions on `-Undo` exit cleanly with 0 failures (`$global:FailCount -eq 0`).
+  - Added AST assertions across both `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` ensuring `Add-AppxPackage` never binds the invalid `-AllUsers` switch.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-025 covering AppX restoration parameter defense and idempotent registry property deletion.
+
+---
+
 ## [1.2.2] - 2026-09-15
 
 ### Added

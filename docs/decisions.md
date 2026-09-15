@@ -349,4 +349,20 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **Windows 10 Parity:** Added `EnableCdp = 0` and `AutoDownload = 2` to `unslop-win10.ps1` with 100% symmetrical `-Undo` restoration.
 - **Consequences:** Eliminates silent background NVMe writes from Store auto-updates, suppresses `CrossDeviceResume.exe` from spawning into RAM, purges Windows Widgets reliably, and preserves full system stability and manual Store update functionality.
 
+---
+
+## ADR-025: AppX Restoration Parameter Defense (`-AllUsers` Removal) and Idempotent Registry Property Deletion (2026-09-15)
+- **Status:** Accepted
+- **Context:**
+  1. *`Add-AppxPackage` Parameter Binding Failure:* During `-Undo` restoration in Stage 12 of `unslop-win11.ps1` and Stages 2 and 12 of `unslop-win10.ps1`, re-registering provisioned AppX packages failed with `A parameter cannot be found that matches parameter name 'AllUsers'`. `Add-AppxPackage` does not accept an `-AllUsers` parameter (only `Remove-AppxPackage` and `Get-AppxPackage` support it). In earlier versions, this was masked by `-ErrorAction SilentlyContinue`. In v1.2.2, with the introduction of honest error logging (`$global:FailCount++` under `-ErrorAction Stop`), this exposed 5 hard failures on Windows 11 (`aimgr`, `MicrosoftWindows.Client.WebExperience`, `Microsoft.Office.ActionsServer`, `Microsoft.OfficePushNotificationUtility`, `Microsoft.GamingApp`).
+  2. *Non-Existent Registry Property Failures on `-Undo`:* In `Set-RegDwordSafe`, properties configured with `removeOnUndo = $true` (e.g. `AllowNewsAndInterests`, `EnableCdp`) were removed via `Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction Stop` when the parent registry key existed (`Test-Path $path` was true). If the property itself did not exist on that key (e.g., if debloat never created it, if the machine was previously undone, or if restore was run on a clean install), `Remove-ItemProperty` threw `Property <name> does not exist at path <path>`. The generic `catch` block incremented `$global:FailCount++` and logged hard `FAILED:` errors even though the intended state (property absent) was already satisfied.
+- **Alternatives Considered:**
+  1. *Suppress all errors in `Set-RegDwordSafe` with `-ErrorAction SilentlyContinue`:* Rejected. Violates the Non-Negotiable Honest Failure Invariant (Rule 8). Legitimate errors (Access Denied, permission locks) must fail and increment `$global:FailCount`.
+  2. *Query `Get-ItemProperty` before removing in `Set-RegDwordSafe`:* In unit tests with mock cmdlets, unmocked `Get-ItemProperty` against fake test registry paths returns `$null`, bypassing `Remove-ItemProperty` invocations and breaking existing unit tests unless mocked everywhere.
+- **Decision:**
+  - **Remove Invalid `-AllUsers` Parameter:** Stripped `-AllUsers` from all `Add-AppxPackage -RegisterByFamilyName -MainPackage ...` calls in `unslop-win11.ps1` and `unslop-win10.ps1`.
+  - **Idempotent Registry Property Deletion:** Updated `Set-RegDwordSafe`'s catch block in both engines to inspect exception messages and error IDs (`$_.Exception.Message -match "does not exist"` or `$_.FullyQualifiedErrorId -match "PSArgumentException.*RemoveItemPropertyCommand"`). When the property is already absent, it safely logs `SKIP: $name not present in $path` without incrementing `$global:FailCount`. Real exceptions continue to increment `$global:FailCount++` and emit `FAILED:`.
+  - **Test Coverage:** Added unit tests verifying idempotent property removal skips and AST assertions ensuring `Add-AppxPackage` never binds `-AllUsers` across both `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`.
+- **Consequences:** Eliminates all false-positive warnings during `-Undo` runs, guarantees idempotency across repeated restoration runs, and enables smooth, error-free AppX package re-registration.
+
 
