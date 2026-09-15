@@ -29,12 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Microsoft Store Background Auto-Download Suppression (`AutoDownload = 2`)**: Configured machine-wide policy `HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore\AutoDownload = 2` across both Windows 11 and Windows 10 engines to prevent silent background updates from waking up `wsappx` (`AppXSVC`) and `WinGet COM Server`, eliminating unprompted NVMe write spikes while preserving manual Store updates.
-- **Cross-Device Resume (XDR) & Connected Devices Platform Neutralization**:
+- **Cross-Device Resume (XDR) & Connected Devices Platform Disabling**:
   - Configured MDM PolicyManager gate `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume\value = 1` in `unslop-win11.ps1`, preventing `sihost.exe` from spawning `CrossDeviceResume.exe` into RAM at user logon.
   - Set Connected Devices Platform policy `HKLM:\SOFTWARE\Policies\Microsoft\Windows\System\EnableCdp = 0` across both engines to disable cross-device hand-off activities system-wide.
   - Set user-level toggles `IsResumeAllowed = 0` and `IsOneDriveResumeAllowed = 0` under `HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration`.
   - Added active process termination for `CrossDeviceResume.exe` during debloat runs.
-- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-024 detailing Store auto-download throttling, Cross-Device Resume MDM/CDP neutralization, and WebExperience package alignment.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-024 detailing Store auto-download throttling, Cross-Device Resume MDM/CDP disabling and WebExperience package alignment.
 
 ### Fixed
 - **Windows Web Experience Pack (`WebExperience`) Package Typo**: Added `"MicrosoftWindows.Client.WebExperience"` to `$bloatApps` in `unslop-win11.ps1`, resolving a dot-notation mismatch that previously prevented Windows Widgets from being de-provisioned.
@@ -44,19 +44,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2026-09-15
 
 ### Added
-- **Dedicated Windows 11 Engine (`unslop-win11.ps1`)**: Standalone, symmetrically named Windows 11 debloater and privacy hardening engine targeting Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000).
+- **Dedicated Windows 11 Engine (`unslop-win11.ps1`)**: Standalone, symmetrically named Windows 11 debloater and privacy hardening engine targeting Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000).
 - **Bidirectional OS Build Gating (`unslop-win11.ps1`)**: Added pre-flight OS build guard validating build $\ge 22000$, providing actionable redirection to `unslop-win10.ps1` when executed on Windows 10, accompanied by `-SkipBuildCheck` switch for CI and offline test harnesses.
 - **Dedicated `-Win11` CLI Parameter (`unslop.bat`, `scripts/Test-MasterGate.ps1`)**: Whitelisted `-Win11` switch in `unslop.bat` and parameterized `scripts/Test-MasterGate.ps1` to allow explicit headless testing of the Windows 11 engine.
-- **Granular OS Version & Build Documentation**: Replaced vague "all versions" text across all documentation (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `ROADMAP.md`, `AGENTS.md`, and `.agents/skills/`) with comprehensive build tables, platform codenames (Germanium, Nickel, Sun Valley, Vibranium, Threshold, Redstone), and servicing schedules (Enterprise LTSC 2021/2019/2016/2015, IoT Enterprise LTSC).
-- **Host OS Detection & Mismatch Warning (`unslop.bat`)**: Automatically queries `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\CurrentBuildNumber` on startup, renders detected system information on the main selection menu, issues explicit warning prompts when an OS mismatch occurs (e.g., selecting Windows 10 while running Windows 11 or vice versa) with confirmation prompts, passes `-SkipBuildCheck` when explicitly confirmed by the user, and emits informative warning notices in CLI mode.
-- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-023 detailing symmetrical dual-engine architecture, removal of `unslop.ps1`, and granular version documentation standard.
+- **Granular OS Version & Build Documentation**: Replaced vague "all versions" text across all documentation (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `ROADMAP.md` and `LICENSE`) with exact build tables, platform codenames (Germanium, Nickel, Sun Valley, Vibranium, Threshold, Redstone) and servicing schedules (Enterprise LTSC 2021/2019/2016/2015, IoT Enterprise LTSC).
+- **Host OS Detection & Mismatch Warning (`unslop.bat`)**: Automatically queries `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\CurrentBuildNumber` on startup, renders detected system information on the main selection menu, issues explicit warning prompts when an OS mismatch occurs (e.g., selecting Windows 10 while running Windows 11 or vice versa) with confirmation prompts, passes `-SkipBuildCheck` when explicitly confirmed by the user and emits informative warning notices in CLI mode.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-023 detailing symmetrical dual-engine architecture, removal of `unslop.ps1` and granular version documentation standard.
 
 ### Changed
 - **Removed Ambiguous `unslop.ps1`**: Retired `unslop.ps1` in favor of pure symmetrical dual standalone engines (`unslop-win11.ps1` and `unslop-win10.ps1`) launched and elevated via `unslop.bat`.
 - **Symmetrical Test Harnesses**: Renamed `tests/unslop.Tests.ps1` to `tests/unslop-win11.Tests.ps1` to pair symmetrically with `tests/unslop-win10.Tests.ps1`.
-- **Unified Batch Launcher Modernization (`unslop.bat`)**: Enforces presence of both `unslop-win11.ps1` and `unslop-win10.ps1`, modernizes the interactive OS selection menu with exact release brackets, and maintains CRLF integrity.
+- **Unified Batch Launcher Modernization (`unslop.bat`)**: Enforces presence of both `unslop-win11.ps1` and `unslop-win10.ps1`, modernizes the interactive OS selection menu with exact release brackets and maintains CRLF integrity.
 - **Release Documentation Alignment (`.github/workflows/release.yml`, `README.md`)**: Updated the "Quick Installation & Usage" release notes template and README usage steps to include the interactive OS selection step before preset selection.
-- **CI / Automation Alignment (`.github/workflows/lint.yml`, `release.yml`)**: Updated JaCoCo code coverage paths and release archive bundle lists to package `unslop.bat`, `unslop-win11.ps1`, and `unslop-win10.ps1`.
+- **CI / Automation Alignment (`.github/workflows/lint.yml`, `release.yml`)**: Updated JaCoCo code coverage paths and release archive bundle lists to package `unslop.bat`, `unslop-win11.ps1` and `unslop-win10.ps1`.
 
 ---
 
@@ -65,36 +65,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Universal Windows 10 Debloat Engine (`unslop-win10.ps1`)**: Complete, standalone debloater and privacy hardener targeting all Windows 10 versions (Build 10240 through 19045 22H2). Replicates all 6 core helper functions for complete isolation from the Windows 11 engine, with full 100% symmetrical `-Undo` restoration and safe non-elevated `-DryRun` audit support.
 - **Windows 10-Specific Debloating Modules (`unslop-win10.ps1`)**:
-  - **Cortana Complete Purge**: Group Policy neutralization (`AllowCortana = 0`, `AllowSearchToUseLocation = 0`, `SearchboxTaskbarMode = 0`, `AllowCortanaAboveLock = 0`) coupled with dual-stage de-provisioning and removal of the Cortana UWP app (`Microsoft.549981C3F5F10`).
-  - **Taskbar & Explorer Cleanup**: Disables News & Interests (`Feeds\ShellFeedsTaskbarViewMode = 2`), hides the People Bar (`PeopleBand = 0`), hides Meet Now (`HideSCAMeetNow = 1`), and shows file extensions.
-  - **Win10 Bloatware De-Provisioning**: Tailored dual-stage AppX package purge targeting Print3D, 3DBuilder, 3DViewer, OneConnect, Paint 3D, Skype, Alarms, Maps, Sound Recorder, Mail & Calendar, and Mixed Reality Portal while strictly protecting the untouchable whitelist (Store, Winget, XboxIdentityProvider, classic Paint).
-- **Unified Dual-OS Batch Launcher (`unslop.bat`)**: Added interactive OS selection menu (Windows 11 vs Windows 10) on launch, OS-specific feature toggle sub-menus (omitting the irrelevant Classic Context Menu toggle for Win10), `-Win10` CLI flag pass-through routing, and `-SkipBuildCheck` whitelist support.
-- **Dedicated Windows 10 Pester Test Suite (`tests/unslop-win10.Tests.ps1`)**: 38 unit, mocking, integration, and AST parity test cases verifying helper functions, parameter switches, privilege boundaries, and Win10-specific invariants (Cortana, News & Interests, PeopleBand, Meet Now).
-- **Local Master Quality Gate Multi-OS Support (`scripts/Test-MasterGate.ps1`)**: Added `-Win10` and `-SkipBuildCheck` switches to dynamically route AST syntax, Pester tests, DryRun audits, and batch launcher passthrough tests to either Windows 10 or Windows 11 targets.
-- **Quad-Target CI Quality Gate Matrix (`.github/workflows/lint.yml`)**: Added `quality-gate-win10-core` (PS7 Core) and `quality-gate-win10-desktop` (PS 5.1 Desktop) workflows, ensuring both Windows 10 and Windows 11 engines are validated on every commit and PR.
-- **Release Automation Upgrades (`.github/workflows/release.yml`)**: Added pre-flight testing for both OS targets, bundle packaging for `unslop-win10.ps1`, and automated SHA-256 checksum generation for the Win10 script.
-- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-022 detailing the multi-OS support architecture, dual-script engine isolation, and unified launcher design.
-- **Windows 10 Internals Knowledge Skill (`.agents/skills/unslop-win10-internals/SKILL.md`)**: Complete reference for Windows 10 telemetry, Cortana suppression, Feeds, and build differences.
+  - **Cortana Removal**: Group Policy enforcement (`AllowCortana = 0`, `AllowSearchToUseLocation = 0`, `SearchboxTaskbarMode = 0`, `AllowCortanaAboveLock = 0`) coupled with dual-stage de-provisioning and removal of the Cortana UWP app (`Microsoft.549981C3F5F10`).
+  - **Taskbar & Explorer Cleanup**: Disables News & Interests (`Feeds\ShellFeedsTaskbarViewMode = 2`), hides the People Bar (`PeopleBand = 0`), hides Meet Now (`HideSCAMeetNow = 1`) and shows file extensions.
+  - **Win10 Bloatware De-Provisioning**: Dual-stage AppX package removal targeting Print3D, 3DBuilder, 3DViewer, OneConnect, Paint 3D, Skype, Alarms, Maps, Sound Recorder, Mail & Calendar and Mixed Reality Portal while strictly protecting the untouchable whitelist (Store, Winget, XboxIdentityProvider, classic Paint).
+  - **Unified Dual-OS Batch Launcher (`unslop.bat`)**: Added interactive OS selection menu (Windows 11 vs Windows 10) on launch, OS-specific feature toggle sub-menus (omitting the irrelevant Classic Context Menu toggle for Win10), `-Win10` CLI flag pass-through routing and `-SkipBuildCheck` whitelist support.
+- **Dedicated Windows 10 Pester Test Suite (`tests/unslop-win10.Tests.ps1`)**: 38 unit, mocking, integration and AST parity test cases verifying helper functions, parameter switches, privilege boundaries and Win10-specific invariants (Cortana, News & Interests, PeopleBand, Meet Now).
+- **Local Master Quality Gate Multi-OS Support (`scripts/Test-MasterGate.ps1`)**: Added `-Win10` and `-SkipBuildCheck` switches to dynamically route AST syntax, Pester tests, DryRun audits and batch launcher passthrough tests to either Windows 10 or Windows 11 targets.
+- **Quad-Target CI Quality Gate (`.github/workflows/lint.yml`)**: Added `quality-gate-win10-core` (PS7 Core) and `quality-gate-win10-desktop` (PS 5.1 Desktop) workflows, ensuring both Windows 10 and Windows 11 engines are validated on every commit and PR.
+- **Release Automation Upgrades (`.github/workflows/release.yml`)**: Added pre-flight testing for both OS targets, bundle packaging for `unslop-win10.ps1` and automated SHA-256 checksum generation for the Win10 script.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-022 detailing the multi-OS support architecture, dual-script engine isolation and unified launcher design.
+- **Windows 10 Internals Documentation**: Complete reference for Windows 10 telemetry, Cortana suppression, Feeds and servicing build differences.
 
 ---
 
 ## [1.1.5] - 2026-09-10
 
 ### Security
-- **Reparse Point & Symlink Traversal Defense (`scripts/Measure-SystemState.ps1`)**: Resolved `$snapshotPath` before checking directory attributes and enforced `exit 1` fail-closed termination when a reparse point or directory junction is encountered in user profiles, neutralizing symlink redirection attacks (OPSEC-01).
+- **Reparse Point & Symlink Traversal Defense (`scripts/Measure-SystemState.ps1`)**: Resolved `$snapshotPath` before checking directory attributes and enforced `exit 1` fail-closed termination when a reparse point or directory junction is encountered in user profiles, preventing symlink redirection attacks (OPSEC-01).
 
 ### Added
-- **Local Pre-Commit Git Hook (`.githooks/pre-commit`)**: Added automated pre-commit quality gate execution running rapid AST, PSScriptAnalyzer, and CRLF integrity checks on feature branches and full 7-pillar gates on `main`.
+- **Local Pre-Commit Git Hook (`.githooks/pre-commit`)**: Added automated pre-commit quality gate execution running rapid AST, PSScriptAnalyzer and CRLF integrity checks on feature branches and full 7-pillar gates on `main`.
 - **Automated Developer Prerequisite Installer (`scripts/Install-GitHooks.ps1`)**: Added `-InstallPrerequisites` switch to automatically discover and install `Pester 5+` and `PSScriptAnalyzer` into the current user's profile and configure Git hook paths in a single command.
-- **Production PR Standards Documentation (`CONTRIBUTING.md`)**: Comprehensive testing guidelines, Git hook lifecycles, and mandatory pull request checklist requiring 0 failures under `Test-MasterGate.ps1 -Strict`.
-- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-021 detailing diagnostic benchmark security, multi-architecture AppX array binding, and local developer hook gates.
+- **Production PR Standards Documentation (`CONTRIBUTING.md`)**: Testing guidelines, Git hook lifecycles and mandatory pull request checklist requiring 0 failures under `Test-MasterGate.ps1 -Strict`.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-021 detailing diagnostic benchmark security, multi-architecture AppX array binding and local developer hook gates.
 
 ### Fixed
 - **AppX Multi-Architecture Parameter Binding (`unslop.ps1`)**: Handled multi-architecture AppX matches safely by iterating over matched packages (`foreach ($pkg in $match)`) rather than binding package arrays directly to `Add-AppxPackage -PackagePath`.
 - **Log Buffer Variable Scoping (`unslop.ps1`)**: Explicitly scoped `$script:log` in the log buffer export routine, guaranteeing complete log flushing even when called across nested scopes.
 
 ### Changed
-- **Interactive Batch Toggles Sub-Menu UX (`unslop.bat`)**: Added a dynamic active flags preview banner, a quick reset toggle (`[0] Reset all options to default`), and streamlined argument construction by directly reusing validated active switches.
+- **Interactive Batch Toggles Sub-Menu UX (`unslop.bat`)**: Added a dynamic active flags preview banner, a quick reset toggle (`[0] Reset all options to default`) and streamlined argument construction by directly reusing validated active switches.
 
 ---
 
@@ -103,34 +103,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Widgets Policy Alignment & UCPD Defense (`unslop.ps1`)**: Switched Widgets disablement from user-mode `HKCU:\...\Advanced\TaskbarDa` to machine-wide Group Policy `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (undo `1`, `removeOnUndo = $true`). This avoids `UnauthorizedAccessException` from the Windows 11 User Choice Protection Driver (`UCPD.sys`) introduced in 23H2/24H2 while cleanly disabling Widgets system-wide.
 - **SYSTEM-Restricted Task Cleanup (`unslop.ps1`)**: Removed `\Microsoft\Windows\Application Experience\SdbinstMergeDbTask` from debloat scheduled tasks list. This task is Windows' internal app compat shim DB merger (non-telemetry) and has an explicit SDDL descriptor restricting write access to `SYSTEM` (`BA` only has Read/Execute), which caused `Access is denied` under standard Administrator elevation.
-- **Inbox SystemApps Depuration & NonRemovable Filter (`unslop.ps1`)**: Removed protected inbox SystemApps (`MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, `MicrosoftWindows.UndockedDevKit`) from `$bloatApps` and added `-not $_.NonRemovable` filtering to `Get-AppxPackage` retrieval, preventing `0x80070032` (`ERROR_NOT_SUPPORTED`) deployment errors on immutable system components while keeping AI engines neutralized via GPO and ConsentStore.
+- **Inbox SystemApps Depuration & NonRemovable Filter (`unslop.ps1`)**: Removed protected inbox SystemApps (`MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, `MicrosoftWindows.UndockedDevKit`) from `$bloatApps` and added `-not $_.NonRemovable` filtering to `Get-AppxPackage` retrieval, preventing `0x80070032` (`ERROR_NOT_SUPPORTED`) deployment errors on immutable system components while keeping AI engines disabled via GPO and ConsentStore.
 - **PowerShell Registry Drive Mapping (`unslop.ps1`)**: Replaced unmounted `HKCR:\CLSID\{018D5C66-...}` with `HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-...}` in both debloat and undo OneDrive unpinning routines, eliminating "Cannot find drive HKCR" errors.
 
 ### Added
-- **Automated Registry & System Package Invariant Tests (`tests/unslop.Tests.ps1`)**: Added test assertions ensuring `AllowNewsAndInterests` is used for Widgets, forbidding unmounted `HKCR:` paths in registry operations, verifying `SdbinstMergeDbTask` is excluded, and locking `Photon`, `CoreAI`, and `UndockedDevKit` into the non-removable package invariants.
-- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-020 detailing Windows 11 24H2/25H2 Protection Driver (UCPD), Inbox SystemApps, and Elevation ACL Alignment.
+- **Automated Registry & System Package Invariant Tests (`tests/unslop.Tests.ps1`)**: Added test assertions ensuring `AllowNewsAndInterests` is used for Widgets, forbidding unmounted `HKCR:` paths in registry operations, verifying `SdbinstMergeDbTask` is excluded and locking `Photon`, `CoreAI` and `UndockedDevKit` into the non-removable package invariants.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-020 detailing Windows 11 24H2/25H2 Protection Driver (UCPD), Inbox SystemApps and Elevation ACL Alignment.
 
 ---
 
 ## [1.1.3] - 2026-09-09
 
 ### Fixed
-- **Defender Telemetry Invariant Alignment (`unslop.ps1`)**: Corrected Defender `SubmitSamplesConsent` from `0` (`AlwaysPrompt`, which caused interactive prompts) to `2` (`NeverSend`) in debloat mode, and `1` (`SendSafeSamples`) in undo mode (BUG-01).
+- **Defender Telemetry Invariant Alignment (`unslop.ps1`)**: Corrected Defender `SubmitSamplesConsent` from `0` (`AlwaysPrompt`, which caused interactive prompts) to `2` (`NeverSend`) in debloat mode and `1` (`SendSafeSamples`) in undo mode (BUG-01).
 - **Startup Entry Preservation & Restoration Symmetry (`unslop.ps1`)**: Upgraded `Remove-StartupEntry` to archive target startup entries under `HKCU:\Software\unslop-windows\StartupBackup` during debloat, enabling 100% lossless symmetrical restoration under `-Undo` (BUG-02).
 - **AppX Package List Depuration (`unslop.ps1`)**: Removed system-protected and non-removable packages (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`, `MicrosoftEdge.Stable`, `MicrosoftEdgeDevToolsClient`) from `$bloatApps`, preventing `0x80073CFA` de-provisioning errors (BUG-03).
 - **Non-Elevated AppX Audit Fidelity & Sequential Enumeration Bottleneck (`unslop.ps1`)**: Switched AppX evaluation to a single-pass `Get-AppxPackage` query with in-memory regex matching, reducing scan latency from ~14s to <1s while providing clear current-user audit guidance when running non-elevated `-DryRun` (BUG-04, PERF-01).
-- **Silent Placebo Logging Elimination (`unslop.ps1`)**: Initialized `$global:FailCount` tracking across all modules; replaced raw unhandled commands in scheduled tasks (NVIDIA, Recall, OneDrive) with defensive `Set-TaskState` invocations, and added error trapping with informative failure reporting to firewall and context menu operations (INV-01).
+- **Silent Placebo Logging Elimination (`unslop.ps1`)**: Initialized `$global:FailCount` tracking across all modules; replaced raw unhandled commands in scheduled tasks (NVIDIA, Recall, OneDrive) with defensive `Set-TaskState` invocations and added error trapping with informative failure reporting to firewall and context menu operations (INV-01).
 - **Vanishing Elevated Menu Windows (`unslop.bat`)**: Added `-FromMenu` parameter forwarding to the launcher switch whitelist, ensuring that elevated executions initiated from the interactive console menu pause with anti-screen-amnesia before returning to the menu (INV-02).
-- **Local Clipboard History Decoupling (`unslop.ps1`)**: Preserved local `Win + V` multi-item clipboard history by eliminating `EnableClipboardHistory = 0` and `AllowClipboardHistory = 0`, while maintaining strict neutralization of cross-device cloud clipboard synchronization (INV-03).
+- **Local Clipboard History Decoupling (`unslop.ps1`)**: Preserved local `Win + V` multi-item clipboard history by eliminating `EnableClipboardHistory = 0` and `AllowClipboardHistory = 0`, while keeping cross-device cloud clipboard synchronization disabled (INV-03).
 - **CI PSScriptAnalyzer Pre-Installation (`lint.yml`, `release.yml`)**: Added automated `PSScriptAnalyzer` module installation to CI workflows to guarantee static analysis coverage is never skipped in automated pipelines.
 
 ### Added
-- **Universal Mutating AST Audit (`tests/unslop.Tests.ps1`)**: Expanded the AST parity suite to scan all registry, scheduled task, and service mutations, strictly forbidding naked mutating cmdlets outside approved bidirectional helper functions.
-- **Negative Error-Trap Unit Tests (`tests/unslop.Tests.ps1`)**: Added test cases injecting exceptions into helper mocks, verifying error trapping, `$global:FailCount` increments, and truthful `FAILED:` logging.
+- **Universal Mutating AST Audit (`tests/unslop.Tests.ps1`)**: Expanded the AST parity suite to scan all registry, scheduled task and service mutations, strictly forbidding naked mutating cmdlets outside approved bidirectional helper functions.
+- **Negative Error-Trap Unit Tests (`tests/unslop.Tests.ps1`)**: Added test cases injecting exceptions into helper mocks, verifying error trapping, `$global:FailCount` increments and truthful `FAILED:` logging.
 - **System Package Blacklist Assertions (`tests/unslop.Tests.ps1`)**: Added automated checks ensuring `$bloatApps` never contains immutable system packages or essential Windows Store runtimes.
 - **Fail-Closed CI Tooling (`scripts/Test-MasterGate.ps1`)**: Introduced `-Strict` mode (auto-engaged in GitHub Actions) that fails with exit code 1 if `PSScriptAnalyzer` or `Pester 5` is missing.
-- **The Zero-Advisory Invariant Mandate (`AGENTS.md`)**: Codified Section 10 requiring that no architectural policy or safety rule exist purely as markdown prose without automated test enforcement.
-- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-019 covering engine integrity, startup symmetry, Defender realignment, and audit fidelity.
+- **Automated Test Enforcement Policy**: Codified requirements that no architectural policy or safety rule exist purely as markdown prose without automated test enforcement in `CONTRIBUTING.md`.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-019 covering engine integrity, startup symmetry, Defender realignment and audit fidelity.
 
 ---
 
@@ -147,14 +147,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Windows Update Hardware Driver & Firmware Preservation (`unslop.ps1`)**: Removed `ExcludeWUDriversInQualityUpdate = 1` from debloat passes and added proactive removal of any legacy key so Windows Update hardware CVE patches and firmware updates flow freely (REG-02).
 
 ### Added
-- **Security & Privilege Boundary Unit Tests (`tests/unslop.Tests.ps1`)**: Added 3 new unit and AST invariant tests verifying Authenticode verification enforcement, reparse point detection, and legacy driver policy cleanup, expanding the test suite to 25 passing assertions.
+- **Security & Privilege Boundary Unit Tests (`tests/unslop.Tests.ps1`)**: Added 3 new unit and AST invariant tests verifying Authenticode verification enforcement, reparse point detection and legacy driver policy cleanup, expanding the test suite to 25 passing assertions.
 
 ---
 
 ## [1.1.1] - 2026-09-08
 
 ### Added
-- **PowerShell Comment-Based Help (`unslop.ps1`)**: Integrated comprehensive `<# .SYNOPSIS ... #>` documentation enabling native `Get-Help .\unslop.ps1 -Full` inspection across all parameters, switches, and usage examples.
+- **PowerShell Comment-Based Help (`unslop.ps1`)**: Integrated `<# .SYNOPSIS ... #>` documentation enabling native `Get-Help .\unslop.ps1 -Full` inspection across all parameters, switches and usage examples.
 - **Pure-Batch Interactive Feature Toggles Sub-Menu (`unslop.bat`)**: Added Option `[4] Interactive Toggles` allowing users to configure custom combinations (Xbox, OneDrive, To-Do, Classic Menu, Dry-Run) with visual `[ ON  ]` / `[ OFF ]` toggle states without typing CLI parameters.
 - **Curated Launcher Presets (`unslop.bat`)**: Replaced rigid single-app options with curated profiles: `[2] Gamer Preset (-KeepXbox)` and `[3] Productivity Preset (-KeepOneDrive -KeepTodos)`.
 - **Dynamic Build Detection (`unslop.ps1`)**: Dynamically resolves the Windows 11 build tag (`23H2`, `24H2`, `25H2`) for runtime console banners and log file names instead of hardcoding `25h2`.
@@ -162,9 +162,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Semantic Console Logging (`unslop.ps1`)**: Modernized terminal output with contextual `-ForegroundColor` formatting (Cyan headers, Green mutations, Yellow dry-run predictions, DarkGray skips, Red errors, Magenta preserved items) while maintaining clean timestamped disk logs.
 - **AppX Package Skip Condensation (`unslop.ps1`)**: Collapsed 40+ repetitive `SKIP: [App] (not installed)` lines into a single aggregate summary line (`SKIP: X bloatware packages not installed on system`), drastically reducing terminal noise.
-- **Dynamic & Honest Summary Reporting (`unslop.ps1`)**: Replaced static summary text with dynamic reporting that honors `-KeepOneDrive`, `-KeepXbox`, and `-KeepTodos` parameter flags, and explicitly marks `-DryRun` as preview-only with zero modifications written.
+- **Dynamic & Honest Summary Reporting (`unslop.ps1`)**: Replaced static summary text with dynamic reporting that honors `-KeepOneDrive`, `-KeepXbox` and `-KeepTodos` parameter flags and explicitly marks `-DryRun` as preview-only with zero modifications written.
 - **Streamlined Reboot Ergonomics (`unslop.ps1`)**: Clarified the interactive restart prompt text (`Initiate 30-second restart countdown? [Y/n]`) and configured `-ForceRestart` to execute immediate reboot without the 30-second delay.
-- **Anti-Screen-Amnesia Protection (`unslop.bat`)**: Added an interactive post-audit prompt (`Press [Enter] to return to the menu, or [Q] to exit...`) preventing `cls` from wiping dry-run inspection output.
+- **Anti-Screen-Amnesia Protection (`unslop.bat`)**: Added an interactive post-audit prompt (`Press [Enter] to return to the menu or [Q] to exit...`) preventing `cls` from wiping dry-run inspection output.
 
 ### Fixed
 - **Placebo Logging Elimination (`unslop.ps1`)**: Replaced silent error suppression across helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) with `try/catch` error trapping that logs honest `FAILED:` feedback when operations encounter locked hives or permissions errors.
@@ -193,21 +193,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.8] - 2026-09-08
 
 ### Fixed
-- **Documentation**: Corrected reboot countdown timer from 60 seconds to 30 seconds in `AGENTS.md` and `docs/decisions.md` to match actual implementation.
+- **Documentation**: Corrected reboot countdown timer from 60 seconds to 30 seconds in developer documentation and `docs/decisions.md` to match actual implementation.
 
 ---
 
 ## [1.0.7] - 2026-09-08
 
 ### Removed
-- **`scripts/Publish-Release.ps1`**: Deleted redundant local release publisher. The GitHub Actions `release.yml` pipeline is the single source of truth for building release zips, SHA256 checksums, SLSA build provenance attestations, and publishing to GitHub Releases.
+- **`scripts/Publish-Release.ps1`**: Deleted redundant local release publisher. The GitHub Actions `release.yml` pipeline is the single source of truth for building release zips, SHA256 checksums, SLSA build provenance attestations and publishing to GitHub Releases.
 
 ---
 
 ## [1.0.6] - 2026-09-08
 
 ### Changed
-- **Leaner Release Zip**: Trimmed `scripts/`, `docs/`, and `tests/` from the release zip bundle. End users only receive the four essential files (`unslop.bat`, `unslop.ps1`, `README.md`, `LICENSE`). Developer tooling remains available in the source repository.
+- **Leaner Release Zip**: Trimmed `scripts/`, `docs/` and `tests/` from the release zip bundle. End users only receive the four essential files (`unslop.bat`, `unslop.ps1`, `README.md`, `LICENSE`). Developer tooling remains available in the source repository.
 
 ---
 
@@ -224,20 +224,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **GitHub Actions Coverage Summaries & Step Metrics (`.github/workflows/lint.yml`)**: Automated JaCoCo XML parsing in CI, rendering line and instruction code coverage tables directly into `$env:GITHUB_STEP_SUMMARY` and archiving coverage artifacts.
 - **Version-Controlled Static Analysis Ruleset (`PSScriptAnalyzerSettings.psd1`)**: Created repository-level analyzer configuration enforcing `Error` and `Warning` rules (`PSAvoidUsingCmdletAliases`, `PSAvoidUsingEmptyCatchBlock`, `PSAvoidUsingPlainTextForPassword`, `PSAvoidUsingInvokeExpression`, `PSAvoidUsingUsernameAndPasswordParams`) with dynamic binding in `Test-MasterGate.ps1`.
 - **GitHub Actions Supply Chain Hardening & SLSA Build Provenance (`.github/workflows/`)**: Pinned all third-party actions to immutable 40-character commit SHAs (`actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`, `actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1`). Integrated `actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be` in `release.yml` for cryptographic SLSA build provenance attestations on release zip bundles and `SHA256SUMS.txt`.
-- **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-013` (AST Parity Symmetry Verification), `ADR-014` (Native Pester Code Coverage), `ADR-015` (Static Analysis Ruleset), and `ADR-016` (Supply Chain Hardening & SLSA Provenance).
+- **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-013` (AST Parity Symmetry Verification), `ADR-014` (Native Pester Code Coverage), `ADR-015` (Static Analysis Ruleset) and `ADR-016` (Supply Chain Hardening & SLSA Provenance).
 
 ---
 
 ## [1.0.4] - 2026-09-08
 
 ### Added
-- **Pester 5 Unit & Mocking Test Suite (`tests/unslop.Tests.ps1`)**: Introduced 17 isolated unit and integration tests mocking native cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Disable-ScheduledTask`, `Enable-ScheduledTask`), parameter flags (`-KeepXbox`, `-KeepOneDrive`), and non-elevated exit contracts with 100% test pass rate.
+- **Pester 5 Unit & Mocking Test Suite (`tests/unslop.Tests.ps1`)**: Introduced 17 isolated unit and integration tests mocking native cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Disable-ScheduledTask`, `Enable-ScheduledTask`), parameter flags (`-KeepXbox`, `-KeepOneDrive`) and non-elevated exit contracts with 100% test pass rate.
 - **Dedicated Dot-Source Test Guard (`unslop.ps1`)**: Added early top-level exit guard (`if ($MyInvocation.InvocationName -eq '.') { return }`) allowing the engine to export its helper functions into test harnesses without triggering elevation checks or executing debloat logic.
 - **Dual PowerShell Runtime Matrix in CI (`.github/workflows/lint.yml`)**: Multi-runtime matrix testing across both `pwsh` (PowerShell 7 Core) and `powershell` (Windows PowerShell 5.1 Desktop) on `windows-latest` with automated Pester 5 module provisioning.
 - **7-Pillar Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: Expanded the gate to 7 verification pillars by decoupling the batch launcher smoke test (`cmd.exe /c ".\unslop.bat -DryRun"`) into dedicated Pillar 7, restoring sub-second (`0.1s`) execution speed to `-Fast` checks. Added `-TestResultsPath` for NUnit XML export.
 - **Gated Production Releases (`.github/workflows/release.yml`)**: Release builds now strictly require the `verify` job to pass all 7 pillars (`needs: verify`) before packaging and publishing assets. Added `tests/` directory to release archive distribution bundles.
-- **CI Concurrency, Test Reporting & Step Summary Annotations**: Added PR-aware `concurrency: cancel-in-progress: true`, zero-dependency Markdown step summaries (`$env:GITHUB_STEP_SUMMARY`), inline GitHub Actions workflow annotations (`::error`), and artifact archiving via `actions/upload-artifact@v4`.
-- **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-008` (Pester 5 Unit Suite), `ADR-009` (Dual PS Runtime Matrix), `ADR-010` (Gated Releases), `ADR-011` (Dedicated Batch Smoke Test), and `ADR-012` (CI Concurrency & Annotations).
+- **CI Concurrency, Test Reporting & Step Summary Annotations**: Added PR-aware `concurrency: cancel-in-progress: true`, zero-dependency Markdown step summaries (`$env:GITHUB_STEP_SUMMARY`), inline GitHub Actions workflow annotations (`::error`) and artifact archiving via `actions/upload-artifact@v4`.
+- **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-008` (Pester 5 Unit Suite), `ADR-009` (Dual PS Runtime Matrix), `ADR-010` (Gated Releases), `ADR-011` (Dedicated Batch Smoke Test) and `ADR-012` (CI Concurrency & Annotations).
 
 ### Fixed
 - **Helper Function Parameter Binding & Switch Scope Collisions (`unslop.ps1`)**: Fixed PowerShell parameter binding collisions where `-Undo` was interpreted as a partial prefix match for `-undoValue` by adding explicit `[switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun` switches across all helper functions.
@@ -250,14 +250,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UAC Elevation Batch Syntax Crash (`unslop.bat`)**: Resolved an issue where nested `cmd.exe` quote escaping inside delayed expansion caused `\"'" was unexpected at this time.` syntax errors, crashing `unslop.bat` immediately upon launch. Replaced with clean, native PowerShell process elevation (`Start-Process -FilePath '%~f0' -Verb RunAs`).
 
 ### Added
-- **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: 5-pillar verification suite combining AST syntax parsing, PSScriptAnalyzer static analysis, CRLF audits, `cmd.exe` batch syntax validation, non-elevated `-DryRun` execution, and symmetrical `-Undo -DryRun` restoration. Includes `-Fast` mode for rapid iteration.
+- **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: 5-pillar verification suite combining AST syntax parsing, PSScriptAnalyzer static analysis, CRLF audits, `cmd.exe` batch syntax validation, non-elevated `-DryRun` execution and symmetrical `-Undo -DryRun` restoration. Includes `-Fast` mode for rapid iteration.
 - **Git Pre-Push Hook (`.githooks/pre-push` & `scripts/Install-GitHooks.ps1`)**: Automatic pre-push hook enforcing the 5-pillar quality gate prior to publishing to `main` or `master`.
-- **System State Diagnostic Auditor (`scripts/Measure-SystemState.ps1`)**: Standalone tool measuring physical RAM, commit charge, process/thread counts, telemetry services, and AppX packages. Supports `-Snapshot`, `-Baseline`, `-Target`, and `-ExportMarkdown` (`docs/benchmarks.md`).
+- **System State Diagnostic Auditor (`scripts/Measure-SystemState.ps1`)**: Standalone tool measuring physical RAM, commit charge, process/thread counts, telemetry services and AppX packages. Supports `-Snapshot`, `-Baseline`, `-Target` and `-ExportMarkdown` (`docs/benchmarks.md`).
 - **Cryptographic Release Hashes**: Updated `.github/workflows/release.yml` to automatically generate and upload standard GNU-compatible `SHA256SUMS.txt` alongside release bundles.
 - **CI Quality Gate Parity**: Updated `.github/workflows/lint.yml` to execute `Test-MasterGate.ps1` and `Measure-SystemState.ps1` on `windows-latest` runners.
-- **AI Agent Harness & Modular Skills**: Added [`AGENTS.md`](AGENTS.md), [`SKILLS.md`](SKILLS.md), and 4 domain skills in [`.agents/skills/`](.agents/skills/) (`unslop-safetier-engine`, `unslop-windows-internals`, `unslop-quality-gate`, `unslop-agent-workflow`).
-- **Architecture Decision Records (`docs/decisions.md`)**: Formal ledger tracking `ADR-001` through `ADR-007` covering safe-tier invariants, symmetry, non-elevated auditing, restart UX, quality gate, agent harness, and benchmarking.
-- **Repository Governance**: Added `.gitattributes`, `.editorconfig`, `.github/PULL_REQUEST_TEMPLATE.md`, and `ROADMAP.md`.
+- **Engineering Standards & Architecture Specifications**: Added developer specifications and architecture guidelines documenting Safe-Tier invariants, minimal-diff discipline and test verification requirements.
+- **Architecture Decision Records (`docs/decisions.md`)**: Formal ledger tracking `ADR-001` through `ADR-007` covering safe-tier invariants, symmetry, non-elevated auditing, restart UX, quality gate, modular architecture standards and benchmarking.
+- **Repository Governance**: Added `.gitattributes`, `.editorconfig`, `.github/PULL_REQUEST_TEMPLATE.md` and `ROADMAP.md`.
 
 ### Security & Hardening
 - **Batch Syntax Gate Hardening**: Upgraded `scripts/Test-MasterGate.ps1` to directly test `cmd.exe /c "call unslop.bat -DryRun"` in Step 3 to ensure batch syntax corruptions or quote-escaping bugs can never pass local pre-push or CI/CD gates again.
@@ -284,7 +284,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Administrator Privileges Enforcement**: Added an explicit pre-flight check in `unslop.ps1` that blocks non-elevated executions with actionable error messages (while keeping non-elevated `-DryRun` audit inspection intact).
 - **Post-Run Restart Prompt**: Introduced an interactive prompt upon script completion offering to restart the system, along with the `-NoRestart` and `-ForceRestart` parameters.
-- **System Restart Requirement**: Prominently documented that a reboot is required to flush cached telemetry threads, reload service states, and apply group policy changes.
+- **System Restart Requirement**: Prominently documented that a reboot is required to flush cached telemetry threads, reload service states and apply group policy changes.
 
 ### Changed
 - Updated `README.md` to document mandatory admin rights and post-run reboot requirements across all installation methods.
@@ -299,22 +299,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   1. Services optimization (`SysMain`, `WSearch`, `DiagTrack`, `dmwappushservice`, `TrkWks`, `lfsvc`).
   2. Windows Recall (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`) and Windows Copilot policies.
   3. Diagnostic data and telemetry collection policies.
-  4. Start Menu recommendations, tips, and Content Delivery Manager promotions.
+  4. Start Menu recommendations, tips and Content Delivery Manager promotions.
   5. Speech and typing/inking personalization telemetry.
   6. Bing cloud search integration and web suggestions.
   7. Network security: LLMNR mitigation and Wi-Fi Sense suppression.
   8. Windows Update GPU driver overwrite protection.
   9. Explorer & Taskbar: Widgets and Chat removal, file extension visibility enforcement.
   10. ConsentStore: 12 background capability access revocations (Location, Diagnostics, 25H2 screen text scraping, OS AI model execution).
-  11. Scheduled tasks: Disables 18+ telemetry tasks across CEIP, OneSettings, PowerGridForecast, and MareBackup.
-  12. Dual-Stage AppX Purge: Removes installed packages across user profiles and de-provisions staged packages from the Windows image.
-  13. OneDrive Purge Engine: Process termination, silent uninstaller, sidebar unpinning, and sync blocking policies.
+  11. Scheduled tasks: Disables 18+ telemetry tasks across CEIP, OneSettings, PowerGridForecast and MareBackup.
+  12. Dual-Stage AppX Removal: Removes installed packages across user profiles and de-provisions staged packages from the Windows image.
+  13. OneDrive Removal: Process termination, silent uninstaller, sidebar unpinning and sync blocking policies.
   14. Startup entries: Disables Edge background tasks and autorun entries.
   15. Microsoft Defender telemetry sample upload suppression (`SubmitSamplesConsent = 0`).
   16. Activity History and cross-device Cloud Clipboard disabling.
   17. Delivery Optimization: Peer-to-peer upload blocking via GPO (`DODownloadMode = 0`) without disabling `DoSvc`.
   18. Firewall: Blocks 8 outbound telemetry and remote assistance rules.
-- **Symmetrical 1-Click Restoration (`-Undo`)**: Exact 1:1 inverse mapping for all services, tasks, registry policies, and firewall rules.
+- **Symmetrical 1-Click Restoration (`-Undo`)**: Exact 1:1 inverse mapping for all services, tasks, registry policies and firewall rules.
 - **Safe Non-Elevated Dry-Run (`-DryRun`)**: Zero modifications inspection mode.
 - **Untouchable Whitelist**: Protected daily tools (Terminal, Store, WinGet, Calculator, Photos, Paint, Snipping Tool, Microphone, Webcam, Developer environments).
 - **Interactive Menu Launcher (`unslop.bat`)**: Standalone self-bootstrapping console launcher.

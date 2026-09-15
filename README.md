@@ -42,7 +42,7 @@ Select an option [0-2]:
 >
 > **Restart required after running.** Windows caches service states and policies in memory. A full restart is needed to finalize all changes.
 >
-> **Save your work first.** After the script finishes, you get an interactive prompt: press `n` to skip restarting, or `Enter`/`Y` to start a 30-second countdown. During the countdown, press `A` to abort or `R` to reboot immediately.
+> **Save your work first.** After the script finishes, you get an interactive prompt: press `n` to skip restarting or `Enter`/`Y` to start a 30-second countdown. During the countdown, press `A` to abort or `R` to reboot immediately.
 
 ### Direct Download (No Git Required)
 
@@ -50,7 +50,7 @@ Select an option [0-2]:
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
-   - **[1] Full Debloat** — removes OneDrive, telemetry, bloatware
+   - **[1] Full Debloat** — removes OneDrive, telemetry and bloatware
    - **[2] Gamer Preset** — debloat but keep Xbox and Gaming Services
    - **[3] Productivity Preset** — debloat but keep OneDrive and To-Do
    - **[4] Interactive Toggles** — pick exactly what to keep/remove
@@ -190,7 +190,7 @@ This script takes a different approach:
 - **`-DryRun` for inspection.** Run without admin rights to see every proposed change before committing.
 - **Delivery Optimization done right.** Disables P2P sharing via GPO (`DODownloadMode=0`) without killing `DoSvc`, so the Microsoft Store doesn't throw error `0x80d03805`.
 
-Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 25H2, 24H2 and 23H2, and Windows 10 22H2 and LTSC.
+Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 (25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
 
 ---
 

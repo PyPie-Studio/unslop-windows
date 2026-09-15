@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
     Standalone system state auditor and diagnostic benchmarking tool for unslop-windows.
-    Measures RAM usage, commit charge, process/thread counts, telemetry services, and AppX footprint.
+    Measures RAM usage, commit charge, process/thread counts, telemetry services and AppX footprint.
 
 .PARAMETER Snapshot
     Saves the current metrics snapshot to a JSON file in the logs directory or specified path.

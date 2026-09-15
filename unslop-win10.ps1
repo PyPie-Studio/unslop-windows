@@ -1,7 +1,7 @@
 # unslop-windows: Windows 10 Debloater (v1.2.3)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
-# 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021, and IoT Enterprise LTSC
+# 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
 # No core system files touched, all changes reversible with -Undo
 
 <#
@@ -11,11 +11,11 @@
 .DESCRIPTION
     Debloats Windows 10 (22H2 through 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC,
     Builds 10240 through 19045) by disabling telemetry, stopping unnecessary services and background
-    tasks, removing pre-installed bloatware, disabling Cortana, and revoking ConsentStore permissions.
+    tasks, removing pre-installed bloatware, disabling Cortana and revoking ConsentStore permissions.
     Does not touch WinSxS or DISM manifests. All changes reversible via -Undo.
 
 .PARAMETER Undo
-    Reverts all debloat modifications, restores services, re-enables scheduled tasks,
+    Reverts all debloat modifications, restores services, re-enables scheduled tasks
     and resets registry policies back to clean Windows defaults. Alias: -Restore.
 
 .PARAMETER DryRun
@@ -23,10 +23,10 @@
     Audits all proposed actions without modifying system state. Supports -WhatIf.
 
 .PARAMETER KeepXbox
-    Preserves Xbox App, Gaming Services, and related gaming components.
+    Preserves Xbox App, Gaming Services and related gaming components.
 
 .PARAMETER KeepOneDrive
-    Preserves Microsoft OneDrive process, auto-start, syncing, and File Explorer sidebar integration.
+    Preserves Microsoft OneDrive process, auto-start, syncing and File Explorer sidebar integration.
 
 .PARAMETER KeepTodos
     Preserves the Microsoft To-Do UWP application.
@@ -344,7 +344,7 @@ if (-not $isAdmin) {
         Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
         Write-Host "============================================================" -ForegroundColor Red
         Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
-        Write-Host "  system policies, manage services, and configure group policy." -ForegroundColor Red
+        Write-Host "  system policies, manage services and configure group policy." -ForegroundColor Red
         Write-Host ""
         Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
         Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
@@ -382,9 +382,9 @@ Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Ma
 Log ""
 
 # ============================================================
-# 2. CORTANA COMPLETE PURGE
+# 2. CORTANA REMOVAL
 # ============================================================
-Log "--- 2. Cortana Complete Purge ---"
+Log "--- 2. Cortana Removal ---"
 $searchPolicyLM = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
 $searchCU = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
 
@@ -836,9 +836,9 @@ if ($IsUndo) {
 Log ""
 
 # ============================================================
-# 13. ONEDRIVE PURGE ENGINE
+# 13. ONEDRIVE REMOVAL
 # ============================================================
-Log "--- 13. OneDrive Purge Engine ---"
+Log "--- 13. OneDrive Removal ---"
 if ($KeepOneDrive) {
     Log "  KEEP: OneDrive retained (-KeepOneDrive enabled)"
 } else {
@@ -1072,7 +1072,7 @@ if ($IsUndo) {
     Log "Cortana:               Cortana app re-registered and policies reverted"
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
-    Log "Activity & CDP:        Activity feed, Cross-Device experiences, and CDP policies restored"
+    Log "Activity & CDP:        Activity feed, Cross-Device experiences and CDP policies restored"
     Log "Store & Delivery:       Store update and Delivery Optimization policies reverted"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
@@ -1082,11 +1082,11 @@ if ($IsUndo) {
 } else {
     $act = if ($IsDryRun) { "Would disable" } else { "Disabled" }
     Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
-    Log "Cortana:               Cortana AppX purged and policies enforced"
+    Log "Cortana:               Cortana AppX removed and policies enforced"
     if ($KeepOneDrive) {
         Log "OneDrive:              Preserved (-KeepOneDrive enabled)"
     } else {
-        $odAct = if ($IsDryRun) { "Would purge" } else { "Purged" }
+        $odAct = if ($IsDryRun) { "Would remove" } else { "Removed" }
         Log "OneDrive:              $odAct (Process killed, uninstalled, unpinned from sidebar, sync blocked)"
     }
     if ($KeepXbox) {
@@ -1102,7 +1102,7 @@ if ($IsUndo) {
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, News & Interests removed, People/Meet Now hidden"
     Log "Telemetry tasks:       StartupAppTask, CEIP, Office, Diag, CloudExperienceHost"
-    Log "UWP bloatware:         Dual-stage purged ($removedInstalled active, $deprovisionedCount staged packages)"
+    Log "UWP bloatware:         Dual-stage removed ($removedInstalled active, $deprovisionedCount staged packages)"
     Log "Firewall:              8 outbound telemetry/remote rules blocked"
     Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
 }

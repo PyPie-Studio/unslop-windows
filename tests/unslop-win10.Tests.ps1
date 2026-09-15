@@ -3,7 +3,7 @@
 .SYNOPSIS
     Pester Unit & Mocking Test Suite for unslop-windows (Windows 10 Edition).
     Tests engine functions, dot-sourcing isolation, mock-intercepted mutations,
-    parameter switches, and the non-elevated security contract for unslop-win10.ps1.
+    parameter switches and the non-elevated security contract for unslop-win10.ps1.
 #>
 
 BeforeAll {
@@ -281,7 +281,7 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
     }
 
     Context 'Failure Honesty & Negative Error Trapping' {
-        It 'Set-RegDwordSafe traps exceptions, increments FailCount, and emits FAILED log' {
+        It 'Set-RegDwordSafe traps exceptions, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
@@ -292,7 +292,7 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not set TestKey"
         }
 
-        It 'Set-SvcState traps exceptions, increments FailCount, and emits FAILED log' {
+        It 'Set-SvcState traps exceptions, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Get-Service -MockWith {
                 [PSCustomObject]@{ Name = "LockedService"; Status = "Running" }
@@ -305,7 +305,7 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not disable service LockedService"
         }
 
-        It 'Set-TaskState traps exceptions, increments FailCount, and emits FAILED log' {
+        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Get-ScheduledTask -MockWith {
                 [PSCustomObject]@{ TaskName = "LockedTask"; TaskPath = "\" }
@@ -607,7 +607,7 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
     }
 
     It 'Configures Cortana policy AllowCortana symmetrically' {
-        $script:ast.Extent.Text | Should -Match 'AllowCortana' -Because "Cortana must be neutralized via AllowCortana policy"
+        $script:ast.Extent.Text | Should -Match 'AllowCortana' -Because "Cortana must be disabled via AllowCortana policy"
     }
 
     It 'Configures News and Interests ShellFeedsTaskbarViewMode' {

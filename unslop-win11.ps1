@@ -1,5 +1,5 @@
 # unslop-windows: Windows 11 Debloater (v1.2.3)
-# Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621), and 21H2 (Build 22000)
+# Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
 
@@ -10,22 +10,23 @@
 .DESCRIPTION
     Debloats Windows 11 25H2, 24H2, 23H2, 22H2 and 21H2 by disabling telemetry,
     stopping unnecessary services and background tasks, removing pre-installed
-    bloatware, disabling Recall and Copilot, and revoking ConsentStore permissions.
+    bloatware, disabling Recall and Copilot and revoking ConsentStore permissions.
     Does not touch WinSxS or DISM manifests. All changes reversible via -Undo.
 
 .PARAMETER Undo
-    Reverts all debloat modifications, restores services, re-enables scheduled tasks,
-    and resets registry policies back to clean Windows defaults. Alias: -Restore.
+    Reverts all changes back to Windows defaults. Re-enables services,
+    restores scheduled tasks, undoes registry keys and resets firewall rules.
 
 .PARAMETER DryRun
-    Executes in read-only inspection mode under standard user privileges.
-    Audits all proposed actions without modifying system state. Supports -WhatIf.
+    Simulates changes without modifying the system. Logs what would be changed.
+    Safe to run without Administrator privileges for inspection.
 
 .PARAMETER KeepXbox
-    Preserves Xbox App, Gaming Services, and related gaming components.
+    Preserves Xbox App, Gaming Services and related gaming components.
 
 .PARAMETER KeepOneDrive
-    Preserves Microsoft OneDrive process, auto-start, syncing, and File Explorer sidebar integration.
+    Preserves Microsoft OneDrive process, auto-start, syncing and File Explorer sidebar
+    integration.
 
 .PARAMETER KeepTodos
     Preserves the Microsoft To-Do UWP application.
@@ -347,7 +348,7 @@ if (-not $isAdmin) {
         Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
         Write-Host "============================================================" -ForegroundColor Red
         Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
-        Write-Host "  system policies, manage services, and configure group policy." -ForegroundColor Red
+        Write-Host "  system policies, manage services and configure group policy." -ForegroundColor Red
         Write-Host ""
         Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
         Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
@@ -639,8 +640,8 @@ Log ""
 # 10. APP PERMISSIONS & 25H2 CAPABILITIES (ConsentStore)
 # ============================================================
 Log "--- 10. App Permissions & 25H2 Capabilities ---"
-# Target capabilities that leak metadata, contacts, or AI context
-# NOTE: Microphone, Webcam, and File System libraries remain untouched for desktop compatibility!
+# Target capabilities that leak metadata, contacts or AI context
+# Microphone, webcam and filesystem libraries are preserved for desktop apps
 Set-ConsentCapability "location"                     "GPS & Location Tracking"
 Set-ConsentCapability "appDiagnostics"              "UWP Cross-App Diagnostics"
 Set-ConsentCapability "activity"                     "User Activity Tracking"
@@ -729,7 +730,7 @@ Log "--- 12. Dual-Stage UWP & Provisioned Bloatware ---"
 # Store, Terminal, Winget (DesktopAppInstaller), Calculator, Photos, Paint,
 # Snipping Tool (ScreenSketch), Codecs (VP9, AV1, HEVC), VCLibs
 $bloatApps = @(
-    # Microsoft To-Do (modularized: purgeable by default, protected via -KeepTodos)
+    # Microsoft To-Do (modularized: removable by default, protected via -KeepTodos)
     "Microsoft.Todos"
 
     # 24H2 / 25H2 AI & Shell Injections
@@ -889,9 +890,9 @@ if ($IsUndo) {
 Log ""
 
 # ============================================================
-# 13. ONEDRIVE PURGE ENGINE
+# 13. ONEDRIVE REMOVAL
 # ============================================================
-Log "--- 13. OneDrive Purge Engine ---"
+Log "--- 13. OneDrive Removal ---"
 if ($KeepOneDrive) {
     Log "  KEEP: OneDrive retained (-KeepOneDrive enabled)"
 } else {
@@ -1154,14 +1155,14 @@ if ($IsDryRun) {
 if ($IsUndo) {
     $act = if ($IsDryRun) { "Would restore" } else { "Restored" }
     Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
-    Log "Recall & Copilot:      Windows Recall, Screenray, and Copilot policies reverted"
+    Log "Recall & Copilot:      Windows Recall, Screenray and Copilot policies reverted"
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
-    Log "Activity & Resume:     Activity feed, Cross-Device Resume, and CDP policies restored"
+    Log "Activity & Resume:     Activity feed, Cross-Device Resume and CDP policies restored"
     Log "Store & Delivery:       Store update and Delivery Optimization policies reverted"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
-    Log "Explorer & Taskbar:    Widgets, Chat, and File Extensions restored to Windows default"
+    Log "Explorer & Taskbar:    Widgets, Chat and File Extensions restored to Windows default"
     Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, CEIP, Office, NVIDIA enabled"
     Log "Firewall rules:        8 rules re-enabled"
 } else {
@@ -1171,7 +1172,7 @@ if ($IsUndo) {
     if ($KeepOneDrive) {
         Log "OneDrive:              Preserved (-KeepOneDrive enabled)"
     } else {
-        $odAct = if ($IsDryRun) { "Would purge" } else { "Purged" }
+        $odAct = if ($IsDryRun) { "Would remove" } else { "Removed" }
         Log "OneDrive:              $odAct (Process killed, uninstalled, unpinned from sidebar, sync blocked)"
     }
     if ($KeepXbox) {
@@ -1188,7 +1189,7 @@ if ($IsUndo) {
     Log "Explorer & Taskbar:    File extensions visible, Taskbar Widgets & Chat removed"
     if ($ClassicContextMenu) { Log "Context Menu:          Classic Windows 10 style full context menu applied" }
     Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
-    Log "UWP bloatware:         Dual-stage purged ($removedInstalled active, $deprovisionedCount staged packages)"
+    Log "UWP bloatware:         Dual-stage removed ($removedInstalled active, $deprovisionedCount staged packages)"
     Log "Firewall:              8 outbound telemetry/remote rules blocked"
     Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
 }

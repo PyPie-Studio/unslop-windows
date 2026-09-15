@@ -3,7 +3,7 @@
 # Git Pre-Commit Hook for unslop-windows
 # Runs local Master Quality Gate before changes are committed.
 # - On main/master: Enforces full 7-pillar quality gate.
-# - On feature branches: Enforces fast AST syntax, CRLF, and conflict audits.
+# - On feature branches: Enforces fast AST syntax, CRLF and conflict audits.
 # ==============================================================================
 
 # Determine best PowerShell executable

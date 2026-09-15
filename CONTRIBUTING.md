@@ -60,7 +60,7 @@ The following components must remain functional and un-targeted:
 Every change must pass our unified 7-pillar quality gate. You have two options for testing:
 
 #### Option A: 1-Command Automated Setup (Recommended)
-Automatically install required testing modules (`Pester 6+` and `PSScriptAnalyzer`), configure Git hooks (`pre-commit` and `pre-push`), and verify the test gate:
+Automatically install required testing modules (`Pester 6+` and `PSScriptAnalyzer`), configure Git hooks (`pre-commit` and `pre-push`) and verify the test gate:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -InstallPrerequisites -Test
@@ -79,10 +79,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Test
 ```
 
 > [!NOTE]
-> **Remote CI/CD Automation**: Even if you do not install testing modules locally, our GitHub Actions CI pipeline (`.github/workflows/lint.yml`) automatically provisions fresh Windows environments, installs Pester 6 and PSScriptAnalyzer, and runs the full 7-pillar gate across both PowerShell 7 (Core) and Windows PowerShell 5.1 (Desktop) in `-Strict` mode on every pull request and push.
+> **Remote CI/CD Automation**: Even if you do not install testing modules locally, our GitHub Actions CI pipeline (`.github/workflows/lint.yml`) automatically provisions fresh Windows environments, installs Pester 6 and PSScriptAnalyzer and runs the full 7-pillar gate across both PowerShell 7 (Core) and Windows PowerShell 5.1 (Desktop) in `-Strict` mode on every pull request and push.
 
 ### 2. Automated Master Quality Gate
-Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun, and Batch launcher passthrough):
+Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun and Batch launcher passthrough):
 
 ```powershell
 # Full 7-pillar gate for Windows 11:
@@ -101,7 +101,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 ### 3. Git Hook Lifecycle (`pre-commit` & `pre-push`)
 When initialized via `Install-GitHooks.ps1`, your repository enforces quality checks automatically:
 * **`pre-commit`**:
-  * On feature branches: Runs rapid lint (`Test-MasterGate.ps1 -Fast`) to catch syntax, CRLF, and conflict errors immediately upon every commit (<1s).
+  * On feature branches: Runs rapid lint (`Test-MasterGate.ps1 -Fast`) to catch syntax, CRLF and conflict errors immediately upon every commit (<1s).
   * On `main`/`master`: Enforces the full 7-pillar Master Quality Gate before any commit is finalized.
 * **`pre-push`**:
   * Blocks any `git push` targeting `main` or `master` if the full 7-pillar gate fails.
