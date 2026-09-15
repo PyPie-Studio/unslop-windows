@@ -143,9 +143,6 @@ powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo -DryRun
 
 ---
 
-## AI Agent Governance & Architecture Decisions
+## Architecture Decisions
 
-If using AI pair programming assistants (Antigravity, Claude, Copilot, etc.) to contribute:
-* Review [`AGENTS.md`](AGENTS.md) for master architecture standards and non-negotiable safe-tier guardrails.
-* Consult [`SKILLS.md`](SKILLS.md) and [`.agents/skills/`](.agents/skills/) for domain-specific automation skills.
-* Check [`docs/decisions.md`](docs/decisions.md) (Architecture Decision Records) before proposing behavioral changes to existing policies.
+Review [`docs/decisions.md`](docs/decisions.md) (Architecture Decision Records) before proposing behavioral changes to existing policies.

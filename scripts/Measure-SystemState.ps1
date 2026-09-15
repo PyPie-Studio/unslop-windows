@@ -71,7 +71,7 @@ function Get-SystemMetrics {
     $processCount = if ($processes) { $processes.Count } else { 0 }
     $threadCount = 0
     if ($processes) {
-        # Performance Optimization: Fast direct iteration over processes (avoids pipeline allocation overhead)
+        # Direct iteration, skip pipeline
         foreach ($proc in $processes) {
             $threadCount += $proc.Threads.Count
         }

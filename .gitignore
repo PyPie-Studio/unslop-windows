@@ -33,3 +33,10 @@ coverage*.xml
 # Graphify output
 graphify-out/
 
+# AI Agent harnesses & assistant configurations (kept local, never exposed publicly)
+AGENTS.md
+SKILLS.md
+.agents/
+.gemini/
+.jules/
+
