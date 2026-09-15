@@ -3,7 +3,7 @@
 .SYNOPSIS
     Pester Unit & Mocking Test Suite for unslop-windows (Windows 11 Edition).
     Tests engine functions, dot-sourcing isolation, mock-intercepted mutations,
-    parameter switches, and the non-elevated security contract for unslop-win11.ps1.
+    parameter switches and the non-elevated security contract for unslop-win11.ps1.
 #>
 
 BeforeAll {
@@ -291,7 +291,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
     }
 
     Context 'Failure Honesty & Negative Error Trapping' {
-        It 'Set-RegDwordSafe traps exceptions, increments FailCount, and emits FAILED log' {
+        It 'Set-RegDwordSafe traps exceptions, increments FailCount and emits FAILED log' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
             $global:FailCount = 0
@@ -303,7 +303,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
         }
 
-        It 'Set-SvcState traps exceptions, increments FailCount, and emits FAILED log' {
+        It 'Set-SvcState traps exceptions, increments FailCount and emits FAILED log' {
             $mockSvc = [PSCustomObject]@{ Status = "Running" }
             Mock -CommandName Get-Service -MockWith { $mockSvc }
             Mock -CommandName Stop-Service -MockWith { throw "Service cannot be stopped" }
@@ -316,7 +316,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable service TestSvc" }).Count | Should -BeGreaterThan 0
         }
 
-        It 'Set-TaskState traps exceptions, increments FailCount, and emits FAILED log' {
+        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log' {
             $mockTask = [PSCustomObject]@{ TaskName = "TestTask" }
             Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
             Mock -CommandName Disable-ScheduledTask -MockWith { throw "Task operation failed" }

@@ -57,7 +57,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 - [x] **Remove Cortana & Suppress Taskbar Feeds:** Group Policy and AppX removal of Cortana, Feeds / News & Interests, People Bar and Meet Now.
 - [x] **Unified Dual-OS Launcher (`unslop.bat`):** Interactive OS selection menu with `-Win10` and `-Win11` CLI pass-through routing.
 - [x] **Symmetrical Dual-OS Test Suites (`tests/unslop-win11.Tests.ps1` & `tests/unslop-win10.Tests.ps1`):** 74 unit, mocking and AST parity tests.
-- [x] **CI/CD Multi-OS Quad Matrix (`.github/workflows/lint.yml`):** Automated validation across both PowerShell 7 Core and Windows PowerShell 5.1 for both OS targets.
+- [x] **Multi-OS CI Validation (`.github/workflows/lint.yml`):** Automated validation across both PowerShell 7 Core and Windows PowerShell 5.1 for both OS targets.
 
 ---
 

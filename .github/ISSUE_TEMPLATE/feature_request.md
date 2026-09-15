@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea, new debloat target, or hardening policy
+about: Suggest an idea, new debloat target or hardening policy
 title: '[ENHANCEMENT] '
 labels: enhancement
 assignees: ''

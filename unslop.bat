@@ -2,10 +2,8 @@
 setlocal enabledelayedexpansion
 title unslop-windows Launcher
 
-:: Change directory to script directory
 cd /d "%~dp0"
 
-:: Ensure unslop-win11.ps1 and unslop-win10.ps1 exist locally
 set "MISSING=0"
 if not exist "%~dp0unslop-win11.ps1" set "MISSING=1"
 if not exist "%~dp0unslop-win10.ps1" set "MISSING=1"
@@ -192,9 +190,9 @@ echo   Selected Script:  Windows 10 (unslop-win10.ps1)
 echo.
 echo   Notice:
 echo   - unslop-win10.ps1 targets Windows 10 components (Cortana,
-echo     News ^& Interests, People bar, Meet Now).
+echo     News ^& Interests, People Bar and Meet Now).
 echo   - It does NOT include Windows 11 features (Recall, Copilot,
-echo     UCPD Widgets policy, or modern context menu).
+echo     UCPD Widgets policy or modern context menu).
 echo   - unslop-win10.ps1 will abort on Windows 11 by default.
 echo     Proceeding will automatically enable -SkipBuildCheck.
 echo.
@@ -221,8 +219,8 @@ echo.
 echo   Notice:
 echo   - unslop-win11.ps1 targets Windows 11 components (Recall,
 echo     Copilot, UCPD Widgets policy, modern context menu).
-echo   - It does NOT include Windows 10 debloating (Cortana purge,
-echo     Feeds / News ^& Interests, People bar, Meet Now).
+echo   - It does NOT include Windows 10 debloating (Cortana removal,
+echo     Feeds / News ^& Interests, People Bar and Meet Now).
 echo   - unslop-win11.ps1 will abort on Windows 10 by default.
 echo     Proceeding will automatically enable -SkipBuildCheck.
 echo.
@@ -247,9 +245,9 @@ echo   unslop-windows (v1.2.3) - PyPie Studio
 echo   Universal Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2) Debloat ^& Privacy
 echo ============================================================
 echo.
-echo   [1] Full Debloat (Purge OneDrive, telemetry, and bloatware)
-echo   [2] Gamer Preset (Debloat, but Keep Xbox ^& Gaming Services)
-echo   [3] Productivity Preset (Debloat, but Keep OneDrive ^& To-Do)
+echo   [1] Full Debloat (Remove OneDrive, telemetry and bloatware)
+echo   [2] Gamer Preset (Debloat, keep Xbox ^& Gaming Services)
+echo   [3] Productivity Preset (Debloat, keep OneDrive ^& To-Do)
 echo   [4] Interactive Toggles (Configure custom feature combinations)
 echo   [5] Safe Dry-Run Audit (Inspect changes safely, zero modifications)
 echo   [6] Full Restore / Undo (Revert all tweaks back to defaults)
@@ -284,9 +282,9 @@ echo   unslop-windows (v1.2.3) - PyPie Studio
 echo   Universal Windows 10 (22H2 / 21H2 / Enterprise LTSC / Builds 10240-19045) Debloat ^& Privacy
 echo ============================================================
 echo.
-echo   [1] Full Debloat (Purge OneDrive, telemetry, and bloatware)
-echo   [2] Gamer Preset (Debloat, but Keep Xbox ^& Gaming Services)
-echo   [3] Productivity Preset (Debloat, but Keep OneDrive ^& To-Do)
+echo   [1] Full Debloat (Remove OneDrive, telemetry and bloatware)
+echo   [2] Gamer Preset (Debloat, keep Xbox ^& Gaming Services)
+echo   [3] Productivity Preset (Debloat, keep OneDrive ^& To-Do)
 echo   [4] Interactive Toggles (Configure custom feature combinations)
 echo   [5] Safe Dry-Run Audit (Inspect changes safely, zero modifications)
 echo   [6] Full Restore / Undo (Revert all tweaks back to defaults)
@@ -351,7 +349,7 @@ echo   [R] Run with selected configuration
 echo   [C] Clear / Reset all toggles
 echo   [B] Back to Main Menu
 echo ============================================================
-set /p "tchoice=Select an option to toggle, or [R] to run: "
+set /p "tchoice=Select an option to toggle or [R] to run: "
 
 if /i "!tchoice!"=="b" goto :menu_WIN11
 if /i "!tchoice!"=="c" goto :toggles_WIN11
@@ -418,7 +416,7 @@ echo   [R] Run with selected configuration
 echo   [C] Clear / Reset all toggles
 echo   [B] Back to Main Menu
 echo ============================================================
-set /p "tchoice=Select an option to toggle, or [R] to run: "
+set /p "tchoice=Select an option to toggle or [R] to run: "
 
 if /i "!tchoice!"=="b" goto :menu_WIN10
 if /i "!tchoice!"=="c" goto :toggles_WIN10
@@ -536,7 +534,7 @@ if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !FINAL_ARGS!
 echo.
 echo Audit complete. Review the inspection results above or check the log file.
-echo Press [Enter] to return to the menu, or [Q] to exit...
+echo Press [Enter] to return to the menu or [Q] to exit...
 set /p "postchoice="
 if /i "!postchoice!"=="q" exit /b 0
 goto :menu_!OS_MODE!

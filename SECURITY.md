@@ -25,7 +25,7 @@
 
 ## Security Philosophy
 
-`unslop-windows` is designed with a strict **Safety Guarantee (Never Breaking Windows)**:
+`unslop-windows` is designed with strict **Safety Principles (Preventing OS Breakage)**:
 
 1. **Zero External Binaries & Offline-Only**: All operations run strictly through standard Windows PowerShell (`powershell.exe` / `pwsh.exe`) and native Windows APIs. No compiled binaries, external DLLs or third-party executables are packaged or executed. The launcher refuses to download unsigned or unauthenticated code from the internet.
 2. **Servicing Stack & Hardware Patch Preservation**: The script never modifies WinSxS component stores, DISM manifests or system file permissions (`takeown` / `icacls`). Essential Windows Update hardware and firmware driver updates are preserved so endpoints receive critical security mitigations.

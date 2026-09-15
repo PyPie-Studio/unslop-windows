@@ -74,7 +74,7 @@ jobs:
             if ([int]$failures -gt 0) {
               foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
                 $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+                Write-Host "::error file=tests/unslop-win11.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
               }
             }
           }
@@ -139,10 +139,10 @@ jobs:
                   $extracted = $matches[0].Trim()
                   $notesBody = ($extracted -replace "^##\s+\[.*?\]\s*-\s*\d{4}-\d{2}-\d{2}", "" -replace "\r?\n---\s*$", "").Trim()
                   
-                  $header = "# 🛡️ unslop-windows $tag`n`n$notesBody`n`n---`n`n"
+                  $header = "# unslop-windows $tag`n`n$notesBody`n`n---`n`n"
                   $footerLines = @(
                       "",
-                      "## 📦 Quick Installation & Usage",
+                      "## Quick Installation & Usage",
                       "",
                       "1. Download **``unslop-windows-$tag.zip``** from Assets below.",
                       "2. Extract the archive to any directory.",
@@ -152,9 +152,9 @@ jobs:
                       "   - **[2] Windows 10**: Targets 22H2, 21H2, 20H2, Enterprise LTSC, Builds 10240-19045 (runs ``unslop-win10.ps1``).",
                       "   - **[0] Exit**: Close the launcher.",
                       "5. Choose an option from the OS feature menu:",
-                      "   - **[1] Full Debloat**: Purge OneDrive, telemetry, and provisioned bloatware.",
-                      "   - **[2] Gamer Preset**: Debloat, but Keep Xbox & Gaming Services (``-KeepXbox``).",
-                      "   - **[3] Productivity Preset**: Debloat, but Keep OneDrive & Microsoft To-Do (``-KeepOneDrive -KeepTodos``).",
+                      "   - **[1] Full Debloat**: Remove OneDrive, telemetry and provisioned bloatware.",
+                      "   - **[2] Gamer Preset**: Debloat, keep Xbox & Gaming Services (``-KeepXbox``).",
+                      "   - **[3] Productivity Preset**: Debloat, keep OneDrive & Microsoft To-Do (``-KeepOneDrive -KeepTodos``).",
                       "   - **[4] Interactive Toggles**: Configure custom feature combinations with visual toggle states.",
                       "   - **[5] Safe Dry-Run Audit**: Inspect all changes safely with zero system modifications (``-DryRun``).",
                       "   - **[6] Full Restore / Undo**: Symmetrically revert all tweaks back to defaults (``-Undo``).",
@@ -164,7 +164,7 @@ jobs:
                       "",
                       "---",
                       "",
-                      "## 🔒 Verification & Integrity",
+                      "## Verification & Integrity",
                       "Verify archive integrity using the published ``SHA256SUMS.txt``:",
                       "``````powershell",
                       "Get-FileHash .\unslop-windows-$tag.zip -Algorithm SHA256",
@@ -179,7 +179,7 @@ jobs:
           }
           
           # Fallback if no matching changelog entry found
-          Set-Content -Path $notesFile -Value "# 🛡️ unslop-windows $tag`n`nAutomated release bundle." -Encoding utf8
+          Set-Content -Path $notesFile -Value "# unslop-windows $tag`n`nAutomated release bundle." -Encoding utf8
 
       - name: Upload Assets to GitHub Release
         shell: pwsh

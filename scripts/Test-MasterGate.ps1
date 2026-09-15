@@ -13,7 +13,7 @@
     Exit code 0 = Safe to push to main, 1+ = Gate blocked; fix reported findings first.
 
 .PARAMETER Fast
-    Skips the execution-based unit, DryRun, and batch launcher tests (runs syntax, analyzer, and file integrity only).
+    Skips execution-based unit, DryRun and batch launcher tests (runs syntax, analyzer and file integrity only).
 
 .PARAMETER SkipAnalyzer
     Bypasses PSScriptAnalyzer if the module is not installed locally.
@@ -77,7 +77,7 @@ Write-Host "  unslop-windows: Master Quality Gate ($targetPlatformTitle - $($PSV
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # ------------------------------------------------------------
-# STEP 1: AST Syntax & Parser Verification
+# 1. AST syntax & parser verification
 # ------------------------------------------------------------
 Write-Host "`n[1/$totalSteps] AST syntax & parser verification..." -ForegroundColor Yellow
 $scriptFiles = Get-ChildItem -Path $root -Include *.ps1, *.psm1, *.psd1 -Recurse -File |
@@ -104,7 +104,7 @@ if ($syntaxErrorsFound -eq 0) {
 }
 
 # ------------------------------------------------------------
-# STEP 2: Static Code Analysis (PSScriptAnalyzer)
+# 2. Static code analysis (PSScriptAnalyzer)
 # ------------------------------------------------------------
 Write-Host "`n[2/$totalSteps] Static code analysis (PSScriptAnalyzer)..." -ForegroundColor Yellow
 if (-not $SkipAnalyzer) {
@@ -154,7 +154,7 @@ if (-not $SkipAnalyzer) {
 }
 
 # ------------------------------------------------------------
-# STEP 3: Line-Ending & File Integrity Audit
+# 3. Line-ending & file integrity audit
 # ------------------------------------------------------------
 Write-Host "`n[3/$totalSteps] Line-ending & file integrity audit..." -ForegroundColor Yellow
 $lineEndingFail = $false
@@ -203,7 +203,7 @@ if ($conflictMarkers.Count -gt 0) {
 if ($lineEndingFail) { $fail = $true }
 
 # ------------------------------------------------------------
-# STEP 4: Pester Unit & Mocking Test Suite
+# 4. Pester unit & mocking test suite
 # ------------------------------------------------------------
 if (-not $Fast) {
     if (-not $SkipUnitTests) {
@@ -295,7 +295,7 @@ if (-not $Fast) {
     }
 
     # ------------------------------------------------------------
-    # STEP 5: Safe Non-Elevated Dry-Run Execution Test
+    # 5. Safe non-elevated dry-run execution test
     # ------------------------------------------------------------
     Write-Host "`n[5/$totalSteps] Safe non-elevated Dry-Run execution test ($targetEngine)..." -ForegroundColor Yellow
     Push-Location $root
@@ -319,7 +319,7 @@ if (-not $Fast) {
     } finally { Pop-Location }
 
     # ------------------------------------------------------------
-    # STEP 6: Symmetrical Restoration Dry-Run Execution Test
+    # 6. Symmetrical restoration dry-run execution test
     # ------------------------------------------------------------
     Write-Host "`n[6/$totalSteps] Symmetrical restoration Dry-Run execution test ($targetEngine)..." -ForegroundColor Yellow
     Push-Location $root
@@ -343,7 +343,7 @@ if (-not $Fast) {
     } finally { Pop-Location }
 
     # ------------------------------------------------------------
-    # STEP 7: Batch Launcher CLI Parameter Passthrough Audit
+    # 7. Batch launcher CLI parameter passthrough audit
     # ------------------------------------------------------------
     Write-Host "`n[7/$totalSteps] Batch launcher CLI parameter passthrough audit..." -ForegroundColor Yellow
     Push-Location $root
@@ -359,7 +359,7 @@ if (-not $Fast) {
         }
     } finally { Pop-Location }
 } else {
-    Write-Host "`n[4-7/$totalSteps] Skipped Unit, DryRun, and Batch Launcher tests (-Fast flag specified)." -ForegroundColor DarkGray
+    Write-Host "`n[4-7/$totalSteps] Skipped Unit, DryRun and Batch Launcher tests (-Fast flag specified)." -ForegroundColor DarkGray
 }
 
 $sw.Stop()
