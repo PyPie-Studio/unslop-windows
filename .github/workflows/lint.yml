@@ -52,9 +52,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
+            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## :test_tube: Pester Unit Test Results: PowerShell 7 Core ($statusEmoji)",
+              "## Pester Unit Test Results: PowerShell 7 Core ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -78,7 +78,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### :bar_chart: Code Coverage: unslop-win11.ps1",
+                "### Code Coverage: unslop-win11.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -152,9 +152,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
+            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## :test_tube: Pester Unit Test Results: Windows PowerShell 5.1 ($statusEmoji)",
+              "## Pester Unit Test Results: Windows PowerShell 5.1 ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -178,7 +178,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### :bar_chart: Code Coverage: unslop-win11.ps1",
+                "### Code Coverage: unslop-win11.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -252,9 +252,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
+            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## :test_tube: Pester Unit Test Results: Win10 Target on PS7 Core ($statusEmoji)",
+              "## Pester Unit Test Results: Win10 Target on PS7 Core ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -278,7 +278,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### :bar_chart: Code Coverage: unslop-win10.ps1",
+                "### Code Coverage: unslop-win10.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -347,9 +347,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
+            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## :test_tube: Pester Unit Test Results: Win10 Target on PowerShell 5.1 ($statusEmoji)",
+              "## Pester Unit Test Results: Win10 Target on PowerShell 5.1 ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -373,7 +373,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### :bar_chart: Code Coverage: unslop-win10.ps1",
+                "### Code Coverage: unslop-win10.ps1",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",

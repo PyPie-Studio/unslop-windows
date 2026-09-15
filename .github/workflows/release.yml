@@ -55,9 +55,9 @@ jobs:
             $passed = [int]$total - [int]$failures - [int]$notRun
             $suiteTime = $xml.'test-results'.'test-suite'.time
             
-            $statusEmoji = if ([int]$failures -gt 0) { ':x: FAILED' } else { ':white_check_mark: PASSED' }
+            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## :shield: Release Pre-Flight Pester Test Results ($statusEmoji)",
+              "## Release Pre-Flight Pester Test Results ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
