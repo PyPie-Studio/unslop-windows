@@ -50,6 +50,123 @@ Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit
 }
 
 Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
+    Context 'Log' {
+        It 'Formats log entries with timestamp and appends to script:log list' {
+            Mock -CommandName Write-Host -MockWith { }
+            $script:log.Clear()
+
+            Log 'Test entry'
+
+            $script:log.Count | Should -Be 1
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] Test entry$'
+        }
+
+        It 'Prepends [DRY-RUN] prefix when DryRun switch is specified' {
+            Mock -CommandName Write-Host -MockWith { }
+            $script:log.Clear()
+
+            Log 'Dry run action' -DryRun
+
+            $script:log.Count | Should -Be 1
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Dry run action$'
+        }
+
+        It 'Emits specified Color parameter directly to Write-Host ForegroundColor' {
+            Mock -CommandName Write-Host -MockWith { }
+            $script:log.Clear()
+
+            Log 'Explicit yellow msg' -Color 'Yellow'
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $ForegroundColor -eq 'Yellow'
+            }
+        }
+
+        It 'Automatically applies Cyan foreground color for header patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log '=== Header Title ==='
+            Log '--- Subheader ---'
+            Log '=== unslop start'
+
+            Should -Invoke -CommandName Write-Host -Times 3 -ParameterFilter {
+                $ForegroundColor -eq 'Cyan'
+            }
+        }
+
+        It 'Automatically applies Yellow foreground color for dry-run/would patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log '[WOULD REMOVE]: BloatApp'
+            Log 'DRY-RUN: Simulation active'
+
+            Should -Invoke -CommandName Write-Host -Times 2 -ParameterFilter {
+                $ForegroundColor -eq 'Yellow'
+            }
+        }
+
+        It 'Automatically applies Green foreground color for state change patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log 'DISABLED: Telemetry service'
+            Log 'REMOVED: XboxApp'
+            Log 'RESTORED: CortanaApp'
+            Log 'ENABLED: Defender'
+            Log 'BLOCKED: Outbound tracking'
+            Log 'STOPPED: DiagTrack'
+            Log 'UNINSTALLED: OneDrive'
+            Log 'SET: Registry DWORD'
+
+            Should -Invoke -CommandName Write-Host -Times 8 -ParameterFilter {
+                $ForegroundColor -eq 'Green'
+            }
+        }
+
+        It 'Automatically applies DarkGray foreground color for skip patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log 'SKIP: Item already absent'
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $ForegroundColor -eq 'DarkGray'
+            }
+        }
+
+        It 'Automatically applies Red foreground color for failure/error patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log 'FAIL: Service stop failed'
+            Log 'FAILED: Registry write denied'
+            Log 'ERROR: Access is denied'
+
+            Should -Invoke -CommandName Write-Host -Times 3 -ParameterFilter {
+                $ForegroundColor -eq 'Red'
+            }
+        }
+
+        It 'Automatically applies Magenta foreground color for informational patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log 'KEEP: Core system app'
+            Log 'INFO: Scanning system state'
+            Log 'NOTE: Reboot required'
+
+            Should -Invoke -CommandName Write-Host -Times 3 -ParameterFilter {
+                $ForegroundColor -eq 'Magenta'
+            }
+        }
+
+        It 'Outputs plain Write-Host without ForegroundColor for unmatched messages' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log 'Standard output message without special keywords'
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $null -eq $ForegroundColor
+            }
+        }
+    }
+
     Context 'Set-RegDwordSafe' {
         It 'Debloat Mode: Calls Set-ItemProperty with debloatValue (zero calls to Remove-ItemProperty)' {
             Mock -CommandName Test-Path -MockWith { $true }
