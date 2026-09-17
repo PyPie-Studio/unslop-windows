@@ -50,6 +50,132 @@ Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit
 }
 
 Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
+    Context 'Log' {
+        BeforeEach {
+            $script:log.Clear()
+        }
+
+        It 'Formats log entry with timestamp and appends to $script:log' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "Test log message"
+
+            $script:log.Count | Should -Be 1
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] Test log message$'
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $Object -match '^\[\d{2}:\d{2}:\d{2}\] Test log message$'
+            }
+        }
+
+        It 'Formats log entry with [DRY-RUN] prefix when -DryRun is specified' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "Test dry run message" -DryRun
+
+            $script:log.Count | Should -Be 1
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Test dry run message$'
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $Object -match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Test dry run message$'
+            }
+        }
+
+        It 'Applies explicit -Color parameter overriding pattern matching' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "DISABLED: Test message" -Color "Yellow"
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $ForegroundColor -eq "Yellow"
+            }
+        }
+
+        It 'Applies Cyan foreground color for header patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $headerMessages = @("=== Title ===", "--- Subtitle ---", "=== unslop win11 ===")
+            foreach ($msg in $headerMessages) {
+                Log $msg
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $headerMessages.Count -ParameterFilter {
+                $ForegroundColor -eq "Cyan"
+            }
+        }
+
+        It 'Applies Yellow foreground color for dry-run/would patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $yellowMessages = @("  [WOULD REMOVE]: BloatwareApp", "DRY-RUN mode active")
+            foreach ($msg in $yellowMessages) {
+                Log $msg
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $yellowMessages.Count -ParameterFilter {
+                $ForegroundColor -eq "Yellow"
+            }
+        }
+
+        It 'Applies Green foreground color for action completion keywords' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $greenKeywords = @('DISABLED:', 'REMOVED:', 'RESTORED:', 'ENABLED:', 'BLOCKED:', 'STOPPED:', 'UNINSTALLED:', 'SET:')
+            foreach ($kw in $greenKeywords) {
+                Log "  $kw TargetComponent"
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $greenKeywords.Count -ParameterFilter {
+                $ForegroundColor -eq "Green"
+            }
+        }
+
+        It 'Applies DarkGray foreground color for SKIP pattern' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "  SKIP: Already disabled"
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                 $ForegroundColor -eq "DarkGray"
+            }
+        }
+
+        It 'Applies Red foreground color for failure patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $redKeywords = @('FAIL:', 'FAILED:', 'ERROR:')
+            foreach ($kw in $redKeywords) {
+                Log "  $kw Operation failed"
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $redKeywords.Count -ParameterFilter {
+                $ForegroundColor -eq "Red"
+            }
+        }
+
+        It 'Applies Magenta foreground color for info/keep/note patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $magentaKeywords = @('KEEP:', 'INFO:', 'NOTE:')
+            foreach ($kw in $magentaKeywords) {
+                Log "  $kw Preserving setting"
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $magentaKeywords.Count -ParameterFilter {
+                $ForegroundColor -eq "Magenta"
+            }
+        }
+
+        It 'Calls Write-Host without ForegroundColor for default unmatched messages' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "Standard informative message without keywords"
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $null -eq $ForegroundColor -and $Object -match 'Standard informative message'
+            }
+        }
+    }
+
+
     Context 'Set-RegDwordSafe' {
         It 'Debloat Mode: Calls Set-ItemProperty with debloatValue (zero calls to Remove-ItemProperty)' {
             Mock -CommandName Test-Path -MockWith { $true }
