@@ -1236,6 +1236,8 @@ if (-not $IsDryRun) {
                             }
                         }
                     } catch {
+                        # Host does not support raw console keys
+                        $null = $_
                     }
                 }
                 if ($keyHit) { break }
