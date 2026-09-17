@@ -338,7 +338,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$false -DryRun:$false
 
             $global:FailCount | Should -Be 1
-            ($script:log | Where-Object { $_ -match "FAILED: Could not set consent location" }).Count | Should -BeGreaterThan 0
+            ($script:log | Where-Object { $_ -match "FAILED: Could not block consent location" }).Count | Should -BeGreaterThan 0
         }
 
         It 'Set-ConsentCapability (Undo) traps exceptions, increments FailCount and emits FAILED log' {
