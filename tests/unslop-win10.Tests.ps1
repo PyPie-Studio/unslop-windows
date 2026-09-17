@@ -317,6 +317,28 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on task exception"
             $script:log[-1] | Should -Match "FAILED: Could not disable task LockedTask"
         }
+
+        It 'Set-ConsentCapability traps exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$false -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on consent capability set exception"
+            $script:log[-1] | Should -Match "FAILED: Could not set consent location"
+        }
+
+        It 'Set-ConsentCapability (Undo) traps exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on consent capability restore exception"
+            $script:log[-1] | Should -Match "FAILED: Could not restore consent location"
+        }
     }
 }
 
