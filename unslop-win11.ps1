@@ -716,8 +716,11 @@ foreach ($t in $officeTasks) {
 }
 
 # NVIDIA auto-update tasks
-Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match "NVIDIA.*SelfUpdate" } | ForEach-Object {
-    Set-TaskState -path $_.TaskPath -name $_.TaskName
+$nvTasks = Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate" -ErrorAction SilentlyContinue
+if ($nvTasks) {
+    foreach ($task in $nvTasks) {
+        Set-TaskState -path $task.TaskPath -name $task.TaskName
+    }
 }
 Log ""
 
