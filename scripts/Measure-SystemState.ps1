@@ -46,12 +46,17 @@ if ($Snapshot) {
     $Snapshot = $Snapshot.Trim(" `"`',`r`n")
 }
 if ($Compare) {
-    $cleanCompare = @()
+    $cleanCompare = [System.Collections.Generic.List[string]]::new()
     foreach ($item in $Compare) {
-        $parts = $item.Split(',') | ForEach-Object { $_.Trim(" `"`',`r`n") } | Where-Object { $_ }
-        $cleanCompare += $parts
+        if (-not $item) { continue }
+        foreach ($part in $item.Split(',')) {
+            $trimmed = $part.Trim(" `"`',`r`n")
+            if ($trimmed) {
+                $cleanCompare.Add($trimmed)
+            }
+        }
     }
-    $Compare = $cleanCompare
+    $Compare = $cleanCompare.ToArray()
 }
 if ($Baseline) { $Baseline = $Baseline.Trim(" `"`',`r`n") }
 if ($Target)   { $Target   = $Target.Trim(" `"`',`r`n") }
