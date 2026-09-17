@@ -328,6 +328,22 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable task TestTask" }).Count | Should -BeGreaterThan 0
         }
+
+        It 'Remove-StartupEntry (Undo) traps exceptions, increments FailCount and emits FAILED log' {
+            $mockBackupProps = [PSCustomObject]@{
+                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+            }
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockBackupProps }
+            Mock -CommandName Set-ItemProperty -MockWith { throw "Access Denied" }
+            $global:FailCount = 0
+            $script:log = @()
+
+            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -Undo -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore startup entry Discord" }).Count | Should -BeGreaterThan 0
+        }
     }
 }
 
