@@ -185,13 +185,14 @@ if (Test-Path $unslopBat) {
 $textFiles = Get-ChildItem -Path $root -Include *.ps1, *.bat, *.md, *.yml -Recurse -File |
     Where-Object { $_.FullName -notmatch '\\(logs|\.git|videos)\\' }
 
-$conflictMarkers = @()
-foreach ($tf in $textFiles) {
-    $content = Get-Content -Path $tf.FullName -Raw -ErrorAction SilentlyContinue
-    if ($content -and ($content -match '(?m)^<{7}\s' -or $content -match '(?m)^={7}$' -or $content -match '(?m)^>{7}\s')) {
-        $conflictMarkers += $tf.Name
+$conflictMarkers = @(
+    foreach ($tf in $textFiles) {
+        $content = Get-Content -Path $tf.FullName -Raw -ErrorAction SilentlyContinue
+        if ($content -and ($content -match '(?m)^<{7}\s' -or $content -match '(?m)^={7}$' -or $content -match '(?m)^>{7}\s')) {
+            $tf.Name
+        }
     }
-}
+)
 
 if ($conflictMarkers.Count -gt 0) {
     $lineEndingFail = $true
