@@ -113,7 +113,11 @@ if not "%~1"=="" (
     net session >nul 2>&1
     if !errorlevel! neq 0 (
         echo Requesting Administrator privileges...
-        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '%*' -Verb RunAs"
+        set "SAFE_BAT_PATH=%~f0"
+        set "SAFE_BAT_PATH=!SAFE_BAT_PATH:'=''!"
+        set "SAFE_CLI_ARGS=%*"
+        set "SAFE_CLI_ARGS=!SAFE_CLI_ARGS:'=''!"
+        powershell.exe -NoProfile -Command "Start-Process -FilePath '!SAFE_BAT_PATH!' -ArgumentList '!SAFE_CLI_ARGS!' -Verb RunAs"
         if !errorlevel! neq 0 (
             echo [ERROR] UAC elevation was cancelled or denied.
             exit /b 1
@@ -562,7 +566,11 @@ if !errorlevel! neq 0 (
             set "UAC_ARGS=-Win11 -FromMenu"
         )
     )
-    powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '!UAC_ARGS!' -Verb RunAs"
+    set "SAFE_BAT_PATH=%~f0"
+    set "SAFE_BAT_PATH=!SAFE_BAT_PATH:'=''!"
+    set "SAFE_UAC_ARGS=!UAC_ARGS!"
+    set "SAFE_UAC_ARGS=!SAFE_UAC_ARGS:'=''!"
+    powershell.exe -NoProfile -Command "Start-Process -FilePath '!SAFE_BAT_PATH!' -ArgumentList '!SAFE_UAC_ARGS!' -Verb RunAs"
     if !errorlevel! neq 0 (
         echo.
         echo [ERROR] UAC elevation was cancelled or denied.
