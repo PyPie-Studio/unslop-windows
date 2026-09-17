@@ -46,12 +46,11 @@ if ($Snapshot) {
     $Snapshot = $Snapshot.Trim(" `"`',`r`n")
 }
 if ($Compare) {
-    $cleanCompare = @()
-    foreach ($item in $Compare) {
-        $parts = $item.Split(',') | ForEach-Object { $_.Trim(" `"`',`r`n") } | Where-Object { $_ }
-        $cleanCompare += $parts
-    }
-    $Compare = $cleanCompare
+    $Compare = @(
+        foreach ($item in $Compare) {
+            $item.Split(',') | ForEach-Object { $_.Trim(" `"`',`r`n") } | Where-Object { $_ }
+        }
+    )
 }
 if ($Baseline) { $Baseline = $Baseline.Trim(" `"`',`r`n") }
 if ($Target)   { $Target   = $Target.Trim(" `"`',`r`n") }
