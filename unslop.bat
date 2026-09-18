@@ -59,13 +59,13 @@ if not "%~1"=="" (
     :: Validate arguments against strict switch whitelist
     for %%A in (%*) do (
         set "ARG_VALID=0"
-        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck) do (
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck) do (
             if /i "%%~A"=="%%V" set "ARG_VALID=1"
         )
         if "!ARG_VALID!"=="0" (
             echo.
             echo [ERROR] Unrecognized or illegal parameter switch: "%%~A"
-            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart, -Win11, -Win10, -SkipBuildCheck
+            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -Win11, -Win10, -SkipBuildCheck
             exit /b 1
         )
         if /i "%%~A"=="-Win10" (
@@ -141,7 +141,7 @@ if not "%~1"=="" (
 set "OVERRIDE_BUILD_CHECK=0"
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.3) - PyPie Studio
+echo   unslop-windows (v1.3.0) - PyPie Studio
 echo   Universal Windows Unslopper, Debloater ^& Privacy Hardener
 echo ============================================================
 echo.
@@ -241,7 +241,7 @@ goto :os_select
 :menu_WIN11
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.3) - PyPie Studio
+echo   unslop-windows (v1.3.0) - PyPie Studio
 echo   Universal Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -278,7 +278,7 @@ goto :menu_WIN11
 :menu_WIN10
 cls
 echo ============================================================
-echo   unslop-windows (v1.2.3) - PyPie Studio
+echo   unslop-windows (v1.3.0) - PyPie Studio
 echo   Universal Windows 10 (22H2 / 21H2 / Enterprise LTSC / Builds 10240-19045) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -452,10 +452,11 @@ goto :run
 :: ------------------------------------------------------------
 :custom_WIN11
 echo.
-echo Examples: -KeepTodos -KeepXbox
-echo           -KeepOneDrive -ClassicContextMenu
-echo           -KeepTodos -NoRestart
-echo           -Undo -DryRun
+echo Examples: -KeepSysMain -KeepSearch
+echo           -KeepPhoneLink -KeepMail
+echo           -LeftTaskbar -ExcludeWUDrivers
+echo           -KeepSpotify -KeepStoreAutoUpdate
+echo           -KeepDefenderDefaults -KeepTodos
 echo.
 set /p "ARGS=Enter parameter flags: "
 if "!ARGS!"=="" goto :menu_WIN11
@@ -464,7 +465,7 @@ if "!ARGS!"=="" goto :menu_WIN11
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -ClassicContextMenu -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -473,7 +474,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -ClassicContextMenu, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN11
@@ -486,9 +487,11 @@ goto :custom_run
 :: ------------------------------------------------------------
 :custom_WIN10
 echo.
-echo Examples: -KeepTodos -KeepXbox
-echo           -KeepOneDrive -NoRestart
-echo           -Undo -DryRun
+echo Examples: -KeepSysMain -KeepSearch
+echo           -KeepPhoneLink -KeepMail
+echo           -KeepClock -ExcludeWUDrivers
+echo           -KeepSpotify -KeepStoreAutoUpdate
+echo           -KeepDefenderDefaults -KeepTodos
 echo.
 set /p "ARGS=Enter parameter flags: "
 if "!ARGS!"=="" goto :menu_WIN10
@@ -497,7 +500,7 @@ if "!ARGS!"=="" goto :menu_WIN10
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepStoreAutoUpdate -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -506,7 +509,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepStoreAutoUpdate, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN10

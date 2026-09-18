@@ -62,4 +62,4 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Architecture Decisions
-See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-025) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
+See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-026) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.

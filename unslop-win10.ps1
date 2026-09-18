@@ -1,4 +1,4 @@
-# unslop-windows: Windows 10 Debloater (v1.2.3)
+# unslop-windows: Windows 10 Debloater (v1.3.0)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
@@ -31,6 +31,33 @@
 .PARAMETER KeepTodos
     Preserves the Microsoft To-Do UWP application.
 
+.PARAMETER KeepSysMain
+    Preserves the SysMain (Superfetch) service.
+
+.PARAMETER KeepSearch
+    Preserves Windows Search Indexer (WSearch) for Outlook and File Explorer search.
+
+.PARAMETER KeepPhoneLink
+    Preserves Phone Link, CrossDeviceResume and Connected Devices Platform sync.
+
+.PARAMETER KeepMail
+    Preserves Windows Mail and Calendar.
+
+.PARAMETER KeepClock
+    Preserves Windows Clock and Alarms.
+
+.PARAMETER KeepSpotify
+    Preserves the Spotify application.
+
+.PARAMETER KeepStoreAutoUpdate
+    Preserves automatic Microsoft Store background updates.
+
+.PARAMETER ExcludeWUDrivers
+    Blocks Windows Update from installing third-party hardware drivers.
+
+.PARAMETER KeepDefenderDefaults
+    Preserves default Windows Defender sample submission settings.
+
 .PARAMETER SkipBuildCheck
     Bypasses the OS build version check (useful for CI/CD testing).
 
@@ -53,6 +80,10 @@
     Debloats system while preserving Xbox gaming services and OneDrive.
 
 .EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -KeepSearch -KeepPhoneLink -KeepClock
+    Debloats system while keeping search indexing, Phone Link and Windows Clock.
+
+.EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo
     Fully restores system policies and services back to clean Windows defaults.
 #>
@@ -65,6 +96,15 @@ param(
     [switch]$KeepXbox,
     [switch]$KeepOneDrive,
     [switch]$KeepTodos,
+    [switch]$KeepSysMain,
+    [switch]$KeepSearch,
+    [switch]$KeepPhoneLink,
+    [switch]$KeepMail,
+    [switch]$KeepClock,
+    [switch]$KeepSpotify,
+    [switch]$KeepStoreAutoUpdate,
+    [switch]$ExcludeWUDrivers,
+    [switch]$KeepDefenderDefaults,
     [switch]$SkipBuildCheck,
     [switch]$NoRestart,
     [switch]$ForceRestart
@@ -366,15 +406,23 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.3: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.3.0: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
 # 1. SERVICES
 # ============================================================
 Log "--- 1. Services ---"
-Set-SvcState "SysMain"          "Superfetch - NVMe makes it useless, wastes RAM" "Automatic"
-Set-SvcState "WSearch"          "Windows Search Indexer - Start menu app search still works" "Automatic"
+if ($IsUndo -or -not $KeepSysMain) {
+    Set-SvcState "SysMain"          "Superfetch - NVMe makes it useless, wastes RAM" "Automatic"
+} else {
+    Log "  KEEP: SysMain (Superfetch) retained (-KeepSysMain enabled)"
+}
+if ($IsUndo -or -not $KeepSearch) {
+    Set-SvcState "WSearch"          "Windows Search Indexer - Start menu app search still works" "Automatic"
+} else {
+    Log "  KEEP: Windows Search Indexer retained (-KeepSearch enabled)"
+}
 Set-SvcState "dmwappushservice" "WAP Push telemetry" "Manual"
 Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automatic"
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
@@ -588,20 +636,27 @@ Log ""
 # ============================================================
 Log "--- 8. Windows Update Driver & Firmware Integrity ---"
 $wuPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-if (Test-Path $wuPolicy) {
-    $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
-    if ($wuProp) {
-        if ($IsDryRun) {
-            Log "  [WOULD RESTORE]: Driver updates (remove legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+if ($ExcludeWUDrivers) {
+    Set-RegDwordSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+    Log "  EXCLUDED: Third-party drivers blocked from Windows Update (-ExcludeWUDrivers enabled)"
+} else {
+    # Windows Update driver & firmware updates are preserved to ensure hardware CVEs and patches install cleanly.
+    # Proactively clear any legacy ExcludeWUDriversInQualityUpdate policy from older unslop versions:
+    if (Test-Path $wuPolicy) {
+        $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
+        if ($wuProp) {
+            if ($IsDryRun) {
+                Log "  [WOULD RESTORE]: Driver updates (remove legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+            } else {
+                Remove-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Force -ErrorAction SilentlyContinue
+                Log "  RESTORED: Driver updates enabled (cleared legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+            }
         } else {
-            Remove-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Force -ErrorAction SilentlyContinue
-            Log "  RESTORED: Driver updates enabled (cleared legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+            Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
         }
     } else {
         Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
     }
-} else {
-    Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
 }
 Log ""
 
@@ -734,6 +789,26 @@ $bloatApps = @(
 if ($KeepTodos) {
     Log "  KEEP: Microsoft To Do retained (-KeepTodos enabled)"
     $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.Todos" }
+}
+
+if ($KeepPhoneLink) {
+    Log "  KEEP: Phone Link retained (-KeepPhoneLink enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.YourPhone" }
+}
+
+if ($KeepMail) {
+    Log "  KEEP: Windows Mail & Calendar retained (-KeepMail enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.WindowsCommunicationsApps" }
+}
+
+if ($KeepClock) {
+    Log "  KEEP: Windows Clock & Alarms retained (-KeepClock enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.WindowsAlarms" }
+}
+
+if ($KeepSpotify) {
+    Log "  KEEP: Spotify application retained (-KeepSpotify enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "SpotifyAB.SpotifyMusic" }
 }
 
 if (-not $KeepXbox) {
@@ -919,11 +994,10 @@ if ($KeepOneDrive) {
 Log ""
 
 # ============================================================
-# 14. DISABLE EDGE AUTO-LAUNCH + DISCORD AUTO-START
+# 14. DISABLE EDGE AUTO-LAUNCH
 # ============================================================
 Log "--- 14. Startup Entries & Edge Background ---"
 Remove-StartupEntry -pattern "MicrosoftEdge" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
-Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
 
 $edgeBgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
 Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
@@ -935,24 +1009,28 @@ Log ""
 # 15. DEFENDER: STOP SENDING SAMPLES
 # ============================================================
 Log "--- 15. Defender ---"
-try {
-    if ($IsUndo) {
-        if ($IsDryRun) {
-            Log "  [WOULD SET]: SubmitSamplesConsent = 1 (Send safe samples automatically)"
+if ($IsUndo -or -not $KeepDefenderDefaults) {
+    try {
+        if ($IsUndo) {
+            if ($IsDryRun) {
+                Log "  [WOULD SET]: SubmitSamplesConsent = 1 (Send safe samples automatically)"
+            } else {
+                Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction Stop
+                Log "  SubmitSamplesConsent = 1 (Restored default)"
+            }
         } else {
-            Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction Stop
-            Log "  SubmitSamplesConsent = 1 (Restored default)"
+            if ($IsDryRun) {
+                Log "  [WOULD SET]: SubmitSamplesConsent = 2 (Never send samples)"
+            } else {
+                Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop
+                Log "  SubmitSamplesConsent = 2 (Disabled telemetry uploads)"
+            }
         }
-    } else {
-        if ($IsDryRun) {
-            Log "  [WOULD SET]: SubmitSamplesConsent = 2 (Never send samples)"
-        } else {
-            Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop
-            Log "  SubmitSamplesConsent = 2 (Disabled telemetry uploads)"
-        }
+    } catch {
+        Log "  SKIP: SubmitSamplesConsent (may need policy override or tampering protection exemption)"
     }
-} catch {
-    Log "  SKIP: SubmitSamplesConsent (may need policy override or tampering protection exemption)"
+} else {
+    Log "  KEEP: Defender sample submission retained (-KeepDefenderDefaults enabled)"
 }
 Log ""
 
@@ -965,7 +1043,11 @@ Set-RegDwordSafe -path $sysPath -name "EnableActivityFeed" -debloatValue 0 -undo
 Set-RegDwordSafe -path $sysPath -name "PublishUserActivities" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
 # Connected Devices Platform (CDP) - Continue experiences on this device
-Set-RegDwordSafe -path $sysPath -name "EnableCdp" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+if ($IsUndo -or -not $KeepPhoneLink) {
+    Set-RegDwordSafe -path $sysPath -name "EnableCdp" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+} else {
+    Log "  KEEP: Connected Devices Platform (CDP) retained (-KeepPhoneLink enabled)"
+}
 
 $feedbackPath = "HKCU:\Software\Microsoft\Siuf\Rules"
 Set-RegDwordSafe -path $feedbackPath -name "NumberOfSIUFInPeriod" -debloatValue 0 -undoValue 1 -removeOnUndo $true
@@ -987,8 +1069,12 @@ $doPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
 Set-RegDwordSafe -path $doPolicy -name "DODownloadMode" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
 # Microsoft Store Automatic App Updates Suppression (stops background wsappx / winget NVMe writes)
-$wsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
-Set-RegDwordSafe -path $wsPolicy -name "AutoDownload" -debloatValue 2 -undoValue 4 -removeOnUndo $true
+if ($IsUndo -or -not $KeepStoreAutoUpdate) {
+    $wsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
+    Set-RegDwordSafe -path $wsPolicy -name "AutoDownload" -debloatValue 2 -undoValue 4 -removeOnUndo $true
+} else {
+    Log "  KEEP: Microsoft Store automatic updates retained (-KeepStoreAutoUpdate enabled)"
+}
 Log ""
 
 # ============================================================
@@ -1005,6 +1091,10 @@ $fwRules = @(
     "Connected Devices Platform (TCP-Out)"
     "Connected Devices Platform (UDP-Out)"
 )
+if ($KeepPhoneLink) {
+    $fwRules = $fwRules | Where-Object { $_ -notmatch 'Connected Devices Platform' }
+    Log "  KEEP: Connected Devices Platform firewall rules retained (-KeepPhoneLink enabled)"
+}
 foreach ($rule in $fwRules) {
     $existing = Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
     if ($existing) {
@@ -1095,6 +1185,33 @@ if ($IsUndo) {
     if ($KeepTodos) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
     }
+    if ($KeepSysMain) {
+        Log "SysMain:               Preserved (-KeepSysMain enabled)"
+    }
+    if ($KeepSearch) {
+        Log "Search Indexer:        Preserved (-KeepSearch enabled)"
+    }
+    if ($KeepPhoneLink) {
+        Log "Phone Link:            Preserved (-KeepPhoneLink enabled)"
+    }
+    if ($KeepMail) {
+        Log "Mail:                  Preserved (-KeepMail enabled)"
+    }
+    if ($KeepClock) {
+        Log "Clock & Alarms:        Preserved (-KeepClock enabled)"
+    }
+    if ($KeepSpotify) {
+        Log "Spotify:               Preserved (-KeepSpotify enabled)"
+    }
+    if ($KeepStoreAutoUpdate) {
+        Log "Store Updates:         Preserved (-KeepStoreAutoUpdate enabled)"
+    }
+    if ($ExcludeWUDrivers) {
+        Log "Driver Updates:        Blocked from Windows Update (-ExcludeWUDrivers enabled)"
+    }
+    if ($KeepDefenderDefaults) {
+        Log "Defender Samples:      Default submissions preserved (-KeepDefenderDefaults enabled)"
+    }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
     Log "Activity & CDP:        Activity feed, Cross-Device (CDP) and Cloud Clipboard disabled"
     Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
@@ -1104,7 +1221,7 @@ if ($IsUndo) {
     Log "Telemetry tasks:       StartupAppTask, CEIP, Office, Diag, CloudExperienceHost"
     Log "UWP bloatware:         Dual-stage removed ($removedInstalled active, $deprovisionedCount staged packages)"
     Log "Firewall:              8 outbound telemetry/remote rules blocked"
-    Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
+    Log "Startup cleaned:       Edge, OneDrive removed from auto-start"
 }
 Log ""
 Log "PRESERVED (Never Touched):"
