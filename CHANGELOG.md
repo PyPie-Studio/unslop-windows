@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-09-19
+
+### Changed
+- **Scheduled Task Query Optimization**: Replaced pipeline filtering for NVIDIA auto-update tasks with direct CIM provider queries (`Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate"`) in `unslop-win11.ps1` and `unslop-win10.ps1`.
+- **Quality Gate Marker Scan**: Streamlined conflict marker collection loop in `scripts/Test-MasterGate.ps1`.
+
+### Fixed
+- **Console Key Listener Exception Handling**: Added explicit exception variable handling to raw console key reads in the restart countdown loop, satisfying static analyzer rules.
+
+### Added
+- **Log Formatting and Negative Error Trapping Unit Tests**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` covering log timestamping, dry-run prefixes, ANSI keyword color mapping and failure handling across `Set-ConsentCapability` and `Remove-StartupEntry`.
+
+---
+
 ## [1.3.0] - 2026-09-18
 
 ### Removed
@@ -348,7 +362,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.1...v1.2.2

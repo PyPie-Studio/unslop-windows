@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.3.0)
+# unslop-windows: Windows 11 Debloater (v1.3.1)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -409,7 +409,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.0: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.1: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -774,8 +774,11 @@ foreach ($t in $officeTasks) {
 }
 
 # NVIDIA auto-update tasks
-Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match "NVIDIA.*SelfUpdate" } | ForEach-Object {
-    Set-TaskState -path $_.TaskPath -name $_.TaskName
+$nvTasks = Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate" -ErrorAction SilentlyContinue
+if ($nvTasks) {
+    foreach ($task in $nvTasks) {
+        Set-TaskState -path $task.TaskPath -name $task.TaskName
+    }
 }
 Log ""
 
@@ -1443,6 +1446,7 @@ if (-not $IsDryRun) {
                         }
                     } catch {
                         # Host does not support raw console keys
+                        $null = $_
                     }
                 }
                 if ($keyHit) { break }

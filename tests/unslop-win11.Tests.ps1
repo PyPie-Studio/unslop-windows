@@ -50,6 +50,131 @@ Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit
 }
 
 Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
+    Context 'Log' {
+        BeforeEach {
+            $script:log.Clear()
+        }
+
+        It 'Formats log entry with timestamp and appends to $script:log' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "Test log message"
+
+            $script:log.Count | Should -Be 1
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] Test log message$'
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $Object -match '^\[\d{2}:\d{2}:\d{2}\] Test log message$'
+            }
+        }
+
+        It 'Formats log entry with [DRY-RUN] prefix when -DryRun is specified' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "Test dry run message" -DryRun
+
+            $script:log.Count | Should -Be 1
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Test dry run message$'
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $Object -match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Test dry run message$'
+            }
+        }
+
+        It 'Applies explicit -Color parameter overriding pattern matching' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "DISABLED: Test message" -Color "Yellow"
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $ForegroundColor -eq "Yellow"
+            }
+        }
+
+        It 'Applies Cyan foreground color for header patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $headerMessages = @("=== Title ===", "--- Subtitle ---", "=== unslop win11 ===")
+            foreach ($msg in $headerMessages) {
+                Log $msg
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $headerMessages.Count -ParameterFilter {
+                $ForegroundColor -eq "Cyan"
+            }
+        }
+
+        It 'Applies Yellow foreground color for dry-run/would patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $yellowMessages = @("  [WOULD REMOVE]: BloatwareApp", "DRY-RUN mode active")
+            foreach ($msg in $yellowMessages) {
+                Log $msg
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $yellowMessages.Count -ParameterFilter {
+                $ForegroundColor -eq "Yellow"
+            }
+        }
+
+        It 'Applies Green foreground color for action completion keywords' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $greenKeywords = @('DISABLED:', 'REMOVED:', 'RESTORED:', 'ENABLED:', 'BLOCKED:', 'STOPPED:', 'UNINSTALLED:', 'SET:')
+            foreach ($kw in $greenKeywords) {
+                Log "  $kw TargetComponent"
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $greenKeywords.Count -ParameterFilter {
+                $ForegroundColor -eq "Green"
+            }
+        }
+
+        It 'Applies DarkGray foreground color for SKIP pattern' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "  SKIP: Already disabled"
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $ForegroundColor -eq "DarkGray"
+            }
+        }
+
+        It 'Applies Red foreground color for failure patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $redKeywords = @('FAIL:', 'FAILED:', 'ERROR:')
+            foreach ($kw in $redKeywords) {
+                Log "  $kw Operation failed"
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $redKeywords.Count -ParameterFilter {
+                $ForegroundColor -eq "Red"
+            }
+        }
+
+        It 'Applies Magenta foreground color for info/keep/note patterns' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $magentaKeywords = @('KEEP:', 'INFO:', 'NOTE:')
+            foreach ($kw in $magentaKeywords) {
+                Log "  $kw Preserving setting"
+            }
+
+            Should -Invoke -CommandName Write-Host -Times $magentaKeywords.Count -ParameterFilter {
+                $ForegroundColor -eq "Magenta"
+            }
+        }
+
+        It 'Calls Write-Host without ForegroundColor for default unmatched messages' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            Log "Standard informative message without keywords"
+
+            Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
+                $null -eq $ForegroundColor -and $Object -match 'Standard informative message'
+            }
+        }
+    }
+
     Context 'Set-RegDwordSafe' {
         It 'Debloat Mode: Calls Set-ItemProperty with debloatValue (zero calls to Remove-ItemProperty)' {
             Mock -CommandName Test-Path -MockWith { $true }
@@ -295,7 +420,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
             $global:FailCount = 0
-            $script:log = @()
+            $script:log.Clear()
 
             Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "TestVal" -debloatValue 1 -undoValue 0
 
@@ -308,7 +433,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Mock -CommandName Get-Service -MockWith { $mockSvc }
             Mock -CommandName Stop-Service -MockWith { throw "Service cannot be stopped" }
             $global:FailCount = 0
-            $script:log = @()
+            $script:log.Clear()
 
             Set-SvcState -name "TestSvc" -desc "Test service"
 
@@ -321,12 +446,69 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
             Mock -CommandName Disable-ScheduledTask -MockWith { throw "Task operation failed" }
             $global:FailCount = 0
-            $script:log = @()
+            $script:log.Clear()
 
             Set-TaskState -path "\TestPath\" -name "TestTask"
 
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable task TestTask" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-ConsentCapability traps exceptions, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$false -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not block consent location" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-ConsentCapability (Undo) traps exceptions, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore consent location" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Remove-StartupEntry traps exceptions, increments FailCount and emits FAILED log' {
+            $mockProps = [PSCustomObject]@{
+                TestStartupApp = "C:\Program Files\TestApp\test.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            Mock -CommandName Remove-ItemProperty -MockWith { throw "Access Denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not remove TestStartupApp from HKCU:" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Remove-StartupEntry (Undo) traps exceptions, increments FailCount and emits FAILED log' {
+            $mockProps = [PSCustomObject]@{
+                TestStartupApp = "C:\Program Files\TestApp\test.exe"
+            }
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+            Mock -CommandName Set-ItemProperty -MockWith { throw "Access Denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -Undo -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore startup entry TestStartupApp in HKCU:" }).Count | Should -BeGreaterThan 0
         }
     }
 }

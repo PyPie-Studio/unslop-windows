@@ -11,7 +11,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.0.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
+[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.1.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -19,7 +19,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 ```text
 ============================================================
-  unslop-windows (v1.3.0) - PyPie Studio
+  unslop-windows (v1.3.1) - PyPie Studio
   Windows 10 & 11 Debloater and Privacy Tool
 ============================================================
 
@@ -46,7 +46,7 @@ Select an option [0-2]:
 
 ### Direct Download (No Git Required)
 
-1. Download **[`unslop-windows-v1.3.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.3.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
