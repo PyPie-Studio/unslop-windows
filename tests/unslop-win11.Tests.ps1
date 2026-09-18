@@ -239,51 +239,51 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
     Context 'Remove-StartupEntry' {
         It 'Debloat Mode: Archives startup entry to backup key and removes from Run' {
             $mockProps = [PSCustomObject]@{
-                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+                TestStartupApp = "C:\Program Files\TestApp\app.exe"
             }
             Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { }
             Mock -CommandName Remove-ItemProperty -MockWith { }
 
-            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
 
             Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
-                $Path -match "StartupBackup" -and $Name -eq "Discord"
+                $Path -match "StartupBackup" -and $Name -eq "TestStartupApp"
             }
             Should -Invoke -CommandName Remove-ItemProperty -Times 1 -ParameterFilter {
-                $Path -eq "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -and $Name -eq "Discord"
+                $Path -eq "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -and $Name -eq "TestStartupApp"
             }
         }
 
         It 'Undo Mode: Restores archived startup entry from backup key to Run' {
             $mockBackupProps = [PSCustomObject]@{
-                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+                TestStartupApp = "C:\Program Files\TestApp\app.exe"
             }
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Get-ItemProperty -MockWith { $mockBackupProps }
             Mock -CommandName Set-ItemProperty -MockWith { }
             Mock -CommandName Remove-ItemProperty -MockWith { }
 
-            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -Undo
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -Undo
 
             Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
-                $Path -eq "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -and $Name -eq "Discord"
+                $Path -eq "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -and $Name -eq "TestStartupApp"
             }
             Should -Invoke -CommandName Remove-ItemProperty -Times 1 -ParameterFilter {
-                $Path -match "StartupBackup" -and $Name -eq "Discord"
+                $Path -match "StartupBackup" -and $Name -eq "TestStartupApp"
             }
         }
 
         It 'Dry-Run Mode: Performs zero mutating calls during startup management' {
             $mockProps = [PSCustomObject]@{
-                Discord = "C:\Users\test\AppData\Local\Discord\app.exe"
+                TestStartupApp = "C:\Program Files\TestApp\app.exe"
             }
             Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
             Mock -CommandName Set-ItemProperty -MockWith { }
             Mock -CommandName Remove-ItemProperty -MockWith { }
 
-            Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -DryRun
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -DryRun
 
             Should -Invoke -CommandName Set-ItemProperty -Times 0
             Should -Invoke -CommandName Remove-ItemProperty -Times 0
@@ -362,6 +362,27 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         ($output -match "OneDrive retained \(-KeepOneDrive enabled\)").Length | Should -BeGreaterThan 0
         ($output -match "\[WOULD UNINSTALL\]: OneDrive").Length | Should -Be 0
         ($output -match "DisableFileSyncNGSC").Length | Should -Be 0
+    }
+
+    It '-KeepSysMain retains SysMain service' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepSysMain 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "SysMain \(Superfetch\) retained \(-KeepSysMain enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DISABLE\]: SysMain").Length | Should -Be 0
+    }
+
+    It '-KeepSearch retains Windows Search Indexer service' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepSearch 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Windows Search Indexer retained \(-KeepSearch enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DISABLE\]: WSearch").Length | Should -Be 0
+    }
+
+    It '-KeepPhoneLink retains Phone Link app and skips CDP killswitches' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepPhoneLink 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Phone Link retained \(-KeepPhoneLink enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.YourPhone").Length | Should -Be 0
     }
 }
 

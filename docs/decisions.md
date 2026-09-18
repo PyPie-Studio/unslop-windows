@@ -365,4 +365,25 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **Test Coverage:** Added unit tests verifying idempotent property removal skips and AST assertions ensuring `Add-AppxPackage` never binds `-AllUsers` across both `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`.
 - **Consequences:** Eliminates all false-positive warnings during `-Undo` runs, guarantees idempotency across repeated restoration runs and enables smooth, error-free AppX package re-registration.
 
+---
+
+## ADR-026: Third-Party Scope Correction (Discord Removal), -KeepSysMain and Granular Custom CLI Flags Architecture (2026-09-18)
+- **Status:** Accepted
+- **Context:**
+  1. *Third-Party Scope Creep:* Section 14 previously contained hardcoded startup entry removal for Discord (`HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Discord`). Discord is third-party software rather than a Windows OS or Microsoft component. This was initially added as a personal configuration choice by the author. As the repository grew to serve a wider user base, retaining third-party app manipulation conflicted with the core project focus on Windows debloating and privacy hardening.
+  2. *SysMain and Mechanical Storage:* By default, Stage 1 disables `SysMain` (Superfetch). On systems running mechanical HDDs, hybrid storage or secondary spinning disks, disabling `SysMain` can degrade sequential application launch times and cause disk thrashing. Users needed a dedicated flag to preserve `SysMain` without skipping other background services.
+  3. *Granular Component Choice vs Menu Bloat:* Different users need different combinations of built-in components (e.g. keeping Windows Search indexer for Outlook desktop, Phone Link for mobile syncing, Spotify, Mail or Clock). Adding 10+ new toggles into Option [4] ("Interactive Toggle Menu") in `unslop.bat` would clutter the menu and slow down common runs.
+- **Alternatives Considered:**
+  1. *Add all 10 flags into Option [4] Interactive Toggle Menu:* Rejected. Option [4] is designed to be lean and quick for mainstream users who want basic toggles (Xbox, OneDrive, To-Do, Context Menu, DryRun). Adding 10 more toggles creates visual clutter and slows down common workflows.
+  2. *Retain Discord cleanup with an opt-out flag:* Rejected. Debloater scope must remain strictly bounded to Windows and Microsoft components. Modifying third-party application startup entries crosses into general cleaner territory.
+- **Decision:**
+  - **Remove Third-Party Discord Manipulation:** Removed Discord startup entry deletion from Section 14 across `unslop-win11.ps1` and `unslop-win10.ps1`, replacing test mocks with generic startup test entries.
+  - **Implement `-KeepSysMain`:** Added `-KeepSysMain` switch parameter in both engines. When passed, `SysMain` is skipped during debloating, leaving its startup type and running state intact.
+  - **Implement Vetted Custom Flags:** Added `-KeepSearch`, `-KeepPhoneLink`, `-KeepMail`, `-KeepClock` (Windows 10), `-KeepSpotify`, `-KeepStoreAutoUpdate`, `-LeftTaskbar` (Windows 11), `-ExcludeWUDrivers` and `-KeepDefenderDefaults` across both engines with symmetrical `-Undo` handling.
+  - **Whitelisted CLI Pass-Through and Interactive Option [7]:** Expanded the batch file argument whitelist to pass custom switches directly to the underlying PowerShell engines, and added Option `[7] Custom CLI Flags` in `unslop.bat` for interactive parameter entry.
+- **Consequences:**
+  - Restores strict focus on Windows and Microsoft components.
+  - Preserves storage performance on mechanical and hybrid drives via `-KeepSysMain`.
+  - Gives advanced users full flexibility to preserve specific apps and services while keeping the standard interactive menus clean.
+  - Maintains 100% test coverage and validation through `Test-MasterGate.ps1`.
 

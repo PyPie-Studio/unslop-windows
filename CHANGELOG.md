@@ -11,6 +11,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-09-18
+
+### Removed
+- **Third-Party Discord Startup Removal**: Removed Discord startup entry cleanup from Section 14 in both `unslop-win11.ps1` and `unslop-win10.ps1`. Discord startup suppression was originally added as a personal configuration choice by the author. As the repository grew, debloating was scoped strictly to Windows and Microsoft components rather than third-party desktop software.
+
+### Added
+- **Granular Custom CLI Flags**: Added 10 granular switches across both engines to give users control over individual components without modifying core scripts:
+  - `-KeepSysMain`: Preserves the `SysMain` (Superfetch) service. Recommended for mechanical hard drives and hybrid storage setups where background caching prevents I/O thrashing.
+  - `-KeepSearch`: Preserves the Windows Search indexer service (`WSearch`).
+  - `-KeepPhoneLink`: Preserves the Phone Link app (`Microsoft.YourPhone`) and cross-device sync services (`CrossDeviceResumeHost`, Connected Devices Platform and CDP firewall rules).
+  - `-KeepMail`: Preserves Outlook / Mail and Calendar apps (`Microsoft.OutlookForWindows` and `Microsoft.WindowsCommunicationsApps`).
+  - `-KeepClock`: Preserves the Windows Clock and Alarms app (`Microsoft.WindowsAlarms`) on Windows 10.
+  - `-KeepSpotify`: Preserves pre-installed Spotify app (`SpotifyAB.SpotifyMusic`).
+  - `-KeepStoreAutoUpdate`: Preserves Microsoft Store automatic background app updates (`AutoDownload = 4`).
+  - `-LeftTaskbar`: Sets Windows 11 taskbar alignment to the left (`TaskbarAl = 0`).
+  - `-ExcludeWUDrivers`: Prevents Windows Update from installing hardware driver updates (`ExcludeWUDriversInQualityUpdate = 1`).
+  - `-KeepDefenderDefaults`: Preserves default Microsoft Defender sample submission settings (`SubmitSamplesConsent = 1`).
+- **Interactive Batch Custom Flags Menu (`unslop.bat`)**: Added Option `[7] Custom CLI Flags` to `unslop.bat`, allowing users to enter custom parameter strings interactively while keeping Option `[4]` lean.
+- **Unit and Parameter Tests**: Added unit tests covering `-KeepSysMain`, `-KeepSearch`, `-KeepPhoneLink` and `-KeepClock` across `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`, replacing legacy Discord mocks with generic startup test mocks.
+- **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-026 detailing third-party scope correction, `-KeepSysMain` and custom CLI flags architecture.
+
+### Changed
+- **Batch CLI Argument Whitelist (`unslop.bat`)**: Expanded the headless parameter whitelist in `unslop.bat` to support all 10 new flags for direct command-line execution.
+
+---
+
 ## [1.2.3] - 2026-09-15
 
 ### Fixed
@@ -322,7 +348,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.3...v1.3.0
+[1.2.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.1.5...v1.2.0

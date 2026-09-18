@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.2.3)
+# unslop-windows: Windows 11 Debloater (v1.3.0)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -31,8 +31,35 @@
 .PARAMETER KeepTodos
     Preserves the Microsoft To-Do UWP application.
 
+.PARAMETER KeepSysMain
+    Preserves the SysMain (Superfetch) service.
+
+.PARAMETER KeepSearch
+    Preserves Windows Search Indexer (WSearch) for Outlook and File Explorer search.
+
+.PARAMETER KeepPhoneLink
+    Preserves Phone Link, CrossDeviceResume and Connected Devices Platform sync.
+
+.PARAMETER KeepMail
+    Preserves the Outlook for Windows mail client.
+
+.PARAMETER KeepSpotify
+    Preserves the Spotify application.
+
+.PARAMETER KeepStoreAutoUpdate
+    Preserves automatic Microsoft Store background updates.
+
 .PARAMETER ClassicContextMenu
     Restores the classic Windows 10 style full context menu in File Explorer.
+
+.PARAMETER LeftTaskbar
+    Aligns taskbar icons to the classic left position.
+
+.PARAMETER ExcludeWUDrivers
+    Blocks Windows Update from installing third-party hardware drivers.
+
+.PARAMETER KeepDefenderDefaults
+    Preserves default Windows Defender sample submission settings.
 
 .PARAMETER SkipBuildCheck
     Bypasses the OS build version check (useful for CI/CD and cross-build testing).
@@ -56,6 +83,10 @@
     Debloats Windows 11 while preserving Xbox gaming services and OneDrive.
 
 .EXAMPLE
+    powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -KeepSearch -KeepPhoneLink -LeftTaskbar
+    Debloats Windows 11 while keeping search indexing, Phone Link and left taskbar alignment.
+
+.EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\unslop-win11.ps1 -Undo
     Fully restores Windows 11 policies and services back to clean Windows defaults.
 #>
@@ -68,7 +99,16 @@ param(
     [switch]$KeepXbox,
     [switch]$KeepOneDrive,
     [switch]$KeepTodos,
+    [switch]$KeepSysMain,
+    [switch]$KeepSearch,
+    [switch]$KeepPhoneLink,
+    [switch]$KeepMail,
+    [switch]$KeepSpotify,
+    [switch]$KeepStoreAutoUpdate,
     [switch]$ClassicContextMenu,
+    [switch]$LeftTaskbar,
+    [switch]$ExcludeWUDrivers,
+    [switch]$KeepDefenderDefaults,
     [switch]$SkipBuildCheck,
     [switch]$NoRestart,
     [switch]$ForceRestart
@@ -369,15 +409,23 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.2.3: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.0: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
 # 1. SERVICES
 # ============================================================
 Log "--- 1. Services ---"
-Set-SvcState "SysMain"          "Superfetch - NVMe makes it useless, wastes RAM" "Automatic"
-Set-SvcState "WSearch"          "Windows Search Indexer - Start menu app search still works" "Automatic"
+if ($IsUndo -or -not $KeepSysMain) {
+    Set-SvcState "SysMain"          "Superfetch - NVMe makes it useless, wastes RAM" "Automatic"
+} else {
+    Log "  KEEP: SysMain (Superfetch) retained (-KeepSysMain enabled)"
+}
+if ($IsUndo -or -not $KeepSearch) {
+    Set-SvcState "WSearch"          "Windows Search Indexer - Start menu app search still works" "Automatic"
+} else {
+    Log "  KEEP: Windows Search Indexer retained (-KeepSearch enabled)"
+}
 Set-SvcState "dmwappushservice" "WAP Push telemetry" "Manual"
 Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automatic"
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
@@ -555,23 +603,28 @@ Log ""
 # 8. WINDOWS UPDATE DRIVER & FIRMWARE INTEGRITY
 # ============================================================
 Log "--- 8. Windows Update Driver & Firmware Integrity ---"
-# Windows Update driver & firmware updates are preserved to ensure hardware CVEs and patches install cleanly.
-# Proactively clear any legacy ExcludeWUDriversInQualityUpdate policy from older unslop versions:
 $wuPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-if (Test-Path $wuPolicy) {
-    $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
-    if ($wuProp) {
-        if ($IsDryRun) {
-            Log "  [WOULD RESTORE]: Driver updates (remove legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+if ($ExcludeWUDrivers) {
+    Set-RegDwordSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+    Log "  EXCLUDED: Third-party drivers blocked from Windows Update (-ExcludeWUDrivers enabled)"
+} else {
+    # Windows Update driver & firmware updates are preserved to ensure hardware CVEs and patches install cleanly.
+    # Proactively clear any legacy ExcludeWUDriversInQualityUpdate policy from older unslop versions:
+    if (Test-Path $wuPolicy) {
+        $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
+        if ($wuProp) {
+            if ($IsDryRun) {
+                Log "  [WOULD RESTORE]: Driver updates (remove legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+            } else {
+                Remove-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Force -ErrorAction SilentlyContinue
+                Log "  RESTORED: Driver updates enabled (cleared legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+            }
         } else {
-            Remove-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Force -ErrorAction SilentlyContinue
-            Log "  RESTORED: Driver updates enabled (cleared legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
+            Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
         }
     } else {
         Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
     }
-} else {
-    Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
 }
 Log ""
 
@@ -587,6 +640,11 @@ Set-RegDwordSafe -path $explorerAdv -name "HideFileExt" -debloatValue 0 -undoVal
 $dshPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
 Set-RegDwordSafe -path $dshPolicy -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $explorerAdv -name "TaskbarMn" -debloatValue 0 -undoValue 1
+
+# Optional Left Taskbar Alignment (Windows 11 defaults to centered)
+if ($LeftTaskbar) {
+    Set-RegDwordSafe -path $explorerAdv -name "TaskbarAl" -debloatValue 0 -undoValue 1
+}
 
 # Optional Classic Right-Click Context Menu (Windows 10 style, no "Show more options")
 $classicMenuPath = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
@@ -785,6 +843,21 @@ if ($KeepTodos) {
     $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.Todos" }
 }
 
+if ($KeepPhoneLink) {
+    Log "  KEEP: Phone Link retained (-KeepPhoneLink enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.YourPhone" }
+}
+
+if ($KeepMail) {
+    Log "  KEEP: Outlook mail client retained (-KeepMail enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.OutlookForWindows" }
+}
+
+if ($KeepSpotify) {
+    Log "  KEEP: Spotify application retained (-KeepSpotify enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "SpotifyAB.SpotifyMusic" }
+}
+
 if (-not $KeepXbox) {
     $bloatApps += "Microsoft.GamingApp"
     $bloatApps += "Microsoft.GamingServices"
@@ -981,11 +1054,10 @@ if ($KeepOneDrive) {
 Log ""
 
 # ============================================================
-# 14. DISABLE EDGE AUTO-LAUNCH + DISCORD AUTO-START
+# 14. DISABLE EDGE AUTO-LAUNCH
 # ============================================================
 Log "--- 14. Startup Entries & Edge Background ---"
 Remove-StartupEntry -pattern "MicrosoftEdge" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
-Remove-StartupEntry -pattern "Discord" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
 
 $edgeBgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
 Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
@@ -997,24 +1069,28 @@ Log ""
 # 15. DEFENDER: STOP SENDING SAMPLES
 # ============================================================
 Log "--- 15. Defender ---"
-try {
-    if ($IsUndo) {
-        if ($IsDryRun) {
-            Log "  [WOULD SET]: SubmitSamplesConsent = 1 (Send safe samples automatically)"
+if ($IsUndo -or -not $KeepDefenderDefaults) {
+    try {
+        if ($IsUndo) {
+            if ($IsDryRun) {
+                Log "  [WOULD SET]: SubmitSamplesConsent = 1 (Send safe samples automatically)"
+            } else {
+                Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction Stop
+                Log "  SubmitSamplesConsent = 1 (Restored default)"
+            }
         } else {
-            Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction Stop
-            Log "  SubmitSamplesConsent = 1 (Restored default)"
+            if ($IsDryRun) {
+                Log "  [WOULD SET]: SubmitSamplesConsent = 2 (Never send samples)"
+            } else {
+                Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop
+                Log "  SubmitSamplesConsent = 2 (Disabled telemetry uploads)"
+            }
         }
-    } else {
-        if ($IsDryRun) {
-            Log "  [WOULD SET]: SubmitSamplesConsent = 2 (Never send samples)"
-        } else {
-            Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction Stop
-            Log "  SubmitSamplesConsent = 2 (Disabled telemetry uploads)"
-        }
+    } catch {
+        Log "  SKIP: SubmitSamplesConsent (may need policy override or tampering protection exemption)"
     }
-} catch {
-    Log "  SKIP: SubmitSamplesConsent (may need policy override or tampering protection exemption)"
+} else {
+    Log "  KEEP: Defender sample submission retained (-KeepDefenderDefaults enabled)"
 }
 Log ""
 
@@ -1026,29 +1102,33 @@ $sysPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
 Set-RegDwordSafe -path $sysPath -name "EnableActivityFeed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $sysPath -name "PublishUserActivities" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
-# Connected Devices Platform (CDP) - Continue experiences on this device
-Set-RegDwordSafe -path $sysPath -name "EnableCdp" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+# Connected Devices Platform (CDP) & Cross-Device Resume
+if ($IsUndo -or -not $KeepPhoneLink) {
+    Set-RegDwordSafe -path $sysPath -name "EnableCdp" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
-# Cross-Device Resume MDM Policy (prevents sihost from spawning CrossDeviceResume.exe at logon)
-$connPolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume"
-Set-RegDwordSafe -path $connPolicy -name "value" -debloatValue 1 -undoValue 0
+    # Cross-Device Resume MDM Policy (prevents sihost from spawning CrossDeviceResume.exe at logon)
+    $connPolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume"
+    Set-RegDwordSafe -path $connPolicy -name "value" -debloatValue 1 -undoValue 0
 
-# Cross-Device Resume Configuration (User-level preferences)
-$resumeConfig = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration"
-Set-RegDwordSafe -path $resumeConfig -name "IsResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
-Set-RegDwordSafe -path $resumeConfig -name "IsOneDriveResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+    # Cross-Device Resume Configuration (User-level preferences)
+    $resumeConfig = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration"
+    Set-RegDwordSafe -path $resumeConfig -name "IsResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+    Set-RegDwordSafe -path $resumeConfig -name "IsOneDriveResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
-# Terminate active CrossDeviceResume host if running
-if (-not $IsUndo) {
-    $resumeProc = Get-Process -Name "CrossDeviceResume" -ErrorAction SilentlyContinue
-    if ($resumeProc) {
-        if ($IsDryRun) {
-            Log "  [WOULD STOP PROCESS]: CrossDeviceResume"
-        } else {
-            Stop-Process -Name "CrossDeviceResume" -Force -ErrorAction SilentlyContinue
-            Log "  STOPPED: CrossDeviceResume process"
+    # Terminate active CrossDeviceResume host if running
+    if (-not $IsUndo) {
+        $resumeProc = Get-Process -Name "CrossDeviceResume" -ErrorAction SilentlyContinue
+        if ($resumeProc) {
+            if ($IsDryRun) {
+                Log "  [WOULD STOP PROCESS]: CrossDeviceResume"
+            } else {
+                Stop-Process -Name "CrossDeviceResume" -Force -ErrorAction SilentlyContinue
+                Log "  STOPPED: CrossDeviceResume process"
+            }
         }
     }
+} else {
+    Log "  KEEP: Cross-Device Resume & CDP retained (-KeepPhoneLink enabled)"
 }
 
 # Feedback frequency = Never
@@ -1073,8 +1153,12 @@ $doPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization"
 Set-RegDwordSafe -path $doPolicy -name "DODownloadMode" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
 # Microsoft Store Automatic App Updates Suppression (stops background wsappx / winget NVMe writes)
-$wsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
-Set-RegDwordSafe -path $wsPolicy -name "AutoDownload" -debloatValue 2 -undoValue 4 -removeOnUndo $true
+if ($IsUndo -or -not $KeepStoreAutoUpdate) {
+    $wsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore"
+    Set-RegDwordSafe -path $wsPolicy -name "AutoDownload" -debloatValue 2 -undoValue 4 -removeOnUndo $true
+} else {
+    Log "  KEEP: Microsoft Store automatic updates retained (-KeepStoreAutoUpdate enabled)"
+}
 Log ""
 
 # ============================================================
@@ -1091,6 +1175,10 @@ $fwRules = @(
     "Connected Devices Platform (TCP-Out)"
     "Connected Devices Platform (UDP-Out)"
 )
+if ($KeepPhoneLink) {
+    $fwRules = $fwRules | Where-Object { $_ -notmatch 'Connected Devices Platform' }
+    Log "  KEEP: Connected Devices Platform firewall rules retained (-KeepPhoneLink enabled)"
+}
 foreach ($rule in $fwRules) {
     $existing = Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
     if ($existing) {
@@ -1181,6 +1269,33 @@ if ($IsUndo) {
     if ($KeepTodos) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
     }
+    if ($KeepSysMain) {
+        Log "SysMain:               Preserved (-KeepSysMain enabled)"
+    }
+    if ($KeepSearch) {
+        Log "Search Indexer:        Preserved (-KeepSearch enabled)"
+    }
+    if ($KeepPhoneLink) {
+        Log "Phone Link:            Preserved (-KeepPhoneLink enabled)"
+    }
+    if ($KeepMail) {
+        Log "Mail:                  Preserved (-KeepMail enabled)"
+    }
+    if ($KeepSpotify) {
+        Log "Spotify:               Preserved (-KeepSpotify enabled)"
+    }
+    if ($KeepStoreAutoUpdate) {
+        Log "Store Updates:         Preserved (-KeepStoreAutoUpdate enabled)"
+    }
+    if ($LeftTaskbar) {
+        Log "Taskbar:               Left aligned (-LeftTaskbar enabled)"
+    }
+    if ($ExcludeWUDrivers) {
+        Log "Driver Updates:        Blocked from Windows Update (-ExcludeWUDrivers enabled)"
+    }
+    if ($KeepDefenderDefaults) {
+        Log "Defender Samples:      Default submissions preserved (-KeepDefenderDefaults enabled)"
+    }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
     Log "Activity & Resume:     Activity feed, Cross-Device Resume (MDM/CDP) and Cloud Clipboard disabled"
     Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
@@ -1191,7 +1306,7 @@ if ($IsUndo) {
     Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
     Log "UWP bloatware:         Dual-stage removed ($removedInstalled active, $deprovisionedCount staged packages)"
     Log "Firewall:              8 outbound telemetry/remote rules blocked"
-    Log "Startup cleaned:       Edge, OneDrive, Discord removed from auto-start"
+    Log "Startup cleaned:       Edge, OneDrive removed from auto-start"
 }
 Log ""
 Log "PRESERVED (Never Touched):"
