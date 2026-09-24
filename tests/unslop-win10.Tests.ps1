@@ -562,6 +562,15 @@ Describe 'unslop-windows (Win10): Parameter Flags & Whitelist Invariants' -Tag '
         ($output -match "Windows Clock & Alarms retained \(-KeepClock enabled\)").Length | Should -BeGreaterThan 0
         ($output -match "\[WOULD REMOVE APP\]: Microsoft\.WindowsAlarms").Length | Should -Be 0
     }
+
+    It '-KeepTeams retains Microsoft Teams applications' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -SkipBuildCheck -KeepTeams 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Microsoft Teams retained \(-KeepTeams enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD REMOVE APP\]: MicrosoftTeams").Length | Should -Be 0
+        ($output -match "\[WOULD REMOVE APP\]: Microsoft\.MSTeams").Length | Should -Be 0
+        ($output -match "\[WOULD REMOVE APP\]: Microsoft\.Teams").Length | Should -Be 0
+    }
 }
 
 Describe 'unslop-windows (Win10): 100% Symmetrical Restoration Contract (AST Parity)' -Tag 'Unit', 'Static', 'Symmetry' {
@@ -838,5 +847,16 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
         foreach ($call in $appxCalls) {
             $call.Extent.Text | Should -Not -Match '-AllUsers' -Because "Add-AppxPackage does not accept -AllUsers (only Remove-AppxPackage supports -AllUsers)"
         }
+    }
+
+    It 'Enforces CloudContent DisableWindowsConsumerFeatures policy symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'DisableWindowsConsumerFeatures' -Because "DisableWindowsConsumerFeatures GPO policy must be configured"
+    }
+
+    It 'Targets fresh-install bloatware (Sudoku, LinkedIn, Teams) in bloatApps array' {
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.MicrosoftSudoku"' -Because "Sudoku app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"7EE7776C\.LinkedInforWindows"' -Because "LinkedIn app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"MicrosoftTeams"' -Because "Personal Teams app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.MSTeams"' -Because "Modern Teams app must be targeted"
     }
 }

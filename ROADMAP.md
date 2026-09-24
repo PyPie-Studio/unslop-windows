@@ -56,10 +56,10 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 - [x] **Dedicated Windows 10 Engine (`unslop-win10.ps1`):** Complete debloat and hardening engine for Windows 10 releases (22H2, 21H2, 21H1, 20H2, 2004, 1909, 1809, 1607, 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC, Builds 10240 through 19045).
 - [x] **Remove Cortana & Suppress Taskbar Feeds:** Group Policy and AppX removal of Cortana, Feeds / News & Interests, People Bar and Meet Now.
 - [x] **Unified Dual-OS Launcher (`unslop.bat`):** Interactive OS selection menu with `-Win10` and `-Win11` CLI pass-through routing.
-- [x] **Symmetrical Dual-OS Test Suites (`tests/unslop-win11.Tests.ps1` & `tests/unslop-win10.Tests.ps1`):** 74 unit, mocking and AST parity tests.
+- [x] **Symmetrical Dual-OS Test Suites (`tests/unslop-win11.Tests.ps1` & `tests/unslop-win10.Tests.ps1`):** 122 unit, mocking and AST parity tests.
 - [x] **Multi-OS CI Validation (`.github/workflows/lint.yml`):** Automated validation across both PowerShell 7 Core and Windows PowerShell 5.1 for both OS targets.
 
 ---
 
 ## Architecture Decisions
-See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-026) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
+See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-027) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.

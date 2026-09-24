@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.3.1)
+# unslop-windows: Windows 11 Debloater (v1.3.2)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -45,6 +45,9 @@
 
 .PARAMETER KeepSpotify
     Preserves the Spotify application.
+
+.PARAMETER KeepTeams
+    Preserves Microsoft Teams (Personal and Work/School) applications.
 
 .PARAMETER KeepStoreAutoUpdate
     Preserves automatic Microsoft Store background updates.
@@ -104,6 +107,7 @@ param(
     [switch]$KeepPhoneLink,
     [switch]$KeepMail,
     [switch]$KeepSpotify,
+    [switch]$KeepTeams,
     [switch]$KeepStoreAutoUpdate,
     [switch]$ClassicContextMenu,
     [switch]$LeftTaskbar,
@@ -409,7 +413,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.1: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.2: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -524,6 +528,10 @@ foreach ($key in $cdmSettings.Keys) {
     $cfg = $cdmSettings[$key]
     Set-RegDwordSafe -path $cdmPath -name $key -debloatValue $cfg.Debloat -undoValue $cfg.Undo
 }
+
+# Disable Windows Consumer Features / Cloud Content (blocks silent background Store app pushes)
+$cloudContentPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableWindowsConsumerFeatures" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
 # 25H2 Start avatar account nagging badges (OneDrive/M365 promotions) & Iris web recommendations
 Set-RegDwordSafe -path $explorerAdv -name "Start_AccountNotifications" -debloatValue 0 -undoValue 1
@@ -796,6 +804,7 @@ $bloatApps = @(
 
     # 24H2 / 25H2 AI & Shell Injections
     "aimgr"
+    "Microsoft.Copilot"
     "Microsoft.StartExperiencesApp"
     "Microsoft.AIFabric.CBS.1.6"
     "Microsoft.Windows.AugLoop.CBS"
@@ -805,7 +814,7 @@ $bloatApps = @(
     "MicrosoftWindows.Client.WebExperience"
     "Microsoft.Windows.Client.WebExperience"
 
-    # Sponsored third-party bloat
+    # Sponsored third-party bloat & casual games
     "ByteDance.TikTok"
     "SpotifyAB.SpotifyMusic"
     "Disney.37853FC22B2CE"
@@ -814,21 +823,33 @@ $bloatApps = @(
     "King.com.CandyCrushSaga"
     "King.com.CandyCrushSodaSaga"
     "4DF9E0F8.Netflix"
+    "Microsoft.MicrosoftSolitaireCollection"
+    "Microsoft.MicrosoftSudoku"
+    "7EE7776C.LinkedInforWindows"
+    "Microsoft.LinkedIn"
 
     # Microsoft consumer & news push
     "Clipchamp.Clipchamp"
-    "Microsoft.MicrosoftSolitaireCollection"
     "Microsoft.BingNews"
+    "Microsoft.BingWeather"
     "Microsoft.BingFinance"
     "Microsoft.BingSports"
     "Microsoft.BingSearch"
+    "Microsoft.WindowsMaps"
     "Microsoft.OutlookForWindows"
+    "Microsoft.WindowsCommunicationsApps"
+
+    # Microsoft Teams (modularized: removable by default, protected via -KeepTeams)
+    "MicrosoftTeams"
+    "Microsoft.MSTeams"
+    "Microsoft.Teams"
 
     # Support & Nag Tools
     "Microsoft.GetHelp"
     "Microsoft.Getstarted"
     "Microsoft.WindowsFeedbackHub"
     "Microsoft.YourPhone"
+    "MicrosoftWindows.CrossDevice"
 
     # Office push & remnants
     "Microsoft.Office.ActionsServer"
@@ -836,7 +857,12 @@ $bloatApps = @(
 
     # Legacy bloat & stubs
     "Microsoft.ZuneMusic"
+    "Microsoft.ZuneVideo"
     "Microsoft.MixedRealityLink"
+    "Microsoft.People"
+    "Microsoft.OneConnect"
+    "Microsoft.SkypeApp"
+    "Microsoft.MicrosoftOfficeHub"
     "Microsoft.Adera"
     "Microsoft.Adera-Lite"
 )
@@ -848,12 +874,12 @@ if ($KeepTodos) {
 
 if ($KeepPhoneLink) {
     Log "  KEEP: Phone Link retained (-KeepPhoneLink enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.YourPhone" }
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.YourPhone" -and $_ -ne "MicrosoftWindows.CrossDevice" }
 }
 
 if ($KeepMail) {
-    Log "  KEEP: Outlook mail client retained (-KeepMail enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.OutlookForWindows" }
+    Log "  KEEP: Outlook and Windows Mail retained (-KeepMail enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.OutlookForWindows" -and $_ -ne "Microsoft.WindowsCommunicationsApps" }
 }
 
 if ($KeepSpotify) {
@@ -861,9 +887,15 @@ if ($KeepSpotify) {
     $bloatApps = $bloatApps | Where-Object { $_ -ne "SpotifyAB.SpotifyMusic" }
 }
 
+if ($KeepTeams) {
+    Log "  KEEP: Microsoft Teams retained (-KeepTeams enabled)"
+    $bloatApps = $bloatApps | Where-Object { $_ -ne "MicrosoftTeams" -and $_ -ne "Microsoft.MSTeams" -and $_ -ne "Microsoft.Teams" }
+}
+
 if (-not $KeepXbox) {
     $bloatApps += "Microsoft.GamingApp"
     $bloatApps += "Microsoft.GamingServices"
+    $bloatApps += "Microsoft.XboxApp"
 } else {
     Log "  KEEP: Gaming & Xbox services retained (-KeepXbox enabled)"
 }
@@ -1286,6 +1318,9 @@ if ($IsUndo) {
     }
     if ($KeepSpotify) {
         Log "Spotify:               Preserved (-KeepSpotify enabled)"
+    }
+    if ($KeepTeams) {
+        Log "Microsoft Teams:       Preserved (-KeepTeams enabled)"
     }
     if ($KeepStoreAutoUpdate) {
         Log "Store Updates:         Preserved (-KeepStoreAutoUpdate enabled)"

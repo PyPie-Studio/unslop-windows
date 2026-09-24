@@ -560,11 +560,29 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         ($output -match "\[WOULD DISABLE\]: WSearch").Length | Should -Be 0
     }
 
-    It '-KeepPhoneLink retains Phone Link app and skips CDP killswitches' {
+    It '-KeepPhoneLink retains Phone Link and CrossDevice apps and skips CDP killswitches' {
         $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepPhoneLink 2>&1
         $LASTEXITCODE | Should -Be 0
         ($output -match "Phone Link retained \(-KeepPhoneLink enabled\)").Length | Should -BeGreaterThan 0
         ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.YourPhone").Length | Should -Be 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*MicrosoftWindows\.CrossDevice").Length | Should -Be 0
+    }
+
+    It '-KeepMail retains Outlook and Windows Mail apps' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepMail 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Outlook and Windows Mail retained \(-KeepMail enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.OutlookForWindows").Length | Should -Be 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.WindowsCommunicationsApps").Length | Should -Be 0
+    }
+
+    It '-KeepTeams retains Microsoft Teams applications' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepTeams 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Microsoft Teams retained \(-KeepTeams enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*MicrosoftTeams").Length | Should -Be 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.MSTeams").Length | Should -Be 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.Teams").Length | Should -Be 0
     }
 }
 
@@ -856,5 +874,21 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         foreach ($call in $appxCalls) {
             $call.Extent.Text | Should -Not -Match '-AllUsers' -Because "Add-AppxPackage does not accept -AllUsers (only Remove-AppxPackage supports -AllUsers)"
         }
+    }
+
+    It 'Enforces CloudContent DisableWindowsConsumerFeatures policy symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'DisableWindowsConsumerFeatures' -Because "DisableWindowsConsumerFeatures GPO policy must be configured"
+    }
+
+    It 'Targets fresh-install bloatware (Weather, Maps, Teams, Copilot, CrossDevice, Sudoku, LinkedIn) in bloatApps array' {
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.BingWeather"' -Because "Weather app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.WindowsMaps"' -Because "Maps app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.Copilot"' -Because "Copilot app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"MicrosoftWindows\.CrossDevice"' -Because "CrossDevice app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"MicrosoftTeams"' -Because "Personal Teams app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.MSTeams"' -Because "Modern Teams app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.MicrosoftSudoku"' -Because "Sudoku app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"7EE7776C\.LinkedInforWindows"' -Because "LinkedIn app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.WindowsCommunicationsApps"' -Because "Classic Windows Mail must be targeted"
     }
 }

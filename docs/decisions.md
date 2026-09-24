@@ -387,5 +387,27 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Gives advanced users full flexibility to preserve specific apps and services while keeping the standard interactive menus clean.
   - Maintains 100% test coverage and validation through `Test-MasterGate.ps1`.
 
+---
 
-
+## ADR-027: Windows 11 23H2/24H2 Fresh-Install Bloat Parity, Cloud Content GPO Enforcement, and -KeepTeams Architecture (2026-09-24)
+- **Status:** Accepted
+- **Context:**
+  1. *Fresh Install AppX Leakage:* On clean installations of Windows 11 (23H2/24H2), executing `unslop-win11.ps1` on full debloat left several pre-installed packages and startup items intact:
+     - `Microsoft.BingWeather` and `Microsoft.WindowsMaps` were historically included in `unslop-win10.ps1` but omitted from `unslop-win11.ps1`'s `$bloatApps`.
+     - `MicrosoftTeams` (personal Chat client) and `Microsoft.MSTeams` / `Microsoft.Teams` (unified modern Teams) had their taskbar button suppressed via `TaskbarMn = 0`, but the underlying packages were never targeted in `$bloatApps`.
+     - `MicrosoftWindows.CrossDevice` (Cross Device Experience Host / Mobile devices) was introduced in modern Windows 11 as a standalone package registered in Task Manager startup; only legacy `Microsoft.YourPhone` was in `$bloatApps`.
+     - `Microsoft.Copilot` was converted in 24H2 into a discrete standalone AppX package; registry policies disabled the AI backend, but the app package remained installed.
+     - `Microsoft.MicrosoftSudoku` and `7EE7776C.LinkedInforWindows` / `Microsoft.LinkedIn` were absent from the sponsored app array.
+     - `Microsoft.WindowsCommunicationsApps` (classic Mail & Calendar) was missing on Windows 11 (only modern `OutlookForWindows` was targeted).
+  2. *Background Cloud Push Race Condition:* On clean Windows 11 installations connected to the internet, Windows `ContentDeliveryManager` quietly downloads sponsored apps (Spotify, TikTok, Disney+, Sudoku) in the background post-OOBE. Executing debloat before background downloads finish allowed the Store to install apps post-run because `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableWindowsConsumerFeatures` was not enforced at the machine policy level.
+  3. *Xbox Live Safe-Tier Clarification:* In Windows Settings > Installed apps, `Microsoft.XboxIdentityProvider` displays under the friendly localized name "Xbox Live". Removing this package breaks Microsoft Account authentication for Store games and Minecraft (error `0x80048823`), making it an intentional Safe-Tier Whitelist invariant. However, standalone bloat like `Microsoft.XboxApp` (Console Companion) can be safely stripped when `-KeepXbox` is not specified.
+- **Alternatives Considered:**
+  1. *Remove Microsoft.XboxIdentityProvider to eliminate "Xbox Live" from Installed Apps:* Rejected. Violates Safe-Tier Guardrail 2. Breaks Minecraft and Store game authentication.
+  2. *Purge Start Menu cache file (start2.bin) directly:* Rejected. Manipulating private shell binary state risks Start Menu crash loops and corrupts custom user layouts.
+- **Decision:**
+  - **Machine-Wide Cloud Content Lockdown:** Enforced `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent` $\rightarrow$ `DisableWindowsConsumerFeatures = 1` with symmetrical `-Undo` removal (`-undoValue 0 -removeOnUndo $true`) across both Windows 11 and Windows 10 engines.
+  - **Target Missing Packages in `$bloatApps`:** Added `Microsoft.BingWeather`, `Microsoft.WindowsMaps`, `Microsoft.Copilot`, `MicrosoftWindows.CrossDevice`, `Microsoft.MicrosoftSudoku`, `7EE7776C.LinkedInforWindows`, `Microsoft.LinkedIn`, `Microsoft.WindowsCommunicationsApps`, `MicrosoftTeams`, `Microsoft.MSTeams`, `Microsoft.Teams`, and `Microsoft.XboxApp`.
+  - **Implement `-KeepTeams` Switch Parameter:** Added `[switch]$KeepTeams` across both engines and whitelisted the parameter in `unslop.bat`. When passed, Teams packages are preserved; on full debloat, all Teams variants are de-provisioned and removed.
+  - **Broaden Component Flags:** Updated `-KeepPhoneLink` to protect both `Microsoft.YourPhone` and `MicrosoftWindows.CrossDevice`. Updated `-KeepMail` to protect both `Microsoft.OutlookForWindows` and `Microsoft.WindowsCommunicationsApps`. Updated `-KeepXbox` to protect `Microsoft.XboxApp` alongside `GamingApp` and `GamingServices`.
+  - **Dynamic Banner & Gate Enforcement:** Added dynamic reporting for `-KeepTeams` in completion summaries, expanded Pester 6 unit tests (61/61 passing), and added AST parity assertions.
+- **Consequences:** Eliminates fresh-install bloatware leakage, prevents background post-install Store app pulls, maintains 100% symmetrical restoration, and protects gaming authentication runtimes.

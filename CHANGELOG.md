@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.2] - 2026-09-24
+
+### Added
+- **`-KeepTeams` CLI Switch**: Added `-KeepTeams` switch parameter across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat`, enabling users to preserve Microsoft Teams applications (`MicrosoftTeams`, `Microsoft.MSTeams`, `Microsoft.Teams`) while executing full system debloat.
+- **Machine-Wide Cloud Content Policy Lockdown**: Enforces `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableWindowsConsumerFeatures = 1` with symmetrical `-Undo` removal (`-undoValue 0 -removeOnUndo $true`) to permanently suppress background Store pulls of sponsored consumer apps post-install.
+- **Fresh-Install Bloatware Packages Targeted**: Added `Microsoft.BingWeather`, `Microsoft.WindowsMaps`, `Microsoft.Copilot`, `MicrosoftWindows.CrossDevice`, `Microsoft.MicrosoftSudoku`, `7EE7776C.LinkedInforWindows`, `Microsoft.LinkedIn`, `Microsoft.WindowsCommunicationsApps`, and `Microsoft.XboxApp` to `$bloatApps`.
+- **Expanded Test Coverage**: Added Pester 6 unit tests and AST parity assertions covering `-KeepTeams`, `DisableWindowsConsumerFeatures`, and new AppX package additions across both Windows 11 and Windows 10 test suites (61/61 passing on each target).
+
+### Fixed
+- **Fresh-Install Bloatware Leakage**: Fixed omissions in `unslop-win11.ps1` where Weather, Maps, personal Teams, Copilot standalone app, Sudoku, LinkedIn, and CrossDevice background host remained installed post-debloat.
+- **Task Manager "Mobile devices" Startup Item**: Resolved persistent "Mobile devices" startup registration by targeting `MicrosoftWindows.CrossDevice` alongside `Microsoft.YourPhone` in Section 12 (gated via `-KeepPhoneLink`).
+- **Classic Windows Mail & Calendar Parity**: Resolved Windows 10/11 disparity by targeting `Microsoft.WindowsCommunicationsApps` on Windows 11 alongside `Microsoft.OutlookForWindows` (both preserved when `-KeepMail` is passed).
+- **Legacy Xbox Console Companion**: Added `Microsoft.XboxApp` to debloat targeting when `-KeepXbox` is not specified, while keeping `Microsoft.XboxIdentityProvider` ("Xbox Live" in Settings) strictly whitelisted for gaming OAuth integrity.
+
+---
+
 ## [1.3.1] - 2026-09-19
 
 ### Changed
@@ -362,7 +378,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.2...v1.2.3

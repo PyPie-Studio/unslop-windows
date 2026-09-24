@@ -11,7 +11,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.1.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
+[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.2.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -19,7 +19,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 ```text
 ============================================================
-  unslop-windows (v1.3.1) - PyPie Studio
+  unslop-windows (v1.3.2) - PyPie Studio
   Windows 10 & 11 Debloater and Privacy Tool
 ============================================================
 
@@ -46,7 +46,7 @@ Select an option [0-2]:
 
 ### Direct Download (No Git Required)
 
-1. Download **[`unslop-windows-v1.3.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.3.2.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.2.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
@@ -135,7 +135,7 @@ Each script runs 18 modules. Here is what they touch:
 9. **Taskbar and Explorer** — Win11: disables Widgets via GPO, hides Chat. Win10: hides News & Interests, People bar, Meet Now. Both: shows file extensions. Left-align taskbar icons with `-LeftTaskbar`.
 10. **App permissions (ConsentStore)** — Revokes background access for location, diagnostics, contacts, calendar, phone. Win11 also blocks `foregroundTextAccess` and `systemAIModels`.
 11. **Diagnostic scheduled tasks** — Disables 20+ background telemetry tasks (OneSettings, CEIP, Customer Experience, Disk Diagnostics, etc).
-12. **Bloatware removal** — Removes TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video and other pre-installed apps from current user and system image (so they don't come back for new accounts). Win11 also removes AI integrations (aimgr, AIFabric, AugLoop). Skip with `-KeepXbox`, `-KeepTodos`, `-KeepSpotify`, `-KeepPhoneLink`, `-KeepMail` or `-KeepClock`.
+12. **Bloatware removal** — Removes TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video, Weather, Maps, Teams, Copilot and other pre-installed apps from current user and system image (so they don't come back for new accounts). Win11 also removes AI integrations (aimgr, AIFabric, AugLoop). Skip with `-KeepXbox`, `-KeepTodos`, `-KeepSpotify`, `-KeepTeams`, `-KeepPhoneLink`, `-KeepMail` or `-KeepClock`.
 13. **OneDrive removal** — Stops OneDrive, runs uninstaller, unpins from Explorer sidebar, blocks sync. Skip with `-KeepOneDrive`.
 14. **Startup and Edge cleanup** — Stops Edge background tasks. Backs up removed startup entries to the registry for `-Undo`.
 15. **Defender sample submissions** — Sets `SubmitSamplesConsent=2` (NeverSend) to stop automatic file uploads. Real-time AV stays active. Skip with `-KeepDefenderDefaults`.
@@ -151,7 +151,7 @@ These components are explicitly protected and will not be modified or removed:
 
 | Category | Items | Reason |
 | :--- | :--- | :--- |
-| System tools | Windows Terminal, Microsoft Store, WinGet | Required for installs and package management |
+| System tools | Windows Terminal, Microsoft Store, WinGet, Xbox Identity Provider | Required for installs, package management, and Microsoft Account game auth (Minecraft, Store games) |
 | Desktop apps | Calculator, Photos, Paint, Snipping Tool | Daily-use tools with no telemetry overhead |
 | Clipboard | Local `Win+V` clipboard history | Only cloud cross-device sync is disabled |
 | System hosts | CloudExperienceHost, Photon, CoreAI, UCPD | Immutable system packages (AI capabilities disabled via GPO instead) |
@@ -184,10 +184,11 @@ Pass these flags via CLI or enter them under Option `[7]` (Custom CLI Flags) in 
 | :--- | :--- | :--- |
 | `-KeepSysMain` | Both | Keep SysMain (Superfetch) service running. Recommended for mechanical HDDs and hybrid storage. |
 | `-KeepSearch` | Both | Keep Windows Search indexer (`WSearch`) service running. |
-| `-KeepPhoneLink` | Both | Keep Phone Link app (`Microsoft.YourPhone`) and cross-device sync services. |
+| `-KeepPhoneLink` | Both | Keep Phone Link (`Microsoft.YourPhone`) and Mobile Devices integration (`MicrosoftWindows.CrossDevice`). |
 | `-KeepMail` | Both | Keep Outlook / Mail and Calendar apps (`Microsoft.OutlookForWindows`, `Microsoft.WindowsCommunicationsApps`). |
 | `-KeepClock` | Win10 | Keep Windows Clock and Alarms app (`Microsoft.WindowsAlarms`). |
 | `-KeepSpotify` | Both | Keep pre-installed Spotify app (`SpotifyAB.SpotifyMusic`). |
+| `-KeepTeams` | Both | Keep Microsoft Teams (Personal and Work/School) apps (`MicrosoftTeams`, `Microsoft.MSTeams`, `Microsoft.Teams`). |
 | `-KeepStoreAutoUpdate` | Both | Keep Microsoft Store automatic background app updates enabled. |
 | `-LeftTaskbar` | Win11 | Align taskbar icons to the left instead of center. |
 | `-ExcludeWUDrivers` | Both | Prevent Windows Update from delivering hardware driver updates. |
