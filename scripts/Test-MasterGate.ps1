@@ -209,8 +209,13 @@ if ($lineEndingFail) { $fail = $true }
 if (-not $Fast) {
     if (-not $SkipUnitTests) {
         Write-Host "`n[4/$totalSteps] Pester unit & mocking test suite ($targetTests)..." -ForegroundColor Yellow
-        $testScript = Join-Path $root $targetTests
-        if (Test-Path $testScript) {
+        $primaryTestScript = Join-Path $root $targetTests
+        $testScripts = @()
+        if (Test-Path $primaryTestScript) { $testScripts += $primaryTestScript }
+        $measureTestScript = Join-Path $root "tests\Measure-SystemState.Tests.ps1"
+        if (Test-Path $measureTestScript) { $testScripts += $measureTestScript }
+
+        if ($testScripts.Count -gt 0) {
             $pesterModule = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
             if ($pesterModule -and $pesterModule.Version.Major -ge 6) {
                 Push-Location $root
@@ -266,7 +271,7 @@ if (-not $Fast) {
                         }
                         if ($res.FailedCount -gt 0) { exit 1 }
                     }
-                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testScript, $targetXml, $targetCovXml, $covFile 2>&1
+                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testScripts, $targetXml, $targetCovXml, $covFile 2>&1
                     $pesterExit = $LASTEXITCODE
                     if ($pesterExit -ne 0) {
                         $fail = $true
