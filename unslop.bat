@@ -59,7 +59,15 @@ if not "%~1"=="" (
     :: Validate arguments against strict switch whitelist
     for %%A in (%*) do (
         set "ARG_VALID=0"
-        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck) do (
+        for %%V in ( ^
+            -Undo -Restore -DryRun -WhatIf ^
+            -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain ^
+            -KeepSearch -KeepPhoneLink -KeepMail -KeepClock ^
+            -KeepSpotify -KeepTeams -KeepStoreAutoUpdate ^
+            -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers ^
+            -KeepDefenderDefaults -NoRestart -ForceRestart ^
+            -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck ^
+        ) do (
             if /i "%%~A"=="%%V" set "ARG_VALID=1"
         )
         if "!ARG_VALID!"=="0" (
@@ -465,7 +473,15 @@ if "!ARGS!"=="" goto :menu_WIN11
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in ( ^
+        -Undo -Restore -DryRun -WhatIf ^
+        -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain ^
+        -KeepSearch -KeepPhoneLink -KeepMail -KeepClock ^
+        -KeepSpotify -KeepTeams -KeepStoreAutoUpdate ^
+        -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers ^
+        -KeepDefenderDefaults -NoRestart -ForceRestart ^
+        -SkipBuildCheck ^
+    ) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -500,7 +516,14 @@ if "!ARGS!"=="" goto :menu_WIN10
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in ( ^
+        -Undo -Restore -DryRun -WhatIf ^
+        -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain ^
+        -KeepSearch -KeepPhoneLink -KeepMail -KeepClock ^
+        -KeepSpotify -KeepTeams -KeepStoreAutoUpdate ^
+        -ExcludeWUDrivers -KeepDefenderDefaults ^
+        -NoRestart -ForceRestart -SkipBuildCheck ^
+    ) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
