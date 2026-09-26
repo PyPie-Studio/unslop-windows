@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Git Hook Installer Unit Tests (`tests/Install-GitHooks.Tests.ps1`)**: Added 9 Pester 6+ unit and mocking tests covering `scripts/Install-GitHooks.ps1`, including git binary availability invariants, repository boundary checks, hook uninstallation (`-Uninstall`), prerequisite package installation (`-InstallPrerequisites`), and gate execution pipelines.
+- **System State Benchmark Test Suite (`tests/Measure-SystemState.Tests.ps1`)**: Added 15 Pester 6+ unit and integration tests covering `scripts/Measure-SystemState.ps1`, including RAM and commit metrics computation, active process/thread counters, telemetry service and task status mapping, AppX package counts, non-elevated error handling, snapshot comparisons (`-Baseline`, `-Target`, `-Compare`), and Markdown benchmark report generation (`-ExportMarkdown`).
+- **Extensible Multi-Suite Discovery in Test-MasterGate.ps1**: Modernized Step 4 of the Master Quality Gate to dynamically discover and execute auxiliary test suites (`Install-GitHooks.Tests.ps1`, `Measure-SystemState.Tests.ps1`) alongside the core Windows 11 and Windows 10 engine test suites in a single unified Pester run (expanding coverage to 85 passing tests).
+
+### Fixed
+- **Divide-by-Zero Protection in Measure-SystemState.ps1**: Added a safe zero-check to `UsedRAM_Percent` calculation in `scripts/Measure-SystemState.ps1` to prevent arithmetic exceptions when querying systems with uninitialized or mocked memory metrics.
+- **Dot-Source Guard in Measure-SystemState.ps1**: Added procedural execution guard (`if ($MyInvocation.InvocationName -eq '.') { return }`) allowing external harnesses and Pester suites to safely import `Get-SystemMetrics` without triggering immediate live metric collection or output generation.
+
 ---
 
 ## [1.3.2] - 2026-09-24
