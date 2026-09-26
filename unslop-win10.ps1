@@ -847,10 +847,18 @@ $deprovisionedCount = 0
 if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-    foreach ($app in $bloatApps) {
-        $match = if ($provisioned) { $provisioned.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
-        if ($match) {
-            foreach ($pkg in $match) {
+    if ($provisioned -and $bloatApps.Count -gt 0) {
+        $bloatRegex = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $matchedProvisioned = $provisioned.Where({ $_.DisplayName -match $bloatRegex })
+        if ($matchedProvisioned) {
+            $matchedApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            foreach ($pkg in $matchedProvisioned) {
+                foreach ($app in $bloatApps) {
+                    if ($pkg.DisplayName -match "^$([regex]::Escape($app))") {
+                        [void]$matchedApps.Add($app)
+                        break
+                    }
+                }
                 if ($IsDryRun) {
                     Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
                 } else {
@@ -863,14 +871,22 @@ if ($IsUndo) {
                     }
                 }
             }
+            foreach ($app in $bloatApps) {
+                if (-not $matchedApps.Contains($app)) {
+                    Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
+                }
+            }
         } else {
-            Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
+            foreach ($app in $bloatApps) {
+                Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
+            }
         }
     }
 } else {
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-    foreach ($app in $bloatApps) {
-        $staged = if ($stagedPackages) { $stagedPackages.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
+    if ($stagedPackages -and $bloatApps.Count -gt 0) {
+        $bloatRegex = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $staged = $stagedPackages.Where({ $_.DisplayName -match $bloatRegex })
         if ($staged) {
             foreach ($pkg in $staged) {
                 if ($IsDryRun) {
@@ -900,13 +916,18 @@ if ($IsUndo) {
     }
 
     $skippedAppsCount = 0
-    foreach ($app in $bloatApps) {
-        $installed = if ($allInstalled) {
-            $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" })
-        } else { $null }
-
+    if ($allInstalled -and $bloatApps.Count -gt 0) {
+        $bloatRegex = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $installed = $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match $bloatRegex })
         if ($installed) {
+            $matchedApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($pkg in $installed) {
+                foreach ($app in $bloatApps) {
+                    if ($pkg.Name -match "^$([regex]::Escape($app))") {
+                        [void]$matchedApps.Add($app)
+                        break
+                    }
+                }
                 if ($IsDryRun) {
                     Log "  [WOULD REMOVE APP]: $($pkg.Name)"
                     $removedInstalled++
@@ -921,9 +942,12 @@ if ($IsUndo) {
                     }
                 }
             }
+            $skippedAppsCount = $bloatApps.Count - $matchedApps.Count
         } else {
-            $skippedAppsCount++
+            $skippedAppsCount = $bloatApps.Count
         }
+    } else {
+        $skippedAppsCount = $bloatApps.Count
     }
     if ($skippedAppsCount -gt 0) {
         Log "  SKIP: $skippedAppsCount bloatware packages not installed on system"
