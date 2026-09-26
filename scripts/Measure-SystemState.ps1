@@ -38,7 +38,6 @@ param(
     [string]$ExportMarkdown
 )
 
-$ErrorActionPreference = "SilentlyContinue"
 $root = Split-Path -Parent $PSScriptRoot
 
 # Normalize CLI parameter values
