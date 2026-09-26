@@ -305,6 +305,7 @@ function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", 
 
 function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $backupBase = "HKCU:\Software\unslop-windows\StartupBackup"
+    $excludeRegex = [regex]'^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$'
     if ($Undo) {
         foreach ($runKey in $runKeys) {
             $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
@@ -313,7 +314,7 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
                 $props = Get-ItemProperty -Path $backupPath -ErrorAction SilentlyContinue
                 if ($props) {
                     $matches = $props.PSObject.Properties | Where-Object {
-                        $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
+                        -not $excludeRegex.IsMatch($_.Name) -and
                         ($_.Name -match $pattern -or $_.Value -match $pattern)
                     }
                     foreach ($entry in $matches) {
@@ -343,7 +344,7 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
         $props = Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue
         if ($props) {
             $matches = $props.PSObject.Properties | Where-Object {
-                $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
+                -not $excludeRegex.IsMatch($_.Name) -and
                 ($_.Name -match $pattern -or $_.Value -match $pattern)
             }
             foreach ($entry in $matches) {
