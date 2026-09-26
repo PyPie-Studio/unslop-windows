@@ -847,49 +847,68 @@ $deprovisionedCount = 0
 if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-    foreach ($app in $bloatApps) {
-        $match = if ($provisioned) { $provisioned.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
-        if ($match) {
-            foreach ($pkg in $match) {
-                if ($IsDryRun) {
-                    Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
-                } else {
-                    try {
-                        Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -ErrorAction Stop
-                        Log "  RE-REGISTERED: $($pkg.DisplayName)"
-                    } catch {
-                        $global:FailCount++
-                        Log "  FAILED: Could not re-register $($pkg.DisplayName) - $($_.Exception.Message)"
-                    }
+    if ($provisioned -and $bloatApps) {
+        # Build single combined regex pattern to filter all matching packages in O(M) time
+        $bloatRegex = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $matchedProvisioned = $provisioned.Where({ $_.DisplayName -match $bloatRegex })
+        $matchedAppNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+        foreach ($pkg in $matchedProvisioned) {
+            foreach ($app in $bloatApps) {
+                if ($pkg.DisplayName -match "^$([regex]::Escape($app))") {
+                    $null = $matchedAppNames.Add($app)
+                    break
                 }
             }
-        } else {
-            Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
+            if ($IsDryRun) {
+                Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
+            } else {
+                try {
+                    Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -ErrorAction Stop
+                    Log "  RE-REGISTERED: $($pkg.DisplayName)"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not re-register $($pkg.DisplayName) - $($_.Exception.Message)"
+                }
+            }
+        }
+        foreach ($app in $bloatApps) {
+            if (-not $matchedAppNames.Contains($app)) {
+                Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
+            }
+        }
+    } else {
+        if ($bloatApps) {
+            foreach ($app in $bloatApps) {
+                Log "  NOTE: $app de-provisioned (can reinstall via Microsoft Store or winget)"
+            }
         }
     }
 } else {
+    # 1. De-provision staged packages so they never reinstall for new profiles
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-    foreach ($app in $bloatApps) {
-        $staged = if ($stagedPackages) { $stagedPackages.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
-        if ($staged) {
-            foreach ($pkg in $staged) {
-                if ($IsDryRun) {
-                    Log "  [WOULD DE-PROVISION]: $($pkg.DisplayName)"
+    if ($stagedPackages -and $bloatApps) {
+        # Single combined regex filter avoids nested O(N*M) loop overhead
+        $bloatRegex = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $staged = $stagedPackages.Where({ $_.DisplayName -match $bloatRegex })
+        foreach ($pkg in $staged) {
+            if ($IsDryRun) {
+                Log "  [WOULD DE-PROVISION]: $($pkg.DisplayName)"
+                $deprovisionedCount++
+            } else {
+                try {
+                    Remove-AppxProvisionedPackage -Online -PackageName $pkg.PackageName -ErrorAction Stop | Out-Null
+                    Log "  DE-PROVISIONED: $($pkg.DisplayName)"
                     $deprovisionedCount++
-                } else {
-                    try {
-                        Remove-AppxProvisionedPackage -Online -PackageName $pkg.PackageName -ErrorAction Stop | Out-Null
-                        Log "  DE-PROVISIONED: $($pkg.DisplayName)"
-                        $deprovisionedCount++
-                    } catch {
-                        $global:FailCount++
-                        Log "  FAILED: Could not de-provision $($pkg.DisplayName) - $($_.Exception.Message)"
-                    }
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not de-provision $($pkg.DisplayName) - $($_.Exception.Message)"
                 }
             }
         }
     }
 
+    # 2. Remove installed instances across all existing user accounts (optimized single-query scan)
     if ($isAdmin) {
         $allInstalled = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue
     } else {
@@ -900,12 +919,12 @@ if ($IsUndo) {
     }
 
     $skippedAppsCount = 0
-    foreach ($app in $bloatApps) {
-        $installed = if ($allInstalled) {
-            $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" })
-        } else { $null }
-
+    if ($allInstalled -and $bloatApps) {
+        # Single combined regex filter avoids nested O(N*M) loop overhead
+        $bloatRegex = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $installed = $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match $bloatRegex })
         if ($installed) {
+            $matchedApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
             foreach ($pkg in $installed) {
                 if ($IsDryRun) {
                     Log "  [WOULD REMOVE APP]: $($pkg.Name)"
@@ -920,11 +939,21 @@ if ($IsUndo) {
                         Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
                     }
                 }
+                foreach ($app in $bloatApps) {
+                    if ($pkg.Name -match "^$([regex]::Escape($app))") {
+                        $null = $matchedApps.Add($app)
+                        break
+                    }
+                }
             }
+            $skippedAppsCount = $bloatApps.Count - $matchedApps.Count
         } else {
-            $skippedAppsCount++
+            $skippedAppsCount = $bloatApps.Count
         }
+    } else {
+        $skippedAppsCount = if ($bloatApps) { $bloatApps.Count } else { 0 }
     }
+
     if ($skippedAppsCount -gt 0) {
         Log "  SKIP: $skippedAppsCount bloatware packages not installed on system"
     }
