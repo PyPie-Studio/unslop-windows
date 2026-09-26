@@ -1362,7 +1362,7 @@ if (-not $IsDryRun) {
             while ($secondsLeft -gt 0) {
                 Write-Host -NoNewline ("`r  Restarting in {0,2}s... [Press 'A' to Abort | 'R' to Restart Now]   " -f $secondsLeft)
                 $keyHit = $false
-                for ($sub = 0; $sub -lt 10; $sub++) {
+                foreach ($_ in 1..10) {
                     Start-Sleep -Milliseconds 100
                     try {
                         if ($Host.UI.RawUI.KeyAvailable) {
