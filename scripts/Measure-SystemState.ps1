@@ -115,7 +115,7 @@ function Get-SystemMetrics {
         TotalRAM_GB        = [math]::Round($totalRamBytes / 1GB, 2)
         UsedRAM_GB         = [math]::Round($usedRamBytes / 1GB, 2)
         FreeRAM_GB         = [math]::Round($freeRamBytes / 1GB, 2)
-        UsedRAM_Percent    = [math]::Round(($usedRamBytes / $totalRamBytes) * 100, 1)
+        UsedRAM_Percent    = if ($totalRamBytes -gt 0) { [math]::Round(($usedRamBytes / $totalRamBytes) * 100, 1) } else { 0 }
         CommitUsed_GB      = [math]::Round($usedCommitBytes / 1GB, 2)
         CommitLimit_GB     = [math]::Round($totalCommitBytes / 1GB, 2)
         ProcessCount       = $processCount
@@ -128,6 +128,13 @@ function Get-SystemMetrics {
 }
 
 # -----------------------------------------------------------------------------
+# Dot-Source Guard: Return immediately if script is being dot-sourced
+# -----------------------------------------------------------------------------
+if ($MyInvocation.InvocationName -eq ".") {
+    return
+}
+
+# -----------------------------------------------------------------------------
 # Snapshot Comparison Handler
 # -----------------------------------------------------------------------------
 $isCompare = ($Compare -and $Compare.Count -ge 2) -or ($Baseline -and $Target)
@@ -135,8 +142,8 @@ if ($isCompare) {
     $path1 = if ($Baseline) { $Baseline } else { $Compare[0] }
     $path2 = if ($Target) { $Target } else { $Compare[1] }
 
-    if (-not (Test-Path $path1)) { Write-Error "Snapshot 1 not found at: $path1"; exit 1 }
-    if (-not (Test-Path $path2)) { Write-Error "Snapshot 2 not found at: $path2"; exit 1 }
+    if (-not (Test-Path $path1)) { Write-Host "Snapshot 1 not found at: $path1" -ForegroundColor Red; exit 1 }
+    if (-not (Test-Path $path2)) { Write-Host "Snapshot 2 not found at: $path2" -ForegroundColor Red; exit 1 }
 
     $s1 = Get-Content -Path $path1 -Raw | ConvertFrom-Json
     $s2 = Get-Content -Path $path2 -Raw | ConvertFrom-Json
@@ -214,7 +221,7 @@ if ($isCompare) {
         } else {
             $dirItem = Get-Item -Path $mdDir -ErrorAction SilentlyContinue
             if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-                Write-Error "[SECURITY ERROR] Target directory '$mdDir' is a reparse point or junction. Aborting export to prevent symlink redirection."
+                Write-Host -ForegroundColor Red "[SECURITY ERROR] Target directory '$mdDir' is a reparse point or junction. Aborting export to prevent symlink redirection."
                 exit 1
             }
         }
@@ -273,7 +280,7 @@ if ($Snapshot) {
     } else {
         $dirItem = Get-Item -Path $snapshotDir -ErrorAction SilentlyContinue
         if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-            Write-Error "[SECURITY ERROR] Target snapshot directory '$snapshotDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
+            Write-Host -ForegroundColor Red "[SECURITY ERROR] Target snapshot directory '$snapshotDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
             exit 1
         }
     }
