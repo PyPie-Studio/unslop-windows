@@ -250,7 +250,7 @@ if (-not $Fast) {
                         param($testPath, $xmlOut, $covOut, $covTarget)
                         Import-Module Pester -MinimumVersion 6.0.0
                         $cfg = New-PesterConfiguration
-                        $cfg.Run.Path = $testPath
+                        $cfg.Run.Path = $testPath -split ";"
                         $cfg.Output.Verbosity = 'Detailed'
                         $cfg.Run.PassThru = $true
                         if ($xmlOut) {
@@ -271,7 +271,8 @@ if (-not $Fast) {
                         }
                         if ($res.FailedCount -gt 0) { exit 1 }
                     }
-                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testScripts, $targetXml, $targetCovXml, $covFile 2>&1
+                    $testPathStr = $testScripts -join ";"
+                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testPathStr, $targetXml, $targetCovXml, $covFile 2>&1
                     $pesterExit = $LASTEXITCODE
                     if ($pesterExit -ne 0) {
                         $fail = $true

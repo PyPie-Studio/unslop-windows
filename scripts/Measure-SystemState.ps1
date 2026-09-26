@@ -142,8 +142,8 @@ if ($isCompare) {
     $path1 = if ($Baseline) { $Baseline } else { $Compare[0] }
     $path2 = if ($Target) { $Target } else { $Compare[1] }
 
-    if (-not (Test-Path $path1)) { Write-Error "Snapshot 1 not found at: $path1" -ErrorAction Continue; exit 1 }
-    if (-not (Test-Path $path2)) { Write-Error "Snapshot 2 not found at: $path2" -ErrorAction Continue; exit 1 }
+    if (-not (Test-Path $path1)) { Write-Host "Snapshot 1 not found at: $path1" -ForegroundColor Red; exit 1 }
+    if (-not (Test-Path $path2)) { Write-Host "Snapshot 2 not found at: $path2" -ForegroundColor Red; exit 1 }
 
     $s1 = Get-Content -Path $path1 -Raw | ConvertFrom-Json
     $s2 = Get-Content -Path $path2 -Raw | ConvertFrom-Json
@@ -221,7 +221,7 @@ if ($isCompare) {
         } else {
             $dirItem = Get-Item -Path $mdDir -ErrorAction SilentlyContinue
             if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-                Write-Error -ErrorAction Continue "[SECURITY ERROR] Target directory '$mdDir' is a reparse point or junction. Aborting export to prevent symlink redirection."
+                Write-Host -ForegroundColor Red "[SECURITY ERROR] Target directory '$mdDir' is a reparse point or junction. Aborting export to prevent symlink redirection."
                 exit 1
             }
         }
@@ -280,7 +280,7 @@ if ($Snapshot) {
     } else {
         $dirItem = Get-Item -Path $snapshotDir -ErrorAction SilentlyContinue
         if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-            Write-Error -ErrorAction Continue "[SECURITY ERROR] Target snapshot directory '$snapshotDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
+            Write-Host -ForegroundColor Red "[SECURITY ERROR] Target snapshot directory '$snapshotDir' is a reparse point or junction. Aborting snapshot export to prevent symlink redirection."
             exit 1
         }
     }
