@@ -154,6 +154,7 @@ function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
     }
 }
 
+# Intentionally duplicated across engines per ADR-022 for 100% standalone single-file execution with zero external module dependencies.
 function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $s = Get-Service -Name $name -ErrorAction SilentlyContinue
     if ($s) {
