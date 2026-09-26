@@ -900,30 +900,36 @@ if ($IsUndo) {
     }
 
     $skippedAppsCount = 0
-    foreach ($app in $bloatApps) {
-        $installed = if ($allInstalled) {
-            $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" })
-        } else { $null }
+    if ($allInstalled -and $bloatApps.Count -gt 0) {
+        $bloatPattern = "^(" + (($bloatApps | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")"
+        $matchedInstalled = $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match $bloatPattern })
 
-        if ($installed) {
-            foreach ($pkg in $installed) {
-                if ($IsDryRun) {
-                    Log "  [WOULD REMOVE APP]: $($pkg.Name)"
+        $matchedApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($pkg in $matchedInstalled) {
+            if ($IsDryRun) {
+                Log "  [WOULD REMOVE APP]: $($pkg.Name)"
+                $removedInstalled++
+            } else {
+                try {
+                    Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
+                    Log "  REMOVED APP: $($pkg.Name)"
                     $removedInstalled++
-                } else {
-                    try {
-                        Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
-                        Log "  REMOVED APP: $($pkg.Name)"
-                        $removedInstalled++
-                    } catch {
-                        $global:FailCount++
-                        Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
-                    }
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
                 }
             }
-        } else {
-            $skippedAppsCount++
+
+            foreach ($app in $bloatApps) {
+                if ($pkg.Name -match "^$([regex]::Escape($app))") {
+                    [void]$matchedApps.Add($app)
+                    break
+                }
+            }
         }
+        $skippedAppsCount = $bloatApps.Count - $matchedApps.Count
+    } else {
+        $skippedAppsCount = $bloatApps.Count
     }
     if ($skippedAppsCount -gt 0) {
         Log "  SKIP: $skippedAppsCount bloatware packages not installed on system"
