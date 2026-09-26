@@ -634,7 +634,7 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
     }
 
     It 'Zero raw mutating cmdlets (registry, tasks, services) exist outside approved helper functions' {
-        $approvedRegHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry')
+        $approvedRegHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry', 'Restore-StartupEntryKey', 'Remove-StartupEntryKey')
         $mutatingRegCmdlets = @('Set-ItemProperty', 'New-ItemProperty', 'Remove-ItemProperty')
         $mutatingTaskCmdlets = @('Disable-ScheduledTask', 'Enable-ScheduledTask')
         $mutatingSvcCmdlets = @('Set-Service', 'Stop-Service', 'Start-Service')
