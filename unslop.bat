@@ -99,6 +99,22 @@ if not "%~1"=="" (
         )
     )
 
+    :: Validate forwarded arguments against strict target script switch whitelist
+    if defined FORWARD_ARGS (
+        for %%A in (!FORWARD_ARGS!) do (
+            set "ARG_VALID=0"
+            for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+                if /i "%%~A"=="%%V" set "ARG_VALID=1"
+            )
+            if "!ARG_VALID!"=="0" (
+                echo.
+                echo [ERROR] Unrecognized or illegal parameter switch in forwarded arguments: "%%~A"
+                echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
+                exit /b 1
+            )
+        )
+    )
+
     :: Check if non-elevated Dry-Run is requested
     set "IS_DRY=0"
     for %%A in (%*) do (
@@ -534,6 +550,19 @@ echo.
 echo Starting Dry-Run Audit (Non-Elevated)...
 set "FINAL_ARGS=!ARGS!"
 if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
+if defined FINAL_ARGS (
+    for %%A in (!FINAL_ARGS!) do (
+        set "ARG_VALID=0"
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+            if /i "%%~A"=="%%V" set "ARG_VALID=1"
+        )
+        if "!ARG_VALID!"=="0" (
+            echo.
+            echo [ERROR] Unrecognized or illegal parameter flag in execution args: "%%~A"
+            exit /b 1
+        )
+    )
+)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !FINAL_ARGS!
 echo.
 echo Audit complete. Review the inspection results above or check the log file.
@@ -552,6 +581,19 @@ if !errorlevel! neq 0 (
     echo Administrator privileges required. Prompting for UAC elevation...
     set "FINAL_ARGS=!ARGS!"
     if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
+    if defined FINAL_ARGS (
+        for %%A in (!FINAL_ARGS!) do (
+            set "ARG_VALID=0"
+            for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+                if /i "%%~A"=="%%V" set "ARG_VALID=1"
+            )
+            if "!ARG_VALID!"=="0" (
+                echo.
+                echo [ERROR] Unrecognized or illegal parameter flag in execution args: "%%~A"
+                exit /b 1
+            )
+        )
+    )
     if "!OS_MODE!"=="WIN10" (
         if defined FINAL_ARGS (
             set "UAC_ARGS=-Win10 -FromMenu !FINAL_ARGS!"
@@ -580,6 +622,19 @@ if !errorlevel! neq 0 (
 echo.
 set "FINAL_ARGS=!ARGS!"
 if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
+if defined FINAL_ARGS (
+    for %%A in (!FINAL_ARGS!) do (
+        set "ARG_VALID=0"
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+            if /i "%%~A"=="%%V" set "ARG_VALID=1"
+        )
+        if "!ARG_VALID!"=="0" (
+            echo.
+            echo [ERROR] Unrecognized or illegal parameter flag in execution args: "%%~A"
+            exit /b 1
+        )
+    )
+)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !FINAL_ARGS!
 if !errorlevel! equ 100 exit /b 0
 echo.
