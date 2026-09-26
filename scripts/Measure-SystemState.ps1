@@ -128,6 +128,14 @@ function Get-SystemMetrics {
 }
 
 # -----------------------------------------------------------------------------
+# Dot-Source Guard: If script is being dot-sourced (e.g. Pester test harness),
+# return immediately so functions are exported without executing live metrics.
+# -----------------------------------------------------------------------------
+if ($MyInvocation.InvocationName -eq '.') {
+    return
+}
+
+# -----------------------------------------------------------------------------
 # Snapshot Comparison Handler
 # -----------------------------------------------------------------------------
 $isCompare = ($Compare -and $Compare.Count -ge 2) -or ($Baseline -and $Target)

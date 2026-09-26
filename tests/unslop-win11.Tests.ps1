@@ -892,3 +892,54 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match '"Microsoft\.WindowsCommunicationsApps"' -Because "Classic Windows Mail must be targeted"
     }
 }
+
+
+Describe 'scripts/Measure-SystemState.ps1: System Metrics Audit & Error Trapping' -Tag 'Unit', 'Auditor' {
+    BeforeAll {
+        $measureScript = Join-Path $script:repoRoot "scripts/Measure-SystemState.ps1"
+        if (-not (Test-Path $measureScript)) {
+            throw "Target auditor script not found at: $measureScript"
+        }
+
+        # Stub Windows cmdlets if running in non-Windows environment so Pester can mock them
+        @('Get-CimInstance', 'Get-AppxPackage', 'Get-AppxProvisionedPackage', 'Get-ScheduledTask', 'Get-Service') | ForEach-Object {
+            if (-not (Get-Command $_ -ErrorAction SilentlyContinue)) {
+                New-Item -Path "Function:$_" -Value {} -Force | Out-Null
+            }
+        }
+
+        . $measureScript
+    }
+
+    Context 'Get-SystemMetrics AppX Provisioned Error Trapping' {
+        It 'Gracefully handles Get-AppxProvisionedPackage exceptions and sets status to Unavailable' {
+            Mock Get-CimInstance { [PSCustomObject]@{ TotalVisibleMemorySize = 16777216; FreePhysicalMemory = 8388608; TotalVirtualMemorySize = 20971520; FreeVirtualMemory = 10485760 } }
+            Mock Get-Process { @([PSCustomObject]@{ Threads = @(1, 2) }) }
+            Mock Get-Service { [PSCustomObject]@{ Status = 'Running' } }
+            Mock Get-ScheduledTask { [PSCustomObject]@{ State = 'Ready' } }
+            Mock Get-AppxPackage { @('pkg1', 'pkg2') }
+            Mock Get-ItemProperty { [PSCustomObject]@{ DisplayVersion = '23H2' } }
+            Mock Get-AppxProvisionedPackage { throw "Access denied: requires elevation to query DISM provisioned packages" }
+
+            $metrics = Get-SystemMetrics
+
+            $metrics | Should -Not -BeNullOrEmpty
+            $metrics.AppxProvisioned | Should -Be "Unavailable (requires elevation)"
+        }
+
+        It 'Correctly records provisioned package count when Get-AppxProvisionedPackage succeeds' {
+            Mock Get-CimInstance { [PSCustomObject]@{ TotalVisibleMemorySize = 16777216; FreePhysicalMemory = 8388608; TotalVirtualMemorySize = 20971520; FreeVirtualMemory = 10485760 } }
+            Mock Get-Process { @([PSCustomObject]@{ Threads = @(1, 2) }) }
+            Mock Get-Service { [PSCustomObject]@{ Status = 'Running' } }
+            Mock Get-ScheduledTask { [PSCustomObject]@{ State = 'Ready' } }
+            Mock Get-AppxPackage { @('pkg1', 'pkg2') }
+            Mock Get-ItemProperty { [PSCustomObject]@{ DisplayVersion = '23H2' } }
+            Mock Get-AppxProvisionedPackage { @('prov1', 'prov2', 'prov3') }
+
+            $metrics = Get-SystemMetrics
+
+            $metrics | Should -Not -BeNullOrEmpty
+            $metrics.AppxProvisioned | Should -Be 3
+        }
+    }
+}
