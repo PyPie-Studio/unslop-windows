@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.3.3] - 2026-09-27
+
 ### Added
 - **Git Hook Installer Unit Tests (`tests/Install-GitHooks.Tests.ps1`)**: Added 9 Pester 6+ unit and mocking tests covering `scripts/Install-GitHooks.ps1`, including git binary availability invariants, repository boundary checks, hook uninstallation (`-Uninstall`), prerequisite package installation (`-InstallPrerequisites`), and gate execution pipelines.
 - **System State Benchmark Test Suite (`tests/Measure-SystemState.Tests.ps1`)**: Added 15 Pester 6+ unit and integration tests covering `scripts/Measure-SystemState.ps1`, including RAM and commit metrics computation, active process/thread counters, telemetry service and task status mapping, AppX package counts, non-elevated error handling, snapshot comparisons (`-Baseline`, `-Target`, `-Compare`), and Markdown benchmark report generation (`-ExportMarkdown`).
@@ -387,7 +391,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.2.3...v1.3.0
