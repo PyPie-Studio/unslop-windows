@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.3.3)
+# unslop-windows: Windows 11 Debloater (v1.3.4)
 # Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -413,7 +413,7 @@ $osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.3: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.4: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -510,6 +510,8 @@ Set-RegDwordSafe -path $advPath -name "Enabled" -debloatValue 0 -undoValue 1
 # Content Delivery Manager (Offers, Suggestions, Tips, OOBE Nags)
 $cdmPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
 $cdmSettings = @{
+    "ContentDeliveryAllowed"           = @{ Debloat = 0; Undo = 1 } # Master toggle for dynamic content delivery
+    "SubscribedContent-88000963Enabled"= @{ Debloat = 0; Undo = 1 } # Start menu programmable tiles / dynamic layouts
     "SystemPaneSuggestionsEnabled"     = @{ Debloat = 0; Undo = 1 } # Start menu suggestions/ads
     "SoftLandingEnabled"               = @{ Debloat = 0; Undo = 1 } # "Tips" notifications
     "PreInstalledAppsEnabled"          = @{ Debloat = 0; Undo = 1 } # Preinstalled app pushes
@@ -529,9 +531,11 @@ foreach ($key in $cdmSettings.Keys) {
     Set-RegDwordSafe -path $cdmPath -name $key -debloatValue $cfg.Debloat -undoValue $cfg.Undo
 }
 
-# Disable Windows Consumer Features / Cloud Content (blocks silent background Store app pushes)
+# Disable Windows Consumer Features / Cloud Content (blocks silent background Store app pushes & programmable layouts)
 $cloudContentPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
 Set-RegDwordSafe -path $cloudContentPolicy -name "DisableWindowsConsumerFeatures" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableCloudOptimizedContent" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableConsumerAccountStateContent" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
 # 25H2 Start avatar account nagging badges (OneDrive/M365 promotions) & Iris web recommendations
 Set-RegDwordSafe -path $explorerAdv -name "Start_AccountNotifications" -debloatValue 0 -undoValue 1
@@ -541,6 +545,42 @@ Set-RegDwordSafe -path $explorerAdv -name "ShowSyncProviderNotifications" -deblo
 # Post-update "Finish setting up your PC" nag
 $oobePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement"
 Set-RegDwordSafe -path $oobePath -name "ScoobeSystemSettingEnabled" -debloatValue 0 -undoValue 1
+
+# Purge IrisService Programmable Tiles cloud manifests (sponsored Start menu pins)
+$startMenuLocalState = "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState"
+if (Test-Path $startMenuLocalState) {
+    $manifest88 = Join-Path $startMenuLocalState "88000963"
+    if (Test-Path $manifest88) {
+        if (-not $DryRun -and -not $Undo) {
+            try {
+                Remove-Item -Path $manifest88 -Force -ErrorAction Stop
+                Log "  REMOVED: Programmable tiles cloud manifest ($manifest88)"
+            } catch {
+                $global:FailCount++
+                Log "  FAILED: Could not remove $manifest88 - $($_.Exception.Message)" "Red"
+            }
+        } else {
+            Log "  [PREVIEW] Would remove programmable tiles cloud manifest ($manifest88)" "Cyan"
+        }
+    }
+    $progAssets = Join-Path $startMenuLocalState "ProgrammableTilesAssets"
+    if (Test-Path $progAssets) {
+        $assetFiles = Get-ChildItem -Path $progAssets -File -ErrorAction SilentlyContinue
+        foreach ($file in $assetFiles) {
+            if (-not $DryRun -and -not $Undo) {
+                try {
+                    Remove-Item -Path $file.FullName -Force -ErrorAction Stop
+                    Log "  REMOVED: Programmable tile asset ($($file.Name))"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not remove $($file.FullName) - $($_.Exception.Message)" "Red"
+                }
+            } else {
+                Log "  [PREVIEW] Would remove programmable tile asset ($($file.Name))" "Cyan"
+            }
+        }
+    }
+}
 Log ""
 
 # ============================================================

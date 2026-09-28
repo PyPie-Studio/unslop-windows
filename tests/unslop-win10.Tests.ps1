@@ -849,8 +849,14 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
         }
     }
 
-    It 'Enforces CloudContent DisableWindowsConsumerFeatures policy symmetrically' {
+    It 'Enforces CloudContent policies (DisableWindowsConsumerFeatures, DisableCloudOptimizedContent, DisableConsumerAccountStateContent) symmetrically' {
         $script:ast.Extent.Text | Should -Match 'DisableWindowsConsumerFeatures' -Because "DisableWindowsConsumerFeatures GPO policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'DisableCloudOptimizedContent' -Because "DisableCloudOptimizedContent GPO policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'DisableConsumerAccountStateContent' -Because "DisableConsumerAccountStateContent GPO policy must be configured"
+    }
+
+    It 'Configures ContentDeliveryAllowed in ContentDeliveryManager' {
+        $script:ast.Extent.Text | Should -Match '"ContentDeliveryAllowed"' -Because "ContentDeliveryAllowed master CDM switch must be configured"
     }
 
     It 'Targets fresh-install bloatware (Sudoku, LinkedIn, Teams) in bloatApps array' {

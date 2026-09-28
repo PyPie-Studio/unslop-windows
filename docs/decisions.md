@@ -411,3 +411,21 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **Broaden Component Flags:** Updated `-KeepPhoneLink` to protect both `Microsoft.YourPhone` and `MicrosoftWindows.CrossDevice`. Updated `-KeepMail` to protect both `Microsoft.OutlookForWindows` and `Microsoft.WindowsCommunicationsApps`. Updated `-KeepXbox` to protect `Microsoft.XboxApp` alongside `GamingApp` and `GamingServices`.
   - **Dynamic Banner & Gate Enforcement:** Added dynamic reporting for `-KeepTeams` in completion summaries, expanded Pester 6 unit tests (61/61 passing), and added AST parity assertions.
 - **Consequences:** Eliminates fresh-install bloatware leakage, prevents background post-install Store app pulls, maintains 100% symmetrical restoration, and protects gaming authentication runtimes.
+
+---
+
+## ADR-028: Windows 11 Programmable Tiles (IrisService/DynamicLayoutsSV) Suppression and Master ContentDeliveryAllowed Lockdown (2026-09-29)
+- **Status:** Accepted
+- **Context:**
+  1. *Windows 11 Pro GPO Bypass:* In Windows 11 Pro, Microsoft intentionally ignores `DisableWindowsConsumerFeatures` in `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent` (officially documenting it as restricted to Enterprise/Education editions). Consequently, Pro systems continue to receive cloud-pushed recommendations and sponsored partner placements.
+  2. *Programmable Start Menu Tiles (Ghost App Injection):* Rather than relying solely on legacy AppX silent downloads, Windows 11 (23H2/24H2/25H2) introduced dynamic cloud layout manifests (`DynamicLayoutsSV`, placement ID `88000963`) orchestrated by **IrisService** (`ris.api.iris.microsoft.com`). The cloud service pushes manifests with `installDelay: onDemand` directly to `Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState\88000963` and caches downloaded logos in `ProgrammableTilesAssets`. This injects on-demand promotional app stubs (e.g. LinkedIn, new Outlook) into the Start Menu pinned area that appear identical to installed applications, triggering Store installation upon user click.
+  3. *Incomplete CDM Lockdown:* Legacy debloating configured individual CDM subkeys (`SilentInstalledAppsEnabled`, `SystemPaneSuggestionsEnabled`), but omitted the master delivery toggle `ContentDeliveryAllowed = 0` and the placement toggle `SubscribedContent-88000963Enabled = 0`, allowing the CDM engine to process IrisService layout pushes.
+- **Alternatives Considered:**
+  1. *Purge the entire Start Menu database (`start2.bin`):* Rejected. `start2.bin` holds the user's custom-pinned applications and folders. Resetting it damages user customization and violates safe-tier invariants.
+  2. *Block IrisService endpoints via hosts file or DNS:* Rejected. Fragile and prone to circumvention or breaking legitimate Windows Spotlight wallpapers or Windows Search queries.
+- **Decision:**
+  - **Master CDM Lockdown:** Added `ContentDeliveryAllowed = 0` (undo `1`) and `SubscribedContent-88000963Enabled = 0` (undo `1`) to `$cdmSettings` in both `unslop-win11.ps1` and `unslop-win10.ps1`.
+  - **Modern CloudContent Policy Enforcement:** Configured `DisableCloudOptimizedContent = 1` and `DisableConsumerAccountStateContent = 1` under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent` with `-Undo` removal (`-undoValue 0 -removeOnUndo $true`). These policies are respected across Windows 11 Pro and suppress cloud-pushed taskbar and Start dynamic layouts.
+  - **Programmable Tiles Cloud Manifest Purge:** On debloat, automatically detect and delete the dynamic layout manifest `LocalState\88000963` and cached promotional icons in `ProgrammableTilesAssets` under `StartMenuExperienceHost`, preserving the user's personal pins in `start2.bin`.
+  - **Symmetrical Restoration & Test Verification:** Enforced 100% `-Undo` symmetry across all new keys, added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`, and verified clean 7-pillar Master Quality Gate execution (86/86 passing).
+- **Consequences:** Permanently neutralizes ghost app tile injections (such as LinkedIn) in the Start Menu, closes the Windows 11 Pro policy bypass, leaves personal pinned items intact, and preserves full manual Microsoft Store functionality.

@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.4] - 2026-09-29
+
+### Added
+- **IrisService & Programmable Tiles Suppression**: Hardened `unslop-win11.ps1` Stage 4 to detect and purge dynamic cloud layout manifests (`LocalState\88000963`) and downloaded promotional icons in `ProgrammableTilesAssets` under `Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy`, eliminating cloud-pushed on-demand app stubs (e.g. LinkedIn, new Outlook) while preserving custom user pins in `start2.bin`.
+- **Master CDM Delivery Lockdown (`ContentDeliveryAllowed = 0`)**: Added `ContentDeliveryAllowed = 0` (undo `1`) and `SubscribedContent-88000963Enabled = 0` (undo `1`) to `$cdmSettings` across `unslop-win11.ps1` and `unslop-win10.ps1`, cutting off the master cloud delivery conduit for promotional Start Menu items.
+- **Cloud-Optimized Content GPO Policies**: Added `DisableCloudOptimizedContent = 1` and `DisableConsumerAccountStateContent = 1` under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent` across both engines (with symmetrical `-Undo` removal), ensuring policy enforcement on Windows 11 Pro where legacy `DisableWindowsConsumerFeatures` is bypassed.
+- **Test Suite Parity Assertions**: Added unit and AST parity assertions for `ContentDeliveryAllowed`, `SubscribedContent-88000963Enabled`, `DisableCloudOptimizedContent`, and `DisableConsumerAccountStateContent` across `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` (86/86 passing on both targets).
+
+### Fixed
+- **Windows 11 Pro Ghost App Injections**: Resolved an issue where sponsored partner tiles (like LinkedIn) were pushed dynamically onto the Start Menu pinned area post-reboot via IrisService and CDM placement `88000963`, bypassing `DisableWindowsConsumerFeatures`.
+
+---
+
 ## [1.3.3] - 2026-09-27
 
 ### Added
@@ -391,7 +404,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.4...HEAD
+[1.3.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.0...v1.3.1

@@ -876,8 +876,16 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         }
     }
 
-    It 'Enforces CloudContent DisableWindowsConsumerFeatures policy symmetrically' {
+    It 'Enforces CloudContent policies (DisableWindowsConsumerFeatures, DisableCloudOptimizedContent, DisableConsumerAccountStateContent) symmetrically' {
         $script:ast.Extent.Text | Should -Match 'DisableWindowsConsumerFeatures' -Because "DisableWindowsConsumerFeatures GPO policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'DisableCloudOptimizedContent' -Because "DisableCloudOptimizedContent GPO policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'DisableConsumerAccountStateContent' -Because "DisableConsumerAccountStateContent GPO policy must be configured"
+    }
+
+    It 'Configures ContentDeliveryAllowed and SubscribedContent-88000963Enabled in ContentDeliveryManager and purges Programmable Tiles' {
+        $script:ast.Extent.Text | Should -Match '"ContentDeliveryAllowed"' -Because "ContentDeliveryAllowed master CDM switch must be configured"
+        $script:ast.Extent.Text | Should -Match '"SubscribedContent-88000963Enabled"' -Because "SubscribedContent-88000963Enabled must be configured to suppress Programmable Tiles"
+        $script:ast.Extent.Text | Should -Match '88000963' -Because "Programmable tiles manifest must be purged from StartMenuExperienceHost"
     }
 
     It 'Targets fresh-install bloatware (Weather, Maps, Teams, Copilot, CrossDevice, Sudoku, LinkedIn) in bloatApps array' {

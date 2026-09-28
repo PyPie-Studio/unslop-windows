@@ -1,4 +1,4 @@
-# unslop-windows: Windows 10 Debloater (v1.3.3)
+# unslop-windows: Windows 10 Debloater (v1.3.4)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
@@ -410,7 +410,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.3: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.3.4: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -553,6 +553,7 @@ Set-RegDwordSafe -path $advPath -name "Enabled" -debloatValue 0 -undoValue 1
 
 $cdmPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
 $cdmSettings = @{
+    "ContentDeliveryAllowed"           = @{ Debloat = 0; Undo = 1 }
     "SystemPaneSuggestionsEnabled"     = @{ Debloat = 0; Undo = 1 }
     "SoftLandingEnabled"               = @{ Debloat = 0; Undo = 1 }
     "PreInstalledAppsEnabled"          = @{ Debloat = 0; Undo = 1 }
@@ -572,9 +573,11 @@ foreach ($key in $cdmSettings.Keys) {
     Set-RegDwordSafe -path $cdmPath -name $key -debloatValue $cfg.Debloat -undoValue $cfg.Undo
 }
 
-# Disable Windows Consumer Features / Cloud Content (blocks silent background Store app pushes)
+# Disable Windows Consumer Features / Cloud Content (blocks silent background Store app pushes & programmable layouts)
 $cloudContentPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
 Set-RegDwordSafe -path $cloudContentPolicy -name "DisableWindowsConsumerFeatures" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableCloudOptimizedContent" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableConsumerAccountStateContent" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
 Set-RegDwordSafe -path $explorerAdv -name "ShowSyncProviderNotifications" -debloatValue 0 -undoValue 1
 
