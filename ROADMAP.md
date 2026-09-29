@@ -21,7 +21,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 
 ---
 
-## Milestone 2: Windows 11 25H2 & 26H2 Hardening
+## Milestone 2: Windows 11 25H2, 26H1 & 26H2 Hardening
 - [x] Disable Windows Recall and Screenray snapshots (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`).
 - [x] Windows Copilot taskbar and policy suppression.
 - [x] 25H2 ConsentStore permissions (screen text scraping `foregroundTextAccess`, OS AI models `systemAIModels` and borderless capture `graphicsCaptureWithoutBorder`).
@@ -51,4 +51,4 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Architecture Decisions
-See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-027) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
+See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-029) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.

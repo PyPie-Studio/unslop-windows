@@ -5,7 +5,7 @@
 <!-- List each file modified, added or removed and briefly explain why -->
 
 ## How I tested it
-<!-- Describe your verification steps, paste the dry-run excerpt or list tested Windows 11 / Windows 10 build numbers (e.g. Win11 25H2 Build 26200, 24H2 Build 26100; Win10 22H2 Build 19045, LTSC 2021) -->
+<!-- Describe your verification steps, paste the dry-run excerpt or list tested Windows 11 / Windows 10 build numbers (e.g. Win11 26H1 Build 28000, 25H2 Build 26200, 24H2 Build 26100; Win10 22H2 Build 19045, LTSC 2021) -->
 
 ## System Safety Checklist
 All PRs must strictly adhere to the core safety rules before merging:

@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.5] - 2026-09-30
+
+### Added
+- **Windows 11 26H1 (Build 28000+) Official Support**: Extended `unslop-win11.ps1` and `unslop.bat` to recognize and support Windows 11 version 26H1 (Build 28000 series, ARM / Snapdragon X2 targeted release).
+- **Build Version Tagging for 26H1**: Added build threshold check (`$build -ge 28000`) before the 25H2 check in `unslop-win11.ps1` to prevent Build 28000 from being misidentified as "25H2" in headers and log filenames.
+- **`RemoveMicrosoftCopilotApp` Policy Hardening**: Implemented the April 2026 ADMX policy (`HKLM` & `HKCU:\Software\Policies\Microsoft\Windows\WindowsAI\RemoveMicrosoftCopilotApp = 1` with symmetrical `-Undo` removal) to suppress Copilot decoupling on 26H1+ where legacy `TurnOffWindowsCopilot` is bypassed.
+- **Build Tagging & Policy AST Test Suite**: Added Pester 6+ AST parity tests in `tests/unslop-win11.Tests.ps1` validating `$osTag` descending build threshold order (28000, 26200, 26100, 22631, 22621, 22000) and `RemoveMicrosoftCopilotApp` policy implementation.
+- **Architectural Decision Record (ADR-029)**: Documented 26H1 parallel-core support, separate servicing tracks, and policy evolution in `docs/decisions.md`.
+
+---
+
 ## [1.3.4] - 2026-09-29
 
 ### Added
@@ -404,7 +415,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.5...HEAD
+[1.3.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.1...v1.3.2

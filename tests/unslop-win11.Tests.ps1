@@ -900,3 +900,55 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match '"Microsoft\.WindowsCommunicationsApps"' -Because "Classic Windows Mail must be targeted"
     }
 }
+
+Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit', 'Static', 'BuildTagging' {
+    BeforeAll {
+        $script:tokens = $null
+        $script:errors = $null
+        $script:ast = [System.Management.Automation.Language.Parser]::ParseFile($script:targetScript, [ref]$script:tokens, [ref]$script:errors)
+        $script:errors.Count | Should -Be 0
+    }
+
+    It 'Assigns $osTag correctly with all expected build numbers and descending order' {
+        $osTagAssignment = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $node.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $node.Left.VariablePath.UserPath -eq 'osTag'
+        }, $true)
+
+        $osTagAssignment | Should -Not -BeNullOrEmpty -Because "`$osTag must be assigned"
+        
+        $assignmentText = $osTagAssignment.Extent.Text
+        
+        $expectedTags = @('26H1', '25H2', '24H2', '23H2', '22H2', '21H2')
+        foreach ($tag in $expectedTags) {
+            $assignmentText | Should -Match "`"$tag`"" -Because "Version tag $tag must be present"
+        }
+        
+        $idx28000 = $assignmentText.IndexOf('28000')
+        $idx26200 = $assignmentText.IndexOf('26200')
+        $idx28000 | Should -BeGreaterThan -1
+        $idx26200 | Should -BeGreaterThan -1
+        $idx28000 | Should -BeLessThan $idx26200 -Because "Build 28000 must be checked before 26200"
+
+        $buildNumbers = [regex]::Matches($assignmentText, '(?<=\$build -ge )\d+') | ForEach-Object { [int]$_.Value }
+        
+        $expectedBuilds = @(28000, 26200, 26100, 22631, 22621, 22000)
+        $buildNumbers.Count | Should -Be $expectedBuilds.Count
+        for ($i = 0; $i -lt $expectedBuilds.Count; $i++) {
+            $buildNumbers[$i] | Should -Be $expectedBuilds[$i] -Because "Build number ordering must be strictly descending"
+        }
+    }
+
+    It 'Implements RemoveMicrosoftCopilotApp via Set-RegDwordSafe' {
+        $copilotPolicy = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'RemoveMicrosoftCopilotApp'
+        }, $true)
+
+        $copilotPolicy | Should -Not -BeNullOrEmpty -Because "RemoveMicrosoftCopilotApp policy must be configured via Set-RegDwordSafe"
+    }
+}

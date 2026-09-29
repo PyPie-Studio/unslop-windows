@@ -148,7 +148,7 @@ jobs:
                       "2. Extract the archive to any directory.",
                       "3. Right-click **``unslop.bat``** and choose **Run as administrator** (or double-click and accept the UAC elevation prompt).",
                       "4. Select your operating system from the selection menu:",
-                      "   - **[1] Windows 11**: Targets 25H2, 24H2, 23H2, 22H2, 21H2 (runs ``unslop-win11.ps1``).",
+                      "   - **[1] Windows 11**: Targets 26H1, 25H2, 24H2, 23H2, 22H2, 21H2 (runs ``unslop-win11.ps1``).",
                       "   - **[2] Windows 10**: Targets 22H2, 21H2, 20H2, Enterprise LTSC, Builds 10240-19045 (runs ``unslop-win10.ps1``).",
                       "   - **[0] Exit**: Close the launcher.",
                       "5. Choose an option from the OS feature menu:",

@@ -429,3 +429,15 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **Programmable Tiles Cloud Manifest Purge:** On debloat, automatically detect and delete the dynamic layout manifest `LocalState\88000963` and cached promotional icons in `ProgrammableTilesAssets` under `StartMenuExperienceHost`, preserving the user's personal pins in `start2.bin`.
   - **Symmetrical Restoration & Test Verification:** Enforced 100% `-Undo` symmetry across all new keys, added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`, and verified clean 7-pillar Master Quality Gate execution (86/86 passing).
 - **Consequences:** Permanently neutralizes ghost app tile injections (such as LinkedIn) in the Start Menu, closes the Windows 11 Pro policy bypass, leaves personal pinned items intact, and preserves full manual Microsoft Store functionality.
+
+---
+
+## ADR-029: Windows 11 26H1 (Build 28000) Parallel-Core Support
+
+**Status**: Accepted
+
+**Context**: Windows 11 26H1 (Build 28000 series, released February 2026) is a hardware-scoped release targeting new ARM-based silicon (Qualcomm Snapdragon X2). Unlike 24H2/25H2/26H2 which share a common Windows core and follow a standard upgrade path, 26H1 is based on a different underlying core with a separate servicing track. There is no in-place upgrade path from 25H2 to 26H1 or from 26H1 to 26H2. Despite architectural differences, 26H1 shares the same user-space registry policy paths, AppX package identifiers, service names, and Group Policy objects as the mainstream releases.
+
+**Decision**: Support 26H1 (Build 28000+) within `unslop-win11.ps1` using the existing unified execution model — all 18 hardening modules execute identically across versions with no build-conditional branching. The `$osTag` chain was extended to correctly identify builds ≥ 28000 as "26H1" (inserted before the ≥ 26200 "25H2" branch). The new `RemoveMicrosoftCopilotApp` policy (April 2026 ADMX, `HKLM/HKCU:\Software\Policies\Microsoft\Windows\WindowsAI`) was added to Stage 2 because the legacy `TurnOffWindowsCopilot` key under `WindowsCopilot` is ignored on 26H1+ builds.
+
+**Trade-offs**: Supporting a parallel-core release increases the documented platform matrix without adding code complexity (no conditional branches needed). The risk is that future 26H1 CUs could introduce divergent AppX packages or service names not present in the mainstream releases, but the existing condensed AppX reporting ("SKIP: X packages not installed") handles absent packages gracefully.

@@ -6,6 +6,7 @@
 
 | Operating System Version | Build Range | Supported Engine |
 | :--- | :--- | :--- |
+| **Windows 11 26H1** | Build 28000+ | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
 | **Windows 11 25H2** | Build 26200+ | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
 | **Windows 11 24H2** | Build 26100 - 26120 | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |
 | **Windows 11 23H2** | Build 22631 | Yes ([`unslop-win11.ps1`](unslop-win11.ps1)) |

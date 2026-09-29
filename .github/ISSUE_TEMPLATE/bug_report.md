@@ -11,7 +11,7 @@ A clear and concise description of what happened.
 
 **Windows Version & Build**
 - Edition: (e.g. Windows 11 Pro or Windows 10 Enterprise LTSC)
-- Version: (e.g. Win11 25H2/24H2/23H2, Win10 22H2/21H2/LTSC 2021/2019)
+- Version: (e.g. Win11 26H1/25H2/24H2/23H2, Win10 22H2/21H2/LTSC 2021/2019)
 - Build Number: (Run `winver` or `[System.Environment]::OSVersion.Version`)
 
 **Execution Mode Used**

@@ -7,11 +7,11 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 [![GitHub release](https://img.shields.io/github/v/release/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=green)](https://github.com/PyPie-Studio/unslop-windows/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/PyPie-Studio/unslop-windows/lint.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/PyPie-Studio/unslop-windows/actions)
-[![Windows 11](https://img.shields.io/badge/Windows%2011-25H2%20%7C%2024H2%20%7C%2023H2%20%7C%2022H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
+[![Windows 11](https://img.shields.io/badge/Windows%2011-26H1%20%7C%2025H2%20%7C%2024H2%20%7C%2023H2%20%7C%2022H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.4.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
+[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.5.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -19,13 +19,13 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 ```text
 ============================================================
-  unslop-windows (v1.3.4) - PyPie Studio
+  unslop-windows (v1.3.5) - PyPie Studio
   Windows 10 & 11 Debloater and Privacy Tool
 ============================================================
 
   Select your Windows version:
 
-  [1] Windows 11 (25H2 / 24H2 / 23H2 / 22H2 / 21H2)
+  [1] Windows 11 (26H1 / 25H2 / 24H2 / 23H2 / 22H2 / 21H2)
   [2] Windows 10 (22H2 / 21H2 / 20H2 / Enterprise LTSC / Builds 10240-19045)
   [0] Exit
 
@@ -46,7 +46,7 @@ Select an option [0-2]:
 
 ### Direct Download (No Git Required)
 
-1. Download **[`unslop-windows-v1.3.4.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.4.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.3.5.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.5.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
@@ -108,6 +108,7 @@ Two separate PowerShell scripts — one for Windows 11, one for Windows 10 — s
 
 | OS | Builds | Script |
 | :--- | :--- | :--- |
+| Windows 11 26H1 | 28000+ | `unslop-win11.ps1` |
 | Windows 11 25H2 | 26200+ | `unslop-win11.ps1` |
 | Windows 11 24H2 | 26100–26120 | `unslop-win11.ps1` |
 | Windows 11 23H2 | 22631 | `unslop-win11.ps1` |
@@ -201,7 +202,7 @@ Pass these flags via CLI or enter them under Option `[7]` (Custom CLI Flags) in 
 I tried the popular debloaters and ran into real problems:
 
 - Some broke the WebView2 engine that Microsoft is integrating into most Windows 11 components.
-- Some were built for older Windows versions and didn't cover Recall, Copilot or the 24H2/25H2 AI features.
+- Some were built for older Windows versions and didn't cover Recall, Copilot or the 24H2/25H2/26H1 AI features.
 - Some had changes that came back after Windows feature updates because they only removed apps from the current user instead of de-provisioning from the system image.
 - None had a clean `-Undo` flag that could revert every single change with one command.
 
@@ -213,7 +214,7 @@ This script takes a different approach:
 - **`-DryRun` for inspection.** Run without admin rights to see every proposed change before committing.
 - **Delivery Optimization done right.** Disables P2P sharing via GPO (`DODownloadMode=0`) without killing `DoSvc`, so the Microsoft Store doesn't throw error `0x80d03805`.
 
-Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 (25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
+Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 (26H1, 25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
 
 ---
 

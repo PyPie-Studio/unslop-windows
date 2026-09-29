@@ -1,5 +1,5 @@
-# unslop-windows: Windows 11 Debloater (v1.3.4)
-# Targets Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
+# unslop-windows: Windows 11 Debloater (v1.3.5)
+# Targets Windows 11 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
 
@@ -8,7 +8,7 @@
     unslop-windows: Windows 11 Debloater and Privacy Hardener.
 
 .DESCRIPTION
-    Debloats Windows 11 25H2, 24H2, 23H2, 22H2 and 21H2 by disabling telemetry,
+    Debloats Windows 11 26H1, 25H2, 24H2, 23H2, 22H2 and 21H2 by disabling telemetry,
     stopping unnecessary services and background tasks, removing pre-installed
     bloatware, disabling Recall and Copilot and revoking ConsentStore permissions.
     Does not touch WinSxS or DISM manifests. All changes reversible via -Undo.
@@ -409,11 +409,11 @@ if (-not $SkipBuildCheck) {
         exit 1
     }
 }
-$osTag = if ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } elseif ($build -ge 22621) { "22H2" } elseif ($build -ge 22000) { "21H2" } else { "Dev/Canary" }
+$osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } elseif ($build -ge 22621) { "22H2" } elseif ($build -ge 22000) { "21H2" } else { "Dev/Canary" }
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.4: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.5: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -437,7 +437,7 @@ Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Ma
 Log ""
 
 # ============================================================
-# 2. 24H2/25H2 WINDOWS RECALL & WINDOWS COPILOT KILLSWITCH
+# 2. 24H2/25H2/26H1 WINDOWS RECALL & WINDOWS COPILOT KILLSWITCH
 # ============================================================
 Log "--- 2. Windows Recall & Windows Copilot ---"
 # Windows AI & Recall (Screenray Snapshotting / Click to Do analysis)
@@ -453,6 +453,10 @@ $copilot_LM = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
 $copilot_CU = "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot"
 Set-RegDwordSafe -path $copilot_LM -name "TurnOffWindowsCopilot" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $copilot_CU -name "TurnOffWindowsCopilot" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
+# Copilot App Removal Policy (26H1+, April 2026 ADMX — supersedes TurnOffWindowsCopilot on newer builds)
+Set-RegDwordSafe -path $winAI_LM -name "RemoveMicrosoftCopilotApp" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $winAI_CU -name "RemoveMicrosoftCopilotApp" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
 # Shell Taskbar Copilot Button
 $explorerAdv = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
@@ -684,7 +688,7 @@ Log "--- 9. Taskbar & Explorer Cleanliness ---"
 Set-RegDwordSafe -path $explorerAdv -name "HideFileExt" -debloatValue 0 -undoValue 1
 
 # Clean Taskbar clutter (Hide Widgets via official GPO policy and Chat/Teams buttons)
-# Note: On Windows 11 23H2+/24H2/25H2, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa; HKLM Dsh policy disables Widgets system-wide
+# Note: On Windows 11 23H2+/24H2/25H2/26H1+, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa; HKLM Dsh policy disables Widgets system-wide
 $dshPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
 Set-RegDwordSafe -path $dshPolicy -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $explorerAdv -name "TaskbarMn" -debloatValue 0 -undoValue 1
@@ -831,7 +835,7 @@ if ($nvTasks) {
 Log ""
 
 # ============================================================
-# 12. DUAL-STAGE UWP & PROVISIONED BLOATWARE (24H2/25H2 INCLUDED)
+# 12. DUAL-STAGE UWP & PROVISIONED BLOATWARE (24H2/25H2/26H1 INCLUDED)
 # ============================================================
 Log "--- 12. Dual-Stage UWP & Provisioned Bloatware ---"
 
@@ -842,7 +846,7 @@ $bloatApps = @(
     # Microsoft To-Do (modularized: removable by default, protected via -KeepTodos)
     "Microsoft.Todos"
 
-    # 24H2 / 25H2 AI & Shell Injections
+    # 24H2 / 25H2 / 26H1 AI & Shell Injections
     "aimgr"
     "Microsoft.Copilot"
     "Microsoft.StartExperiencesApp"
