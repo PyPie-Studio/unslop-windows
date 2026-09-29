@@ -31,23 +31,12 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 
 ---
 
-## Milestone 3: Safe OEM Bloatware Profiles
-- [ ] **Targeted OEM Parameters:**
-  - `-RemoveASUS`: Removes Armoury Crate bloatware while keeping essential ASUS System Control Interface drivers.
-  - `-RemoveDell`: Removes Dell SupportAssist telemetry services while preserving power management.
-  - `-RemoveHP`: Removes HP Support Assistant and Touchpoint Analytics.
-  - `-RemoveLenovo`: Cleans Lenovo Vantage telemetry while preserving conservation mode hardware hooks.
-- [ ] **Interactive Menu Expansion:** Add OEM profile selection sub-menu in `unslop.bat`.
-
----
-
 ## Milestone 4: Diagnostic Benchmarking & Automated Testing
 - [x] **System State Auditor (`scripts/Measure-SystemState.ps1`):** Standalone before/after diagnostic tool measuring:
   - Real-time idle RAM and commit charge changes.
   - Active telemetry services and background thread counts.
   - Uninstalled vs provisioned AppX package totals.
   - Generates verifiable Markdown audit reports (`docs/benchmarks.md`).
-- [ ] **Automated Windows Sandbox Smoke Testing:** Launch `unslop-win11.ps1 -DryRun` inside a clean Windows Sandbox instance via script.
 - [x] **Cryptographic Release Hashes:** Automate SHA-256 checksum generation in `.github/workflows/release.yml`.
 
 ---
