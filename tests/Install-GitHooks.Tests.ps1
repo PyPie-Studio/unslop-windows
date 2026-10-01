@@ -53,6 +53,23 @@ Describe 'Install-GitHooks: Git & Repository Invariants' -Tag 'Unit', 'GitHooks'
         $LASTEXITCODE | Should -Be 1
         ($out | Out-String) | Should -Match "ERROR: Hook file not found at:"
     }
+
+    It 'Exits with code 1 when a specific hook file in .githooks is missing' {
+        Mock Get-Command { return [pscustomobject]@{ Name = 'git' } } -ParameterFilter { $Name -eq 'git' }
+        Mock git {
+            $global:LASTEXITCODE = 0
+            if ($args -contains '--git-dir') { return ".git" }
+            return $null
+        }
+        Mock Test-Path {
+            if ($Path -match 'pre-commit') { return $true }
+            if ($Path -match 'pre-push') { return $false }
+            return $false
+        } -ParameterFilter { $Path -match '\.githooks' }
+        $out = & $script:targetScript *>&1
+        $LASTEXITCODE | Should -Be 1
+        ($out | Out-String) | Should -Match "ERROR: Hook file not found at:.*pre-push"
+    }
 }
 
 Describe 'Install-GitHooks: Hook Removal (-Uninstall)' -Tag 'Unit', 'GitHooks' {
