@@ -17,6 +17,29 @@ BeforeAll {
     # Resolve preferred PowerShell CLI executable
     $script:psCli = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell.exe" }
 
+    # Cross-Platform Stub Definitions: ensure Windows cmdlets can be mocked on non-Windows hosts
+    if (-not (Get-Command Get-Service -ErrorAction SilentlyContinue)) {
+        function Get-Service { param($Name) }
+    }
+    if (-not (Get-Command Stop-Service -ErrorAction SilentlyContinue)) {
+        function Stop-Service { param($Name, $Force, $ErrorAction) }
+    }
+    if (-not (Get-Command Set-Service -ErrorAction SilentlyContinue)) {
+        function Set-Service { param($Name, $StartupType, $ErrorAction) }
+    }
+    if (-not (Get-Command Start-Service -ErrorAction SilentlyContinue)) {
+        function Start-Service { param($Name, $ErrorAction) }
+    }
+    if (-not (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue)) {
+        function Get-ScheduledTask { param($TaskPath, $TaskName) }
+    }
+    if (-not (Get-Command Disable-ScheduledTask -ErrorAction SilentlyContinue)) {
+        function Disable-ScheduledTask { param($TaskPath, $TaskName) }
+    }
+    if (-not (Get-Command Enable-ScheduledTask -ErrorAction SilentlyContinue)) {
+        function Enable-ScheduledTask { param($TaskPath, $TaskName) }
+    }
+
     # Dot-source engine to export helper functions into test session
     . $script:targetScript
 }
@@ -476,6 +499,22 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
 
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not restore consent location" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Remove-StartupEntry traps backup creation exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            $mockProps = [PSCustomObject]@{
+                TestStartupApp = "C:\Program Files\TestApp\test.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Access Denied") }
+
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on startup backup creation exception"
+            $script:log[-1] | Should -Match "FAILED: Could not remove TestStartupApp from HKCU:"
         }
 
         It 'Remove-StartupEntry traps exceptions, increments FailCount and emits FAILED log' {
