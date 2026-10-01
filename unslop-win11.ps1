@@ -961,29 +961,39 @@ $bloatApps = @(
     "Microsoft.Adera-Lite"
 )
 
+$excludedBloatApps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
 if ($KeepTodos) {
     Log "  KEEP: Microsoft To Do retained (-KeepTodos enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.Todos" }
+    [void]$excludedBloatApps.Add("Microsoft.Todos")
 }
 
 if ($KeepPhoneLink) {
     Log "  KEEP: Phone Link retained (-KeepPhoneLink enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.YourPhone" -and $_ -ne "MicrosoftWindows.CrossDevice" }
+    [void]$excludedBloatApps.Add("Microsoft.YourPhone")
+    [void]$excludedBloatApps.Add("MicrosoftWindows.CrossDevice")
 }
 
 if ($KeepMail) {
     Log "  KEEP: Outlook and Windows Mail retained (-KeepMail enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "Microsoft.OutlookForWindows" -and $_ -ne "Microsoft.WindowsCommunicationsApps" }
+    [void]$excludedBloatApps.Add("Microsoft.OutlookForWindows")
+    [void]$excludedBloatApps.Add("Microsoft.WindowsCommunicationsApps")
 }
 
 if ($KeepSpotify) {
     Log "  KEEP: Spotify application retained (-KeepSpotify enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "SpotifyAB.SpotifyMusic" }
+    [void]$excludedBloatApps.Add("SpotifyAB.SpotifyMusic")
 }
 
 if ($KeepTeams) {
     Log "  KEEP: Microsoft Teams retained (-KeepTeams enabled)"
-    $bloatApps = $bloatApps | Where-Object { $_ -ne "MicrosoftTeams" -and $_ -ne "Microsoft.MSTeams" -and $_ -ne "Microsoft.Teams" }
+    [void]$excludedBloatApps.Add("MicrosoftTeams")
+    [void]$excludedBloatApps.Add("Microsoft.MSTeams")
+    [void]$excludedBloatApps.Add("Microsoft.Teams")
+}
+
+if ($excludedBloatApps.Count -gt 0) {
+    $bloatApps = $bloatApps.Where({ -not $excludedBloatApps.Contains($_) })
 }
 
 if (-not $KeepXbox) {
