@@ -370,49 +370,7 @@ $allRunKeys = @(
 )
 
 # ------------------------------------------------------------
-# Dot-Source Guard: If script is being dot-sourced (e.g. Pester test harness),
-# return immediately so functions are exported without executing the debloat payload.
-# ------------------------------------------------------------
-if ($MyInvocation.InvocationName -eq '.') {
-    return
-}
-
-# Verify Administrator Privileges (enforced unless -DryRun)
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    if ($IsDryRun) {
-        Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
-    } else {
-        Write-Host ""
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
-        Write-Host "  system policies, manage services and configure group policy." -ForegroundColor Red
-        Write-Host ""
-        Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
-        Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host ""
-        exit 1
-    }
-}
-
-$build = [System.Environment]::OSVersion.Version.Build
-if (-not $SkipBuildCheck) {
-    if ($build -ge 22000) {
-        Write-Host "ABORT: This script is for Windows 10 (Build < 22000). For Windows 11, use unslop-win11.ps1." -ForegroundColor Red
-        exit 1
-    }
-}
-$osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } elseif ($build -ge 19043) { "21H1" } elseif ($build -ge 19042) { "20H2" } elseif ($build -ge 19041) { "2004" } elseif ($build -ge 18362) { "1909/1903" } elseif ($build -ge 17763) { "1809/LTSC2019" } elseif ($build -ge 14393) { "1607/LTSB2016" } elseif ($build -ge 10240) { "1507/LTSB2015" } else { "Legacy" }
-
-$modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
-if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
-
-Log "=== unslop-windows v1.3.5: Windows 10 $modeStr ==="
-Log ""
-
+function Invoke-ServicesModule {
 # ============================================================
 # 1. SERVICES
 # ============================================================
@@ -432,7 +390,9 @@ Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automat
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
 Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Manual"
 Log ""
+}
 
+function Invoke-CortanaModule {
 # ============================================================
 # 2. CORTANA REMOVAL
 # ============================================================
@@ -505,7 +465,9 @@ if ($IsUndo) {
     }
 }
 Log ""
+}
 
+function Invoke-TelemetryModule {
 # ============================================================
 # 3. TELEMETRY, DIAGNOSTIC DATA, WER & ONESETTINGS POLICIES
 # ============================================================
@@ -537,7 +499,9 @@ Set-RegDwordSafe -path $werLM -name "DoReport" -debloatValue 0 -undoValue 1 -rem
 $werCU = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting"
 Set-RegDwordSafe -path $werCU -name "Disabled" -debloatValue 1 -undoValue 0
 Log ""
+}
 
+function Invoke-RecommendationsModule {
 # ============================================================
 # 4. RECOMMENDATIONS & OFFERS
 # ============================================================
@@ -584,7 +548,9 @@ Set-RegDwordSafe -path $explorerAdv -name "ShowSyncProviderNotifications" -deblo
 $oobePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement"
 Set-RegDwordSafe -path $oobePath -name "ScoobeSystemSettingEnabled" -debloatValue 0 -undoValue 1
 Log ""
+}
 
+function Invoke-SpeechInkingModule {
 # ============================================================
 # 5. ONLINE SPEECH & INKING PERSONALIZATION
 # ============================================================
@@ -604,7 +570,9 @@ Set-RegDwordSafe -path $inkPath -name "RestrictImplicitTextCollection" -debloatV
 Set-RegDwordSafe -path $inkPath -name "HarvestContacts"               -debloatValue 0 -undoValue 1
 Set-RegDwordSafe -path $inkPath -name "CollectContacts"               -debloatValue 0 -undoValue 1
 Log ""
+}
 
+function Invoke-SearchHistoryModule {
 # ============================================================
 # 6. START MENU SEARCH & DEVICE SEARCH HISTORY
 # ============================================================
@@ -623,7 +591,9 @@ Set-RegDwordSafe -path $searchSettingsPath -name "IsMSACloudSearchEnabled"      
 Set-RegDwordSafe -path $searchSettingsPath -name "IsAADCloudSearchEnabled"      -debloatValue 0 -undoValue 1
 Set-RegDwordSafe -path $searchSettingsPath -name "IsDynamicSearchBoxEnabled"    -debloatValue 0 -undoValue 1
 Log ""
+}
 
+function Invoke-NetworkSecurityModule {
 # ============================================================
 # 7. NETWORK SECURITY, LLMNR & WI-FI SENSE
 # ============================================================
@@ -641,7 +611,9 @@ Set-RegDwordSafe -path $wcmConfig -name "AutoConnectAllowedOEM" -debloatValue 0 
 $findPath = "HKLM:\SOFTWARE\Policies\Microsoft\FindMyDevice"
 Set-RegDwordSafe -path $findPath -name "AllowFindMyDevice" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Log ""
+}
 
+function Invoke-WindowsUpdateModule {
 # ============================================================
 # 8. WINDOWS UPDATE DRIVER & FIRMWARE INTEGRITY
 # ============================================================
@@ -670,7 +642,9 @@ if ($ExcludeWUDrivers) {
     }
 }
 Log ""
+}
 
+function Invoke-TaskbarExplorerModule {
 # ============================================================
 # 9. TASKBAR & EXPLORER CLEANUP
 # ============================================================
@@ -687,7 +661,9 @@ $feedsPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Feeds"
 Set-RegDwordSafe -path $feedsPath -name "ShellFeedsTaskbarViewMode" -debloatValue 2 -undoValue 0
 Set-RegDwordSafe -path $feedsPath -name "IsFeedsAvailable" -debloatValue 0 -undoValue 1
 Log ""
+}
 
+function Invoke-AppPermissionsModule {
 # ============================================================
 # 10. APP PERMISSIONS (ConsentStore)
 # ============================================================
@@ -702,7 +678,9 @@ Set-ConsentCapability "phoneCall"                    "Cellular / Phone Calls"
 Set-ConsentCapability "phoneCallHistory"             "Call Logs"
 Set-ConsentCapability "chat"                         "Messaging & SMS"
 Log ""
+}
 
+function Invoke-ScheduledTasksModule {
 # ============================================================
 # 11. TELEMETRY SCHEDULED TASKS
 # ============================================================
@@ -752,7 +730,9 @@ if ($nvTasks) {
     }
 }
 Log ""
+}
 
+function Invoke-UwpBloatwareModule {
 # ============================================================
 # 12. DUAL-STAGE UWP & PROVISIONED BLOATWARE
 # ============================================================
@@ -935,7 +915,9 @@ if ($IsUndo) {
     Log "  Total provisioned packages de-staged: $deprovisionedCount"
 }
 Log ""
+}
 
+function Invoke-OneDriveModule {
 # ============================================================
 # 13. ONEDRIVE REMOVAL
 # ============================================================
@@ -1018,7 +1000,9 @@ if ($KeepOneDrive) {
     }
 }
 Log ""
+}
 
+function Invoke-EdgeModule {
 # ============================================================
 # 14. DISABLE EDGE AUTO-LAUNCH
 # ============================================================
@@ -1030,7 +1014,9 @@ Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
 
 Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
 Log ""
+}
 
+function Invoke-DefenderModule {
 # ============================================================
 # 15. DEFENDER: STOP SENDING SAMPLES
 # ============================================================
@@ -1059,7 +1045,9 @@ if ($IsUndo -or -not $KeepDefenderDefaults) {
     Log "  KEEP: Defender sample submission retained (-KeepDefenderDefaults enabled)"
 }
 Log ""
+}
 
+function Invoke-ActivityHistoryModule {
 # ============================================================
 # 16. ACTIVITY HISTORY & CLOUD CLIPBOARD
 # ============================================================
@@ -1083,7 +1071,9 @@ $clipPath = "HKCU:\Software\Microsoft\Clipboard"
 Set-RegDwordSafe -path $clipPath -name "EnableClipboardSyncAcrossDevices" -debloatValue 0 -undoValue 1
 Set-RegDwordSafe -path $sysPath -name "AllowCrossDeviceClipboard" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Log ""
+}
 
+function Invoke-DeliveryOptimizationModule {
 # ============================================================
 # 17. DELIVERY OPTIMIZATION & STORE AUTO-UPDATES
 # ============================================================
@@ -1102,7 +1092,9 @@ if ($IsUndo -or -not $KeepStoreAutoUpdate) {
     Log "  KEEP: Microsoft Store automatic updates retained (-KeepStoreAutoUpdate enabled)"
 }
 Log ""
+}
 
+function Invoke-FirewallModule {
 # ============================================================
 # 18. FIREWALL RULES
 # ============================================================
@@ -1154,6 +1146,69 @@ foreach ($rule in $fwRules) {
     }
 }
 Log ""
+}
+
+# Dot-Source Guard: If script is being dot-sourced (e.g. Pester test harness),
+# return immediately so functions are exported without executing the debloat payload.
+# ------------------------------------------------------------
+if ($MyInvocation.InvocationName -eq '.') {
+    return
+}
+
+# Verify Administrator Privileges (enforced unless -DryRun)
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    if ($IsDryRun) {
+        Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
+    } else {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
+        Write-Host "  system policies, manage services and configure group policy." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
+        Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
+        Write-Host "============================================================" -ForegroundColor Red
+        Write-Host ""
+        exit 1
+    }
+}
+
+$build = [System.Environment]::OSVersion.Version.Build
+if (-not $SkipBuildCheck) {
+    if ($build -ge 22000) {
+        Write-Host "ABORT: This script is for Windows 10 (Build < 22000). For Windows 11, use unslop-win11.ps1." -ForegroundColor Red
+        exit 1
+    }
+}
+$osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } elseif ($build -ge 19043) { "21H1" } elseif ($build -ge 19042) { "20H2" } elseif ($build -ge 19041) { "2004" } elseif ($build -ge 18362) { "1909/1903" } elseif ($build -ge 17763) { "1809/LTSC2019" } elseif ($build -ge 14393) { "1607/LTSB2016" } elseif ($build -ge 10240) { "1507/LTSB2015" } else { "Legacy" }
+
+$modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
+if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
+
+Log "=== unslop-windows v1.3.5: Windows 10 $modeStr ==="
+Log ""
+
+Invoke-ServicesModule
+Invoke-CortanaModule
+Invoke-TelemetryModule
+Invoke-RecommendationsModule
+Invoke-SpeechInkingModule
+Invoke-SearchHistoryModule
+Invoke-NetworkSecurityModule
+Invoke-WindowsUpdateModule
+Invoke-TaskbarExplorerModule
+Invoke-AppPermissionsModule
+Invoke-ScheduledTasksModule
+Invoke-UwpBloatwareModule
+Invoke-OneDriveModule
+Invoke-EdgeModule
+Invoke-DefenderModule
+Invoke-ActivityHistoryModule
+Invoke-DeliveryOptimizationModule
+Invoke-FirewallModule
 
 # ============================================================
 # SUMMARY
