@@ -837,9 +837,11 @@ if ($KeepTeams) {
 }
 
 if (-not $KeepXbox) {
-    $bloatApps += "Microsoft.GamingApp"
-    $bloatApps += "Microsoft.GamingServices"
-    $bloatApps += "Microsoft.XboxApp"
+    $bloatApps += @(
+        "Microsoft.GamingApp",
+        "Microsoft.GamingServices",
+        "Microsoft.XboxApp"
+    )
 } else {
     Log "  KEEP: Gaming & Xbox services retained (-KeepXbox enabled)"
 }
