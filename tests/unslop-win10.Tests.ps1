@@ -859,10 +859,42 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
         $script:ast.Extent.Text | Should -Match '"ContentDeliveryAllowed"' -Because "ContentDeliveryAllowed master CDM switch must be configured"
     }
 
-    It 'Targets fresh-install bloatware (Sudoku, LinkedIn, Teams) in bloatApps array' {
+    It 'Targets fresh-install bloatware (Sudoku, LinkedIn, Teams, Copilot) in bloatApps array' {
         $script:ast.Extent.Text | Should -Match '"Microsoft\.MicrosoftSudoku"' -Because "Sudoku app must be targeted"
         $script:ast.Extent.Text | Should -Match '"7EE7776C\.LinkedInforWindows"' -Because "LinkedIn app must be targeted"
         $script:ast.Extent.Text | Should -Match '"MicrosoftTeams"' -Because "Personal Teams app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.MSTeams"' -Because "Modern Teams app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.Copilot"' -Because "Copilot app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.Windows\.Ai\.Copilot\.Provider"' -Because "Copilot provider must be targeted"
+    }
+
+    It 'Targets Xbox Game Bar packages when -KeepXbox is not present' {
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.XboxGamingOverlay"' -Because "Xbox Game Bar package must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.XboxGameOverlay"' -Because "Xbox Game Overlay package must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.XboxSpeechToTextOverlay"' -Because "Xbox Speech to Text Overlay package must be targeted"
+    }
+
+    It 'Suppresses Windows Copilot policies and taskbar button symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'TurnOffWindowsCopilot' -Because "TurnOffWindowsCopilot policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'ShowCopilotButton' -Because "ShowCopilotButton taskbar setting must be configured"
+    }
+
+    It 'Suppresses Game Bar and Game DVR background capture policies symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'AppCaptureEnabled' -Because "AppCaptureEnabled GameDVR policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'HistoricalCaptureEnabled' -Because "HistoricalCaptureEnabled GameDVR policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'GameDVR_Enabled' -Because "GameDVR_Enabled must be configured"
+        $script:ast.Extent.Text | Should -Match 'AllowGameDVR' -Because "AllowGameDVR machine policy must be configured"
+    }
+
+    It 'Suppresses Edge Copilot and HubsSidebar policies symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'HubsSidebarEnabled' -Because "Edge sidebar must be disabled via policy"
+        $script:ast.Extent.Text | Should -Match 'AllowCopilot' -Because "Edge Copilot must be disabled via policy"
+    }
+
+    It 'Manages Xbox Live services symmetrically when -KeepXbox is not enabled' {
+        $script:ast.Extent.Text | Should -Match '"XblAuthManager"' -Because "XblAuthManager service must be managed"
+        $script:ast.Extent.Text | Should -Match '"XblGameSave"' -Because "XblGameSave service must be managed"
+        $script:ast.Extent.Text | Should -Match '"XboxNetApiSvc"' -Because "XboxNetApiSvc service must be managed"
+        $script:ast.Extent.Text | Should -Match '"XboxGipSvc"' -Because "XboxGipSvc service must be managed"
     }
 }

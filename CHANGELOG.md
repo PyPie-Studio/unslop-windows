@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.6] - 2026-10-01
+
+### Added
+- **Xbox Game Bar & Game DVR Telemetry Suppression**: Added complete de-provisioning and removal of Xbox Game Bar packages (`Microsoft.XboxGamingOverlay`, `Microsoft.XboxGameOverlay`, `Microsoft.XboxSpeechToTextOverlay`) under `if (-not $KeepXbox)` across Windows 11 and Windows 10. Added policy suppression of Game DVR hotkeys (`Win+G`) and background capture (`AppCaptureEnabled = 0`, `HistoricalCaptureEnabled = 0`, `GameDVR_Enabled = 0`, `AllowGameDVR = 0`) with 100% symmetrical `-Undo` restoration. Added symmetrical management of Xbox Live daemon services (`XblAuthManager`, `XblGameSave`, `XboxNetApiSvc`, `XboxGipSvc`).
+- **Edge Copilot & Sidebar Policy Suppression**: Hardened Module 14 in both engines with `HubsSidebarEnabled = 0` and `AllowCopilot = 0` under `HKLM\SOFTWARE\Policies\Microsoft\Edge` to suppress Copilot and promotional sidebar web hubs in Edge, with clean `-Undo` reversal.
+- **Windows 10 Copilot Parity**: Backported Windows Copilot Group Policy enforcement (`TurnOffWindowsCopilot = 1`, `ShowCopilotButton = 0`) to `unslop-win10.ps1` for Windows 10 22H2 (KB5032278) systems.
+- **Start Menu & Edge Apps Sponsored Stub Scrub**: Added automatic cleanup of promotional web shortcut files (`*LinkedIn*.lnk`, `*LinkedIn*.url`, `*Copilot*.lnk`) from all user and machine Start Menu Programs locations in Module 4.
+- **Architectural Decision Record (ADR-030)**: Documented root cause analysis and eradication architecture for Game Bar, LinkedIn stubs, and Copilot apps in `docs/decisions.md`.
+
+### Fixed
+- **LinkedIn DISM Provisioned Package Survival**: Resolved an issue where LinkedIn was not de-provisioned from the Windows system image because `Get-AppxProvisionedPackage` reports `DisplayName` as `LinkedIn` while `PackageName` begins with `7EE7776C.LinkedInforWindows`. Updated DISM package filters across both engines to match against both `PackageName` and `DisplayName`.
+- **Copilot App & Provider Leakage**: Resolved an issue where the standalone Copilot app and background provider (`Microsoft.Windows.Ai.Copilot.Provider`) remained installed on clean installations of Windows 11 and Windows 10.
+- **Xbox Game Bar Retention on Full Debloat**: Resolved an issue where the Xbox Game Bar app and Game DVR background listeners persisted on fresh installs when running without `-KeepXbox`.
+
+---
+
 ## [1.3.5] - 2026-09-30
 
 ### Added
@@ -415,7 +431,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.5...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.2...v1.3.3
