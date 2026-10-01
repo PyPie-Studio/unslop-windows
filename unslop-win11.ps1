@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.3.5)
+# unslop-windows: Windows 11 Debloater (v1.3.6)
 # Targets Windows 11 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -22,7 +22,7 @@
     Safe to run without Administrator privileges for inspection.
 
 .PARAMETER KeepXbox
-    Preserves Xbox App, Gaming Services and related gaming components.
+    Preserves Xbox App, Gaming Services, Game Bar and related gaming components.
 
 .PARAMETER KeepOneDrive
     Preserves Microsoft OneDrive process, auto-start, syncing and File Explorer sidebar
@@ -413,7 +413,7 @@ $osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26200) { "25H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.5: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.6: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -434,6 +434,14 @@ Set-SvcState "dmwappushservice" "WAP Push telemetry" "Manual"
 Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automatic"
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
 Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Manual"
+if ($IsUndo -or -not $KeepXbox) {
+    Set-SvcState "XblAuthManager" "Xbox Live Auth Manager" "Manual"
+    Set-SvcState "XblGameSave"    "Xbox Live Game Save"    "Manual"
+    Set-SvcState "XboxNetApiSvc"  "Xbox Live Networking"   "Manual"
+    Set-SvcState "XboxGipSvc"     "Xbox Accessory Management" "Manual"
+} else {
+    Log "  KEEP: Xbox Live services retained (-KeepXbox enabled)"
+}
 Log ""
 
 # ============================================================
@@ -494,6 +502,21 @@ Set-RegDwordSafe -path $werLM -name "DoReport" -debloatValue 0 -undoValue 1 -rem
 
 $werCU = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting"
 Set-RegDwordSafe -path $werCU -name "Disabled" -debloatValue 1 -undoValue 0
+
+# Game Bar & Game DVR Background Capture (Telemetry & Screen Recording)
+if ($IsUndo -or -not $KeepXbox) {
+    $gameDvrPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR"
+    Set-RegDwordSafe -path $gameDvrPath -name "AppCaptureEnabled" -debloatValue 0 -undoValue 1
+    Set-RegDwordSafe -path $gameDvrPath -name "HistoricalCaptureEnabled" -debloatValue 0 -undoValue 1
+
+    $gameConfigStore = "HKCU:\System\GameConfigStore"
+    Set-RegDwordSafe -path $gameConfigStore -name "GameDVR_Enabled" -debloatValue 0 -undoValue 1
+
+    $gameDvrPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR"
+    Set-RegDwordSafe -path $gameDvrPolicy -name "AllowGameDVR" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+} else {
+    Log "  KEEP: Game Bar & Game DVR capture retained (-KeepXbox enabled)"
+}
 Log ""
 
 # ============================================================
@@ -581,6 +604,31 @@ if (Test-Path $startMenuLocalState) {
                 }
             } else {
                 Log "  [PREVIEW] Would remove programmable tile asset ($($file.Name))" "Cyan"
+            }
+        }
+    }
+}
+
+# Purge sponsored Start Menu stub & web app shortcuts (LinkedIn, Copilot)
+$stubShortcutDirs = @(
+    "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
+    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
+    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Edge Apps"
+)
+foreach ($sDir in $stubShortcutDirs) {
+    if (Test-Path $sDir) {
+        $stubFiles = Get-ChildItem -Path $sDir -Recurse -File -Include "*LinkedIn*.lnk", "*LinkedIn*.url", "*Copilot*.lnk" -ErrorAction SilentlyContinue
+        foreach ($sf in $stubFiles) {
+            if (-not $IsDryRun -and -not $IsUndo) {
+                try {
+                    Remove-Item -Path $sf.FullName -Force -ErrorAction Stop
+                    Log "  REMOVED: Sponsored shortcut ($($sf.Name))"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not remove $($sf.FullName) - $($_.Exception.Message)" "Red"
+                }
+            } else {
+                Log "  [PREVIEW] Would remove sponsored shortcut ($($sf.Name))" "Cyan"
             }
         }
     }
@@ -849,6 +897,7 @@ $bloatApps = @(
     # 24H2 / 25H2 / 26H1 AI & Shell Injections
     "aimgr"
     "Microsoft.Copilot"
+    "Microsoft.Windows.Ai.Copilot.Provider"
     "Microsoft.StartExperiencesApp"
     "Microsoft.AIFabric.CBS.1.6"
     "Microsoft.Windows.AugLoop.CBS"
@@ -871,6 +920,7 @@ $bloatApps = @(
     "Microsoft.MicrosoftSudoku"
     "7EE7776C.LinkedInforWindows"
     "Microsoft.LinkedIn"
+    "LinkedIn"
 
     # Microsoft consumer & news push
     "Clipchamp.Clipchamp"
@@ -940,6 +990,9 @@ if (-not $KeepXbox) {
     $bloatApps += "Microsoft.GamingApp"
     $bloatApps += "Microsoft.GamingServices"
     $bloatApps += "Microsoft.XboxApp"
+    $bloatApps += "Microsoft.XboxGamingOverlay"
+    $bloatApps += "Microsoft.XboxGameOverlay"
+    $bloatApps += "Microsoft.XboxSpeechToTextOverlay"
 } else {
     Log "  KEEP: Gaming & Xbox services retained (-KeepXbox enabled)"
 }
@@ -951,19 +1004,25 @@ if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
-        # .Where() avoids pipeline overhead
-        $match = if ($provisioned) { $provisioned.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
+        # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
+        $match = if ($provisioned) {
+            $provisioned.Where({
+                ($_.PackageName -match "^$([regex]::Escape($app))(_|$)") -or
+                ($_.DisplayName -and $_.DisplayName -match "^$([regex]::Escape($app))($|\s)")
+            })
+        } else { $null }
         if ($match) {
             foreach ($pkg in $match) {
+                $pkgTitle = if ($pkg.DisplayName) { $pkg.DisplayName } else { $pkg.PackageName }
                 if ($IsDryRun) {
-                    Log "  [WOULD RE-REGISTER]: $($pkg.DisplayName)"
+                    Log "  [WOULD RE-REGISTER]: $pkgTitle"
                 } else {
                     try {
                         Add-AppxPackage -RegisterByFamilyName -MainPackage $pkg.PackageName -ErrorAction Stop
-                        Log "  RE-REGISTERED: $($pkg.DisplayName)"
+                        Log "  RE-REGISTERED: $pkgTitle"
                     } catch {
                         $global:FailCount++
-                        Log "  FAILED: Could not re-register $($pkg.DisplayName) - $($_.Exception.Message)"
+                        Log "  FAILED: Could not re-register $pkgTitle - $($_.Exception.Message)"
                     }
                 }
             }
@@ -975,21 +1034,27 @@ if ($IsUndo) {
     # 1. De-provision staged packages so they never reinstall for new profiles
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
-        # .Where() avoids pipeline overhead
-        $staged = if ($stagedPackages) { $stagedPackages.Where({ $_.DisplayName -match "^$([regex]::Escape($app))" }) } else { $null }
+        # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
+        $staged = if ($stagedPackages) {
+            $stagedPackages.Where({
+                ($_.PackageName -match "^$([regex]::Escape($app))(_|$)") -or
+                ($_.DisplayName -and $_.DisplayName -match "^$([regex]::Escape($app))($|\s)")
+            })
+        } else { $null }
         if ($staged) {
             foreach ($pkg in $staged) {
+                $pkgTitle = if ($pkg.DisplayName) { $pkg.DisplayName } else { $pkg.PackageName }
                 if ($IsDryRun) {
-                    Log "  [WOULD DE-PROVISION]: $($pkg.DisplayName)"
+                    Log "  [WOULD DE-PROVISION]: $pkgTitle"
                     $deprovisionedCount++
                 } else {
                     try {
                         Remove-AppxProvisionedPackage -Online -PackageName $pkg.PackageName -ErrorAction Stop | Out-Null
-                        Log "  DE-PROVISIONED: $($pkg.DisplayName)"
+                        Log "  DE-PROVISIONED: $pkgTitle"
                         $deprovisionedCount++
                     } catch {
                         $global:FailCount++
-                        Log "  FAILED: Could not de-provision $($pkg.DisplayName) - $($_.Exception.Message)"
+                        Log "  FAILED: Could not de-provision $pkgTitle - $($_.Exception.Message)"
                     }
                 }
             }
@@ -1008,9 +1073,12 @@ if ($IsUndo) {
 
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
-        # .Where() avoids pipeline overhead
+        # .Where() avoids pipeline overhead; match against Name (PackageId) or PackageFamilyName
         $installed = if ($allInstalled) {
-            $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($app))" })
+            $allInstalled.Where({
+                -not $_.NonRemovable -and
+                ($_.Name -match "^$([regex]::Escape($app))" -or ($_.PackageFamilyName -and $_.PackageFamilyName -match "^$([regex]::Escape($app))"))
+            })
         } else { $null }
 
         if ($installed) {
@@ -1020,7 +1088,15 @@ if ($IsUndo) {
                     $removedInstalled++
                 } else {
                     try {
-                        Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
+                        if ($isAdmin) {
+                            try {
+                                Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
+                            } catch {
+                                Remove-AppxPackage -Package $pkg.PackageFullName -ErrorAction Stop
+                            }
+                        } else {
+                            Remove-AppxPackage -Package $pkg.PackageFullName -ErrorAction Stop
+                        }
                         Log "  REMOVED APP: $($pkg.Name)"
                         $removedInstalled++
                     } catch {
@@ -1142,6 +1218,11 @@ $edgeBgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessA
 Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
 
 Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+
+# Edge Copilot & Sidebar Policy
+$edgePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
+Set-RegDwordSafe -path $edgePolicy -name "HubsSidebarEnabled" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $edgePolicy -name "AllowCopilot"        -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Log ""
 
 # ============================================================
@@ -1323,6 +1404,10 @@ if ($IsUndo) {
     $act = if ($IsDryRun) { "Would restore" } else { "Restored" }
     Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
     Log "Recall & Copilot:      Windows Recall, Screenray and Copilot policies reverted"
+    if (-not $KeepXbox) {
+        $xbAct = if ($IsDryRun) { "Would restore" } else { "Restored" }
+        Log "Xbox & Gaming:         $xbAct (Game Bar & Game DVR capture settings restored)"
+    }
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
     Log "Activity & Resume:     Activity feed, Cross-Device Resume and CDP policies restored"
@@ -1344,6 +1429,9 @@ if ($IsUndo) {
     }
     if ($KeepXbox) {
         Log "Xbox & Gaming:         Preserved (-KeepXbox enabled)"
+    } else {
+        $xbAct = if ($IsDryRun) { "Would debloat" } else { "Debloated" }
+        Log "Xbox & Gaming:         $xbAct (Game Bar, Game DVR capture & Xbox apps removed)"
     }
     if ($KeepTodos) {
         Log "Microsoft To-Do:       Preserved (-KeepTodos enabled)"
