@@ -213,6 +213,8 @@ if (-not $Fast) {
         $testScripts = @()
         if (Test-Path $primaryTestScript) { $testScripts += $primaryTestScript }
 
+        $batTests = Join-Path $root "tests\unslop.bat.Tests.ps1"
+        if (Test-Path $batTests) { $testScripts += $batTests }
         $hooksTests = Join-Path $root "tests\Install-GitHooks.Tests.ps1"
         if (Test-Path $hooksTests) { $testScripts += $hooksTests }
 
