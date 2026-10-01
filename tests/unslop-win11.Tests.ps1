@@ -17,6 +17,29 @@ BeforeAll {
     # Resolve preferred PowerShell CLI executable
     $script:psCli = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell.exe" }
 
+    # Cross-Platform Stub Definitions: ensure Windows cmdlets can be mocked on non-Windows hosts
+    if (-not (Get-Command Get-Service -ErrorAction SilentlyContinue)) {
+        function Get-Service { param($Name) }
+    }
+    if (-not (Get-Command Stop-Service -ErrorAction SilentlyContinue)) {
+        function Stop-Service { param($Name, $Force, $ErrorAction) }
+    }
+    if (-not (Get-Command Set-Service -ErrorAction SilentlyContinue)) {
+        function Set-Service { param($Name, $StartupType, $ErrorAction) }
+    }
+    if (-not (Get-Command Start-Service -ErrorAction SilentlyContinue)) {
+        function Start-Service { param($Name, $ErrorAction) }
+    }
+    if (-not (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue)) {
+        function Get-ScheduledTask { param($TaskPath, $TaskName) }
+    }
+    if (-not (Get-Command Disable-ScheduledTask -ErrorAction SilentlyContinue)) {
+        function Disable-ScheduledTask { param($TaskPath, $TaskName) }
+    }
+    if (-not (Get-Command Enable-ScheduledTask -ErrorAction SilentlyContinue)) {
+        function Enable-ScheduledTask { param($TaskPath, $TaskName) }
+    }
+
     # Dot-source engine to export helper functions into test session
     . $script:targetScript
 }
@@ -478,6 +501,22 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not restore consent location" }).Count | Should -BeGreaterThan 0
         }
 
+        It 'Remove-StartupEntry traps backup creation exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            $mockProps = [PSCustomObject]@{
+                TestStartupApp = "C:\Program Files\TestApp\test.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Access Denied") }
+
+            Remove-StartupEntry -pattern "TestStartupApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on startup backup creation exception"
+            $script:log[-1] | Should -Match "FAILED: Could not remove TestStartupApp from HKCU:"
+        }
+
         It 'Remove-StartupEntry traps exceptions, increments FailCount and emits FAILED log' {
             $mockProps = [PSCustomObject]@{
                 TestStartupApp = "C:\Program Files\TestApp\test.exe"
@@ -892,12 +931,38 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match '"Microsoft\.BingWeather"' -Because "Weather app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.WindowsMaps"' -Because "Maps app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.Copilot"' -Because "Copilot app must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.Windows\.Ai\.Copilot\.Provider"' -Because "Copilot provider package must be targeted"
         $script:ast.Extent.Text | Should -Match '"MicrosoftWindows\.CrossDevice"' -Because "CrossDevice app must be targeted"
         $script:ast.Extent.Text | Should -Match '"MicrosoftTeams"' -Because "Personal Teams app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.MSTeams"' -Because "Modern Teams app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.MicrosoftSudoku"' -Because "Sudoku app must be targeted"
         $script:ast.Extent.Text | Should -Match '"7EE7776C\.LinkedInforWindows"' -Because "LinkedIn app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.WindowsCommunicationsApps"' -Because "Classic Windows Mail must be targeted"
+    }
+
+    It 'Targets Xbox Game Bar packages when -KeepXbox is not present' {
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.XboxGamingOverlay"' -Because "Xbox Game Bar package must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.XboxGameOverlay"' -Because "Xbox Game Overlay package must be targeted"
+        $script:ast.Extent.Text | Should -Match '"Microsoft\.XboxSpeechToTextOverlay"' -Because "Xbox Speech to Text Overlay package must be targeted"
+    }
+
+    It 'Suppresses Game Bar and Game DVR background capture policies symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'AppCaptureEnabled' -Because "AppCaptureEnabled GameDVR policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'HistoricalCaptureEnabled' -Because "HistoricalCaptureEnabled GameDVR policy must be configured"
+        $script:ast.Extent.Text | Should -Match 'GameDVR_Enabled' -Because "GameDVR_Enabled must be configured"
+        $script:ast.Extent.Text | Should -Match 'AllowGameDVR' -Because "AllowGameDVR machine policy must be configured"
+    }
+
+    It 'Suppresses Edge Copilot and HubsSidebar policies symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'HubsSidebarEnabled' -Because "Edge sidebar must be disabled via policy"
+        $script:ast.Extent.Text | Should -Match 'AllowCopilot' -Because "Edge Copilot must be disabled via policy"
+    }
+
+    It 'Manages Xbox Live services symmetrically when -KeepXbox is not enabled' {
+        $script:ast.Extent.Text | Should -Match '"XblAuthManager"' -Because "XblAuthManager service must be managed"
+        $script:ast.Extent.Text | Should -Match '"XblGameSave"' -Because "XblGameSave service must be managed"
+        $script:ast.Extent.Text | Should -Match '"XboxNetApiSvc"' -Because "XboxNetApiSvc service must be managed"
+        $script:ast.Extent.Text | Should -Match '"XboxGipSvc"' -Because "XboxGipSvc service must be managed"
     }
 }
 
