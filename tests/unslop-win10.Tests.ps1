@@ -29,7 +29,8 @@ Describe 'unslop-windows (Win10): Engine Architecture & Dot-Sourcing' -Tag 'Unit
             'Set-TaskState',
             'Set-RegDwordSafe',
             'Set-ConsentCapability',
-            'Remove-StartupEntry'
+            'Remove-StartupEntry',
+            'Test-AdminPrivileges'
         )
 
         foreach ($fn in $expectedFunctions) {
@@ -499,6 +500,15 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on startup restore exception"
             $script:log[-1] | Should -Match "FAILED: Could not restore startup entry TestStartupApp in HKCU:"
         }
+
+
+    Context 'Test-AdminPrivileges' {
+        It 'Validates elevation status and handles non-elevated dry-run mode without throwing' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $result = Test-AdminPrivileges -DryRun:$true
+            $result | Should -BeIn @($true, $false)
+        }
     }
 }
 
@@ -708,6 +718,7 @@ Describe 'unslop-windows (Win10): 100% Symmetrical Restoration Contract (AST Par
         $funcNames | Should -Contain 'Set-TaskState'
         $funcNames | Should -Contain 'Set-ConsentCapability'
         $funcNames | Should -Contain 'Remove-StartupEntry'
+        $funcNames | Should -Contain 'Test-AdminPrivileges'
 
         foreach ($fn in $functions) {
             if ($fn.Name -eq 'Set-RegDwordSafe') {
@@ -865,4 +876,5 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
         $script:ast.Extent.Text | Should -Match '"MicrosoftTeams"' -Because "Personal Teams app must be targeted"
         $script:ast.Extent.Text | Should -Match '"Microsoft\.MSTeams"' -Because "Modern Teams app must be targeted"
     }
+}
 }

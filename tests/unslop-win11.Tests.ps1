@@ -29,7 +29,8 @@ Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit
             'Set-TaskState',
             'Set-RegDwordSafe',
             'Set-ConsentCapability',
-            'Remove-StartupEntry'
+            'Remove-StartupEntry',
+            'Test-AdminPrivileges'
         )
 
         foreach ($fn in $expectedFunctions) {
@@ -510,6 +511,15 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not restore startup entry TestStartupApp in HKCU:" }).Count | Should -BeGreaterThan 0
         }
+
+
+    Context 'Test-AdminPrivileges' {
+        It 'Validates elevation status and handles non-elevated dry-run mode without throwing' {
+            Mock -CommandName Write-Host -MockWith { }
+
+            $result = Test-AdminPrivileges -DryRun:$true
+            $result | Should -BeIn @($true, $false)
+        }
     }
 }
 
@@ -722,6 +732,7 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
         $funcNames | Should -Contain 'Set-TaskState'
         $funcNames | Should -Contain 'Set-ConsentCapability'
         $funcNames | Should -Contain 'Remove-StartupEntry'
+        $funcNames | Should -Contain 'Test-AdminPrivileges'
 
         foreach ($fn in $functions) {
             if ($fn.Name -eq 'Set-RegDwordSafe') {
@@ -951,4 +962,5 @@ Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit'
 
         $copilotPolicy | Should -Not -BeNullOrEmpty -Because "RemoveMicrosoftCopilotApp policy must be configured via Set-RegDwordSafe"
     }
+}
 }

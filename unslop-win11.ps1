@@ -367,6 +367,29 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
     }
 }
 
+function Test-AdminPrivileges([switch]$DryRun = $IsDryRun) {
+    $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        if ($DryRun) {
+            Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
+        } else {
+            Write-Host ""
+            Write-Host "============================================================" -ForegroundColor Red
+            Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
+            Write-Host "============================================================" -ForegroundColor Red
+            Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
+            Write-Host "  system policies, manage services and configure group policy." -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
+            Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
+            Write-Host "============================================================" -ForegroundColor Red
+            Write-Host ""
+            exit 1
+        }
+    }
+    return $isAdmin
+}
+
 $allRunKeys = @(
     "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
     "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
@@ -382,25 +405,7 @@ if ($MyInvocation.InvocationName -eq '.') {
 }
 
 # Verify Administrator Privileges (enforced unless -DryRun)
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    if ($IsDryRun) {
-        Write-Host "[WARNING] Running in non-elevated mode. Dry-run inspection only." -ForegroundColor Yellow
-    } else {
-        Write-Host ""
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  [ERROR] ADMINISTRATOR PRIVILEGES REQUIRED" -ForegroundColor Red
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host "  unslop-windows must be executed as an Administrator to apply" -ForegroundColor Red
-        Write-Host "  system policies, manage services and configure group policy." -ForegroundColor Red
-        Write-Host ""
-        Write-Host "  Please re-run this script from an elevated terminal:" -ForegroundColor Yellow
-        Write-Host "  Right-click Windows Terminal / PowerShell -> 'Run as administrator'" -ForegroundColor Yellow
-        Write-Host "============================================================" -ForegroundColor Red
-        Write-Host ""
-        exit 1
-    }
-}
+$isAdmin = Test-AdminPrivileges
 
 $build = [System.Environment]::OSVersion.Version.Build
 if (-not $SkipBuildCheck) {
