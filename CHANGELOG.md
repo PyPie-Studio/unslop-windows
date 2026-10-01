@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.7] - 2026-10-01
+
+### Added
+- **Batch Launcher Pester Test Suite (`tests/unslop.bat.Tests.ps1`)**: Integrated comprehensive unit testing for `unslop.bat` (12 tests) verifying non-empty file existence, CRLF line-ending byte integrity, script dependency guards, CLI switch whitelist completeness, injection token defense, and menu structure routing. Integrated directly into `scripts/Test-MasterGate.ps1` under Pillar 4.
+- **Cross-Platform Cmdlet Test Stubs**: Added fallback stubs for Windows cmdlets (`Get-Service`, `Stop-Service`, `Set-Service`, `Start-Service`, `Get-ScheduledTask`, `Disable-ScheduledTask`, `Enable-ScheduledTask`) across `tests/unslop-win10.Tests.ps1` and `tests/unslop-win11.Tests.ps1` to ensure reliable mock execution across heterogeneous test environments.
+- **Negative Error Handling Tests**: Added explicit unit tests verifying that `Remove-StartupEntry` catches `New-Item` backup creation exceptions, increments `$global:FailCount`, and logs truthful failure entries per ADR-019. Added negative unit test in `tests/Install-GitHooks.Tests.ps1` verifying fail-closed exit when individual `.githooks` scripts are missing.
+
+### Changed
+- **Bloatware Exclusion Filtering Performance Optimization**: Replaced sequential pipeline-chained `Where-Object` array rebuilds with a single-pass `[System.Collections.Generic.HashSet[string]]` case-insensitive lookup and `.Where()` filter across both `unslop-win10.ps1` and `unslop-win11.ps1`.
+
+---
+
 ## [1.3.6] - 2026-10-01
 
 ### Added
@@ -431,7 +443,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.6...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.7...HEAD
+[1.3.7]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.3...v1.3.4
