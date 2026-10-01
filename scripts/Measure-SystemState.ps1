@@ -46,12 +46,10 @@ if ($Snapshot) {
     $Snapshot = $Snapshot.Trim(" `"`',`r`n")
 }
 if ($Compare) {
-    $cleanCompare = @()
-    foreach ($item in $Compare) {
-        $parts = $item.Split(',') | ForEach-Object { $_.Trim(" `"`',`r`n") } | Where-Object { $_ }
-        $cleanCompare += $parts
+    $cleanCompare = foreach ($item in $Compare) {
+        $item.Split(',') | ForEach-Object { $_.Trim(" `"`',`r`n") } | Where-Object { $_ }
     }
-    $Compare = $cleanCompare
+    $Compare = @($cleanCompare)
 }
 if ($Baseline) { $Baseline = $Baseline.Trim(" `"`',`r`n") }
 if ($Target)   { $Target   = $Target.Trim(" `"`',`r`n") }
@@ -181,36 +179,34 @@ if ($isCompare) {
 
     if ($ExportMarkdown) {
         $mdLines = @(
-            "# unslop-windows System State Benchmark Report",
-            "",
-            "Comparative audit report measuring baseline system footprint versus post-hardening optimization.",
-            "",
-            "- **Benchmark Date:** $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))",
-            "- **OS Version:** Windows 11 $($s2.OSVersion) (Build $($s2.OSBuild))",
-            "- **Baseline Snapshot:** ``$path1`` ($($s1.Timestamp))",
-            "- **Debloated Snapshot:** ``$path2`` ($($s2.Timestamp))",
-            "",
-            "## Resource Utilization Metrics",
-            "",
-            "| Metric | Baseline | Post-Hardening | Delta / Reduction |",
-            "| :--- | :--- | :--- | :--- |",
-            "| **Used RAM** | $($s1.UsedRAM_GB) GB ($($s1.UsedRAM_Percent)%) | $($s2.UsedRAM_GB) GB ($($s2.UsedRAM_Percent)%) | **$ramDelta GB** ($ramPctDelta%) |",
-            "| **Commit Charge** | $($s1.CommitUsed_GB) GB | $($s2.CommitUsed_GB) GB | **$commitDelta GB** |",
-            "| **Active Processes** | $($s1.ProcessCount) | $($s2.ProcessCount) | **$procDelta** |",
-            "| **Active Threads** | $($s1.ThreadCount) | $($s2.ThreadCount) | **$threadDelta** |",
-            "| **User AppX Packages** | $($s1.AppxUserPackages) | $($s2.AppxUserPackages) | **$appxDelta** |",
-            "",
-            "## Telemetry Services State",
-            "",
-            "| Service Name | Baseline State | Hardened State |",
+            "# unslop-windows System State Benchmark Report"
+            ""
+            "Comparative audit report measuring baseline system footprint versus post-hardening optimization."
+            ""
+            "- **Benchmark Date:** $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))"
+            "- **OS Version:** Windows 11 $($s2.OSVersion) (Build $($s2.OSBuild))"
+            "- **Baseline Snapshot:** ``$path1`` ($($s1.Timestamp))"
+            "- **Debloated Snapshot:** ``$path2`` ($($s2.Timestamp))"
+            ""
+            "## Resource Utilization Metrics"
+            ""
+            "| Metric | Baseline | Post-Hardening | Delta / Reduction |"
+            "| :--- | :--- | :--- | :--- |"
+            "| **Used RAM** | $($s1.UsedRAM_GB) GB ($($s1.UsedRAM_Percent)%) | $($s2.UsedRAM_GB) GB ($($s2.UsedRAM_Percent)%) | **$ramDelta GB** ($ramPctDelta%)"
+            "| **Commit Charge** | $($s1.CommitUsed_GB) GB | $($s2.CommitUsed_GB) GB | **$commitDelta GB**"
+            "| **Active Processes** | $($s1.ProcessCount) | $($s2.ProcessCount) | **$procDelta**"
+            "| **Active Threads** | $($s1.ThreadCount) | $($s2.ThreadCount) | **$threadDelta**"
+            "| **User AppX Packages** | $($s1.AppxUserPackages) | $($s2.AppxUserPackages) | **$appxDelta**"
+            ""
+            "## Telemetry Services State"
+            ""
+            "| Service Name | Baseline State | Hardened State |"
             "| :--- | :--- | :--- |"
-        )
-        foreach ($svcKey in $s1.Services.PSObject.Properties.Name) {
-            $mdLines += "| ``$svcKey`` | $($s1.Services.$svcKey) | $($s2.Services.$svcKey) |"
-        }
-        $mdLines += @(
-            "",
-            "---",
+            foreach ($svcKey in $s1.Services.PSObject.Properties.Name) {
+                "| ``$svcKey`` | $($s1.Services.$svcKey) | $($s2.Services.$svcKey) |"
+            }
+            ""
+            "---"
             "*Report generated automatically by ``scripts/Measure-SystemState.ps1`` - [unslop-windows](https://github.com/PyPie-Studio/unslop-windows)*"
         )
         $mdContent = $mdLines -join "`n"
