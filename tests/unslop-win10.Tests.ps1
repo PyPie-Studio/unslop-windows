@@ -610,6 +610,14 @@ Describe 'unslop-windows (Win10): Parameter Flags & Whitelist Invariants' -Tag '
         ($output -match "\[WOULD REMOVE APP\]: Microsoft\.MSTeams").Length | Should -Be 0
         ($output -match "\[WOULD REMOVE APP\]: Microsoft\.Teams").Length | Should -Be 0
     }
+
+    It '-KeepPCManager retains Microsoft PC Manager and skips service shutdown' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -SkipBuildCheck -KeepPCManager 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Microsoft PC Manager retained \(-KeepPCManager enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD REMOVE APP\]: Microsoft\.MicrosoftPCManager").Length | Should -Be 0
+        ($output -match "\[WOULD DISABLE\]: PCManager Service Store").Length | Should -Be 0
+    }
 }
 
 Describe 'unslop-windows (Win10): 100% Symmetrical Restoration Contract (AST Parity)' -Tag 'Unit', 'Static', 'Symmetry' {
@@ -732,6 +740,18 @@ Describe 'unslop-windows (Win10): 100% Symmetrical Restoration Contract (AST Par
         foreach ($call in $svcCalls) {
             $cmdText = $call.Extent.Text
             $cmdText | Should -Not -Match '\$\s*null' -Because "Service state '$cmdText' must have valid restore startup type"
+        }
+    }
+
+    It 'Manages compatibility appraisal and CDP services via Set-SvcState' {
+        $expectedServices = @(
+            'PcaSvc',
+            'CDPSvc',
+            'PCManager Service Store'
+        )
+
+        foreach ($svc in $expectedServices) {
+            $script:ast.Extent.Text | Should -Match "`"$([regex]::Escape($svc))`"" -Because "Service '$svc' must be managed via Set-SvcState in unslop-win10.ps1"
         }
     }
 

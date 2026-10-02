@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.3.8] - 2026-10-02
+
+### Added
+- **`-KeepPCManager` Parameter Flag**: Added first-class `-KeepPCManager` switch across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` allowing users who actively utilize Microsoft PC Manager to preserve both the application (`Microsoft.MicrosoftPCManager`) and its background service (`PCManager Service Store`).
+- **25H2/26H1 Telemetry & Diagnostics Services Hardening**: Added `InventorySvc` (Inventory and Compatibility Appraisal service), `whesvc` (Windows Health and Optimized Experiences), `WSAIFabricSvc` (Windows AI Components Host), and `PcaSvc` (Program Compatibility Assistant Service) to Stage 1 Services with 100% symmetrical `-Undo` restoration.
+- **Batch Launcher Interactive Toggle (`unslop.bat`)**: Added Option `[5]` in `:toggles_WIN11` and Option `[4]` in `:toggles_WIN10` to toggle Microsoft PC Manager preservation interactively.
+- **Unit & AST Test Coverage**: Added automated Pester 6+ test coverage in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying `-KeepPCManager` preservation behavior and `Set-SvcState` service declarations.
+- **Architectural Decision Record (ADR-031)**: Documented 25H2/26H1 service telemetry neutralization and PC Manager file locking resolution in `docs/decisions.md`.
+
+### Fixed
+- **CrossDeviceResume.exe Re-spawning**: Symmetrically managed `CDPSvc` (Connected Devices Platform Service) in Stage 1 and enforced `DisableCrossDeviceResume = 1` in both `default` and active device node `HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Connectivity`, preventing `sihost.exe` from re-spawning `Resume` after reboot.
+- **Microsoft PC Manager AppX File Locking**: Ensured `PCManager Service Store` background service and `MSPCManagerService` process are stopped prior to invoking `Remove-AppxPackage`, releasing binary file locks and allowing clean de-provisioning when `-KeepPCManager` is omitted.
 
 ---
 
@@ -443,7 +454,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.7...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.8...HEAD
+[1.3.8]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.4...v1.3.5

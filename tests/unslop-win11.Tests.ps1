@@ -623,6 +623,14 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.MSTeams").Length | Should -Be 0
         ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.Teams").Length | Should -Be 0
     }
+
+    It '-KeepPCManager retains Microsoft PC Manager and skips service shutdown' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepPCManager 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Microsoft PC Manager retained \(-KeepPCManager enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.MicrosoftPCManager").Length | Should -Be 0
+        ($output -match "\[WOULD DISABLE\]: PCManager Service Store").Length | Should -Be 0
+    }
 }
 
 Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -Tag 'Unit', 'Static', 'Symmetry' {
@@ -746,6 +754,21 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
         foreach ($call in $svcCalls) {
             $cmdText = $call.Extent.Text
             $cmdText | Should -Not -Match '\$\s*null' -Because "Service state '$cmdText' must have valid restore startup type"
+        }
+    }
+
+    It 'Manages 25H2/26H1 telemetry, appraisal, and CDP services via Set-SvcState' {
+        $expectedServices = @(
+            'InventorySvc',
+            'whesvc',
+            'WSAIFabricSvc',
+            'PcaSvc',
+            'CDPSvc',
+            'PCManager Service Store'
+        )
+
+        foreach ($svc in $expectedServices) {
+            $script:ast.Extent.Text | Should -Match "`"$([regex]::Escape($svc))`"" -Because "Service '$svc' must be managed via Set-SvcState in unslop-win11.ps1"
         }
     }
 

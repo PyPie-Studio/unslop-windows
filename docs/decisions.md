@@ -459,3 +459,23 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **Start Menu & Edge Web App Stub Cleanup:** Stage 4 automatically scrubs promotional `.lnk` and `.url` shortcuts matching `*LinkedIn*` and `*Copilot*` from `C:\ProgramData\Microsoft\Windows\Start Menu\Programs` and `$env:APPDATA\Microsoft\Windows\Start Menu\Programs`.
   - **Copilot Parity on Windows 10:** Backported Windows Copilot policies (`TurnOffWindowsCopilot = 1`, `ShowCopilotButton = 0`) to `unslop-win10.ps1`. Added `Microsoft.Copilot` and `Microsoft.Windows.Ai.Copilot.Provider` to `$bloatApps` on both platforms. Added Edge sidebar policies (`HubsSidebarEnabled = 0`, `AllowCopilot = 0`) to Stage 14.
 - **Consequences:** Permanently eradicates Xbox Game Bar, LinkedIn, and Copilot apps and promotional shortcuts on fresh Windows 10 and 11 installations. Preserves gaming authentication when playing Minecraft or Store games, honors `-KeepXbox`, and maintains 100% `-Undo` symmetry.
+
+---
+
+## ADR-031: Windows 11 25H2/26H1 Telemetry & AI Host Service Neutralization and Microsoft PC Manager Locking Resolution (2026-10-02)
+- **Status:** Accepted
+- **Context:**
+  1. *Windows 11 25H2/26H1 Telemetry Services Migration:* On modern Windows 11 builds (Build 26200-26300+), Microsoft migrated several telemetry and appraisal pipelines from legacy scheduled tasks into standalone background services running under `svchost.exe`:
+     - `InventorySvc` (`Inventory and Compatibility Appraisal service`): Modern persistent service hosting application and hardware compatibility telemetry.
+     - `whesvc` (`Windows Health and Optimized Experiences`): Experimentation and user experience diagnostic pipeline.
+     - `WSAIFabricSvc` (`Windows AI Components Host`): Background service hosting on-device generative AI framework tasks for CBS system packages (`Microsoft.AIFabric.CBS`, `Microsoft.Windows.AugLoop.CBS`).
+     - `PcaSvc` (`Program Compatibility Assistant Service`): Monitors application executions and submits compatibility telemetry.
+     Prior releases only targeted `DiagTrack`, `dmwappushservice`, `SysMain`, and `WSearch`, allowing these modern services to continuously consume CPU/RAM in the background.
+  2. *Connected Devices Platform (`CDPSvc`) & `CrossDeviceResume.exe` Re-spawning:* Prior versions attempted to suppress Cross-Device Resume by killing `CrossDeviceResume.exe` and writing to `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume`. However, `CDPSvc` remained running with startup type `Automatic`, and PolicyManager active enforcement requires writing to `HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Connectivity`. Consequently, upon subsequent user logon, `sihost.exe` automatically re-spawned `CrossDeviceResume.exe` (labeled as `Resume` in Task Manager).
+  3. *Microsoft PC Manager File Locking & User Workflow:* Microsoft PC Manager installs a persistent background Win32 service named `PCManager Service Store` (`MSPCManagerService.exe`). When executing AppX de-provisioning, Windows Package Manager returned `0x80073D02` (in-use) because the active service locked binaries in `C:\Program Files\WindowsApps\Microsoft.MicrosoftPCManager...`. Furthermore, users who actively utilize Microsoft PC Manager required a dedicated preservation flag (`-KeepPCManager`).
+- **Decision:**
+  - **25H2/26H1 Service Management via `Set-SvcState`:** Added `InventorySvc`, `whesvc`, `WSAIFabricSvc`, and `PcaSvc` to Stage 1 Services with 100% symmetrical `-Undo` restoration back to `Automatic`.
+  - **Connected Devices Platform (`CDPSvc`) Neutralization:** Managed `CDPSvc` symmetrically via `Set-SvcState` (skipped when `-KeepPhoneLink` is passed). Enforced `DisableCrossDeviceResume = 1` in both `default` and active device node `current\device\Connectivity`.
+  - **`-KeepPCManager` Parameter Flag & Pre-Uninstall Locking Resolution:** Introduced `[switch]$KeepPCManager` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` (including argument token whitelist and interactive toggle menus). When `-KeepPCManager` is omitted, the `PCManager Service Store` service is disabled in Stage 1 and running `MSPCManagerService` processes are terminated before Stage 12, releasing all file locks and enabling clean package de-provisioning.
+- **Consequences:** Eliminates lingering background svchost bloat and Cross-Device host re-spawns on 25H2/26H1 builds, safely preserves Microsoft PC Manager when requested, and guarantees clean package removal when debloated while preserving full 100% `-Undo` symmetry.
+

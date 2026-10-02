@@ -11,7 +11,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.7.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
+[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.8.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -19,7 +19,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 ```text
 ============================================================
-  unslop-windows (v1.3.7) - PyPie Studio
+  unslop-windows (v1.3.8) - PyPie Studio
   Windows 10 & 11 Debloater and Privacy Tool
 ============================================================
 
@@ -46,7 +46,7 @@ Select an option [0-2]:
 
 ### Direct Download (No Git Required)
 
-1. Download **[`unslop-windows-v1.3.7.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.7.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.3.8.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.8.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
@@ -125,7 +125,7 @@ Two separate PowerShell scripts — one for Windows 11, one for Windows 10 — s
 
 Each script runs 18 modules. Here is what they touch:
 
-1. **Background services** — Disables `SysMain`, `WSearch`, `DiagTrack`, `dmwappushservice`, `TrkWks`, `lfsvc` and Xbox Live background daemon services. Start menu search stays fast (shell in-memory index). Skip with `-KeepSysMain`, `-KeepSearch` or `-KeepXbox`.
+1. **Background services** — Disables `SysMain`, `WSearch`, `DiagTrack`, `dmwappushservice`, `TrkWks`, `lfsvc`, `InventorySvc` (compatibility appraisal), `whesvc` (experience telemetry), `WSAIFabricSvc` (AI host), `PcaSvc` (compatibility assistant), `CDPSvc` (connected devices), and Xbox Live background daemon services. Start menu search stays fast (shell in-memory index). Skip with `-KeepSysMain`, `-KeepSearch`, `-KeepXbox`, `-KeepPhoneLink`, or `-KeepPCManager`.
 2. **Recall and Copilot (Win11) / Cortana and Copilot (Win10)** — Win11: disables Recall snapshotting (`DisableAIDataAnalysis=1`), removes Copilot policies, providers and taskbar shortcuts. Win10: disables Cortana (`AllowCortana=0`) and Copilot (`TurnOffWindowsCopilot=1`), uninstalls the apps.
 3. **Telemetry and Game DVR** — Sets `AllowTelemetry=0`, disables CEIP, Application Impact Telemetry, OneSettings downloads and Game DVR / Game Bar background recording policies (skip with `-KeepXbox`).
 4. **Start menu and lock screen ads** — Disables lock screen tips, app recommendations, notification promotions, IrisService programmable tiles and scrubs sponsored app stubs (LinkedIn, Copilot).
@@ -136,7 +136,7 @@ Each script runs 18 modules. Here is what they touch:
 9. **Taskbar and Explorer** — Win11: disables Widgets via GPO, hides Chat. Win10: hides News & Interests, People bar, Meet Now. Both: shows file extensions. Left-align taskbar icons with `-LeftTaskbar`.
 10. **App permissions (ConsentStore)** — Revokes background access for location, diagnostics, contacts, calendar, phone. Win11 also blocks `foregroundTextAccess` and `systemAIModels`.
 11. **Diagnostic scheduled tasks** — Disables 20+ background telemetry tasks (OneSettings, CEIP, Customer Experience, Disk Diagnostics, etc).
-12. **Bloatware removal** — Removes TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video, Weather, Maps, Teams, Copilot, LinkedIn, Xbox Game Bar overlay packages and other pre-installed apps from current user and system image (so they don't come back for new accounts). Win11 also removes AI integrations (aimgr, AIFabric, AugLoop). Skip with `-KeepXbox`, `-KeepTodos`, `-KeepSpotify`, `-KeepTeams`, `-KeepPhoneLink`, `-KeepMail` or `-KeepClock`.
+12. **Bloatware removal** — Removes TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video, Weather, Maps, Teams, Copilot, LinkedIn, Xbox Game Bar overlay packages, PC Manager and other pre-installed apps from current user and system image (so they don't come back for new accounts). Win11 also removes AI integrations (aimgr, AIFabric, AugLoop). Skip with `-KeepXbox`, `-KeepTodos`, `-KeepSpotify`, `-KeepTeams`, `-KeepPCManager`, `-KeepPhoneLink`, `-KeepMail` or `-KeepClock`.
 13. **OneDrive removal** — Stops OneDrive, runs uninstaller, unpins from Explorer sidebar, blocks sync. Skip with `-KeepOneDrive`.
 14. **Startup and Edge cleanup** — Stops Edge background tasks and suppresses Edge Copilot / sidebar web hubs (`HubsSidebarEnabled=0`, `AllowCopilot=0`). Backs up removed startup entries to the registry for `-Undo`.
 15. **Defender sample submissions** — Sets `SubmitSamplesConsent=2` (NeverSend) to stop automatic file uploads. Real-time AV stays active. Skip with `-KeepDefenderDefaults`.
@@ -190,6 +190,7 @@ Pass these flags via CLI or enter them under Option `[7]` (Custom CLI Flags) in 
 | `-KeepClock` | Win10 | Keep Windows Clock and Alarms app (`Microsoft.WindowsAlarms`). |
 | `-KeepSpotify` | Both | Keep pre-installed Spotify app (`SpotifyAB.SpotifyMusic`). |
 | `-KeepTeams` | Both | Keep Microsoft Teams (Personal and Work/School) apps (`MicrosoftTeams`, `Microsoft.MSTeams`, `Microsoft.Teams`). |
+| `-KeepPCManager` | Both | Keep Microsoft PC Manager app (`Microsoft.MicrosoftPCManager`) and its background service (`PCManager Service Store`). |
 | `-KeepStoreAutoUpdate` | Both | Keep Microsoft Store automatic background app updates enabled. |
 | `-LeftTaskbar` | Win11 | Align taskbar icons to the left instead of center. |
 | `-ExcludeWUDrivers` | Both | Prevent Windows Update from delivering hardware driver updates. |

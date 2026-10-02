@@ -1,4 +1,4 @@
-# unslop-windows: Windows 10 Debloater (v1.3.7)
+# unslop-windows: Windows 10 Debloater (v1.3.8)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
@@ -51,6 +51,9 @@
 
 .PARAMETER KeepTeams
     Preserves Microsoft Teams (Personal and Work/School) applications.
+
+.PARAMETER KeepPCManager
+    Preserves Microsoft PC Manager application and its background service.
 
 .PARAMETER KeepStoreAutoUpdate
     Preserves automatic Microsoft Store background updates.
@@ -106,6 +109,7 @@ param(
     [switch]$KeepClock,
     [switch]$KeepSpotify,
     [switch]$KeepTeams,
+    [switch]$KeepPCManager,
     [switch]$KeepStoreAutoUpdate,
     [switch]$ExcludeWUDrivers,
     [switch]$KeepDefenderDefaults,
@@ -410,7 +414,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.7: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.3.8: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -431,6 +435,22 @@ Set-SvcState "dmwappushservice" "WAP Push telemetry" "Manual"
 Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automatic"
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
 Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Manual"
+Set-SvcState "PcaSvc"           "Program Compatibility Assistant Service" "Automatic"
+
+# Connected Devices Platform (CDP) Service
+if ($IsUndo -or -not $KeepPhoneLink) {
+    Set-SvcState "CDPSvc"       "Connected Devices Platform Service" "Automatic"
+} else {
+    Log "  KEEP: Connected Devices Platform service retained (-KeepPhoneLink enabled)"
+}
+
+# Microsoft PC Manager Service
+if ($IsUndo -or -not $KeepPCManager) {
+    Set-SvcState "PCManager Service Store" "Microsoft PC Manager Service" "Automatic"
+} else {
+    Log "  KEEP: Microsoft PC Manager service retained (-KeepPCManager enabled)"
+}
+
 if ($IsUndo -or -not $KeepXbox) {
     Set-SvcState "XblAuthManager" "Xbox Live Auth Manager" "Manual"
     Set-SvcState "XblGameSave"    "Xbox Live Game Save"    "Manual"
@@ -923,6 +943,11 @@ if ($KeepTeams) {
     [void]$excludedBloatApps.Add("Microsoft.Teams")
 }
 
+if ($KeepPCManager) {
+    Log "  KEEP: Microsoft PC Manager retained (-KeepPCManager enabled)"
+    [void]$excludedBloatApps.Add("Microsoft.MicrosoftPCManager")
+}
+
 if ($excludedBloatApps.Count -gt 0) {
     $bloatApps = $bloatApps.Where({ -not $excludedBloatApps.Contains($_) })
 }
@@ -972,6 +997,19 @@ if ($IsUndo) {
         }
     }
 } else {
+    # Terminate background processes for debloated packages to release file locks on package files
+    if (-not $KeepPCManager) {
+        $pcmProc = Get-Process -Name "MSPCManagerService" -ErrorAction SilentlyContinue
+        if ($pcmProc) {
+            if ($IsDryRun) {
+                Log "  [WOULD STOP PROCESS]: MSPCManagerService"
+            } else {
+                Stop-Process -Name "MSPCManagerService" -Force -ErrorAction SilentlyContinue
+                Log "  STOPPED: MSPCManagerService process"
+            }
+        }
+    }
+
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
         # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
@@ -1309,7 +1347,7 @@ if ($IsDryRun) {
 
 if ($IsUndo) {
     $act = if ($IsDryRun) { "Would restore" } else { "Restored" }
-    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
+    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc, PcaSvc"
     Log "Cortana & Copilot:     Cortana/Copilot app re-registered and policies reverted"
     if (-not $KeepXbox) {
         $xbAct = if ($IsDryRun) { "Would restore" } else { "Restored" }
@@ -1326,7 +1364,7 @@ if ($IsUndo) {
     Log "Firewall rules:        8 rules re-enabled"
 } else {
     $act = if ($IsDryRun) { "Would disable" } else { "Disabled" }
-    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
+    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc, PcaSvc"
     Log "Cortana & Copilot:     Cortana/Copilot AppX removed and policies enforced"
     if ($KeepOneDrive) {
         Log "OneDrive:              Preserved (-KeepOneDrive enabled)"
@@ -1363,6 +1401,9 @@ if ($IsUndo) {
     }
     if ($KeepTeams) {
         Log "Microsoft Teams:       Preserved (-KeepTeams enabled)"
+    }
+    if ($KeepPCManager) {
+        Log "PC Manager:            Preserved (-KeepPCManager enabled)"
     }
     if ($KeepStoreAutoUpdate) {
         Log "Store Updates:         Preserved (-KeepStoreAutoUpdate enabled)"

@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.3.7)
+# unslop-windows: Windows 11 Debloater (v1.3.8)
 # Targets Windows 11 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -48,6 +48,9 @@
 
 .PARAMETER KeepTeams
     Preserves Microsoft Teams (Personal and Work/School) applications.
+
+.PARAMETER KeepPCManager
+    Preserves Microsoft PC Manager application and its background service.
 
 .PARAMETER KeepStoreAutoUpdate
     Preserves automatic Microsoft Store background updates.
@@ -108,6 +111,7 @@ param(
     [switch]$KeepMail,
     [switch]$KeepSpotify,
     [switch]$KeepTeams,
+    [switch]$KeepPCManager,
     [switch]$KeepStoreAutoUpdate,
     [switch]$ClassicContextMenu,
     [switch]$LeftTaskbar,
@@ -413,7 +417,7 @@ $osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26200) { "25H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.7: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.3.8: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -434,6 +438,27 @@ Set-SvcState "dmwappushservice" "WAP Push telemetry" "Manual"
 Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automatic"
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
 Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Manual"
+
+# 25H2 / 26H1 Telemetry, Compatibility Appraisal & AI Host Services
+Set-SvcState "InventorySvc"     "Inventory and Compatibility Appraisal service" "Automatic"
+Set-SvcState "whesvc"           "Windows Health and Optimized Experiences telemetry" "Automatic"
+Set-SvcState "WSAIFabricSvc"    "Windows AI Components Host background service" "Automatic"
+Set-SvcState "PcaSvc"           "Program Compatibility Assistant Service" "Automatic"
+
+# Connected Devices Platform (CDP) Service
+if ($IsUndo -or -not $KeepPhoneLink) {
+    Set-SvcState "CDPSvc"       "Connected Devices Platform Service" "Automatic"
+} else {
+    Log "  KEEP: Connected Devices Platform service retained (-KeepPhoneLink enabled)"
+}
+
+# Microsoft PC Manager Service
+if ($IsUndo -or -not $KeepPCManager) {
+    Set-SvcState "PCManager Service Store" "Microsoft PC Manager Service" "Automatic"
+} else {
+    Log "  KEEP: Microsoft PC Manager service retained (-KeepPCManager enabled)"
+}
+
 if ($IsUndo -or -not $KeepXbox) {
     Set-SvcState "XblAuthManager" "Xbox Live Auth Manager" "Manual"
     Set-SvcState "XblGameSave"    "Xbox Live Game Save"    "Manual"
@@ -992,6 +1017,11 @@ if ($KeepTeams) {
     [void]$excludedBloatApps.Add("Microsoft.Teams")
 }
 
+if ($KeepPCManager) {
+    Log "  KEEP: Microsoft PC Manager retained (-KeepPCManager enabled)"
+    [void]$excludedBloatApps.Add("Microsoft.MicrosoftPCManager")
+}
+
 if ($excludedBloatApps.Count -gt 0) {
     $bloatApps = $bloatApps.Where({ -not $excludedBloatApps.Contains($_) })
 }
@@ -1041,6 +1071,19 @@ if ($IsUndo) {
         }
     }
 } else {
+    # Terminate background processes for debloated packages to release file locks on package files
+    if (-not $KeepPCManager) {
+        $pcmProc = Get-Process -Name "MSPCManagerService" -ErrorAction SilentlyContinue
+        if ($pcmProc) {
+            if ($IsDryRun) {
+                Log "  [WOULD STOP PROCESS]: MSPCManagerService"
+            } else {
+                Stop-Process -Name "MSPCManagerService" -Force -ErrorAction SilentlyContinue
+                Log "  STOPPED: MSPCManagerService process"
+            }
+        }
+    }
+
     # 1. De-provision staged packages so they never reinstall for new profiles
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
@@ -1280,6 +1323,9 @@ if ($IsUndo -or -not $KeepPhoneLink) {
     $connPolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume"
     Set-RegDwordSafe -path $connPolicy -name "value" -debloatValue 1 -undoValue 0
 
+    $connDevicePolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Connectivity\DisableCrossDeviceResume"
+    Set-RegDwordSafe -path $connDevicePolicy -name "value" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
     # Cross-Device Resume Configuration (User-level preferences)
     $resumeConfig = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration"
     Set-RegDwordSafe -path $resumeConfig -name "IsResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
@@ -1412,7 +1458,7 @@ if ($IsDryRun) {
 
 if ($IsUndo) {
     $act = if ($IsDryRun) { "Would restore" } else { "Restored" }
-    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
+    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc, InventorySvc, whesvc, WSAIFabricSvc, PcaSvc"
     Log "Recall & Copilot:      Windows Recall, Screenray and Copilot policies reverted"
     if (-not $KeepXbox) {
         $xbAct = if ($IsDryRun) { "Would restore" } else { "Restored" }
@@ -1429,7 +1475,7 @@ if ($IsUndo) {
     Log "Firewall rules:        8 rules re-enabled"
 } else {
     $act = if ($IsDryRun) { "Would disable" } else { "Disabled" }
-    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc"
+    Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc, InventorySvc, whesvc, WSAIFabricSvc, PcaSvc"
     Log "Recall & Copilot:      Windows Recall (DisableAIDataAnalysis=1) & Copilot policies enforced"
     if ($KeepOneDrive) {
         Log "OneDrive:              Preserved (-KeepOneDrive enabled)"
@@ -1463,6 +1509,9 @@ if ($IsUndo) {
     }
     if ($KeepTeams) {
         Log "Microsoft Teams:       Preserved (-KeepTeams enabled)"
+    }
+    if ($KeepPCManager) {
+        Log "PC Manager:            Preserved (-KeepPCManager enabled)"
     }
     if ($KeepStoreAutoUpdate) {
         Log "Store Updates:         Preserved (-KeepStoreAutoUpdate enabled)"
