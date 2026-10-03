@@ -1,4 +1,4 @@
-# unslop-windows: Windows 10 Debloater (v1.4.0)
+# unslop-windows: Windows 10 Debloater (v1.4.1)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
@@ -163,7 +163,11 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
             } else {
                 try {
                     Set-Service -Name $name -StartupType $undoStartupType -ErrorAction Stop
-                    Start-Service -Name $name -ErrorAction Stop
+                    if ($undoStartupType -ne "Manual") {
+                        Start-Service -Name $name -ErrorAction Stop
+                    } else {
+                        try { Start-Service -Name $name -ErrorAction Stop } catch { }
+                    }
                     Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
                 } catch {
                     $global:FailCount++
@@ -175,7 +179,9 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                 Log "  [WOULD DISABLE]: $name ($desc)" -DryRun:$DryRun
             } else {
                 try {
-                    if ($s.Status -eq "Running") { Stop-Service -Name $name -Force -ErrorAction Stop }
+                    if ($s.Status -eq "Running") {
+                        try { Stop-Service -Name $name -Force -ErrorAction Stop } catch { }
+                    }
                     Set-Service -Name $name -StartupType Disabled -ErrorAction Stop
                     Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
                 } catch {
@@ -200,8 +206,12 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
                     Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
                     Log "  ENABLED: $name" -DryRun:$DryRun
                 } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not enable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    if ($_.Exception.Message -match "Access is denied" -and ($t.SecurityDescriptor -and $t.SecurityDescriptor -match '\(A;;FRFX;;;BA\)')) {
+                        Log "  SKIP: $name requires SYSTEM token (managed via policy/service)" -DryRun:$DryRun
+                    } else {
+                        $global:FailCount++
+                        Log "  FAILED: Could not enable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
                 }
             }
         } else {
@@ -212,8 +222,12 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
                     Disable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
                     Log "  DISABLED: $name" -DryRun:$DryRun
                 } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not disable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    if ($_.Exception.Message -match "Access is denied" -and ($t.SecurityDescriptor -and $t.SecurityDescriptor -match '\(A;;FRFX;;;BA\)')) {
+                        Log "  SKIP: $name requires SYSTEM token (managed via policy/service)" -DryRun:$DryRun
+                    } else {
+                        $global:FailCount++
+                        Log "  FAILED: Could not disable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
                 }
             }
         }
@@ -414,7 +428,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.4.0: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.4.1: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -712,8 +726,11 @@ Set-RegDwordSafe -path $searchUserPath -name "BingSearchEnabled" -debloatValue 0
 Set-RegDwordSafe -path $searchUserPath -name "CortanaConsent"     -debloatValue 0 -undoValue 1
 
 $searchPolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
-Set-RegDwordSafe -path $searchPolicyPath -name "DisableWebSearch"        -debloatValue 1 -undoValue 0 -removeOnUndo $true
-Set-RegDwordSafe -path $searchPolicyPath -name "ConnectedSearchUseWeb"   -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "DisableWebSearch"          -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "ConnectedSearchUseWeb"     -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "EnableDynamicContentInWSB" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "AllowSearchToUseLocation"  -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "AllowCloudSearch"          -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
 $searchSettingsPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
 Set-RegDwordSafe -path $searchSettingsPath -name "IsDeviceSearchHistoryEnabled" -debloatValue 0 -undoValue 1

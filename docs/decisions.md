@@ -504,3 +504,33 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **Stage 12 & 16 Bloat & Companions:** Added `Microsoft.PowerAutomateDesktop` and `MicrosoftCorporationII.MicrosoftFamily` to `$bloatApps`. Suppressed Start Menu Companions Phone Link panel (`Start\Companions\Microsoft.YourPhone...`) under `-KeepPhoneLink` gate.
 - **Consequences:** Provides native, comprehensive support for Windows 11 26H2 with zero version confusion, neutralizes all newly introduced 26H2 AI slop, screen scraping, and background telemetry tasks, ensures 100% symmetrical `-Undo` restoration, and maintains full compliance with the Master Quality Gate.
 
+---
+
+## ADR-033: User Choice Protection Driver (UCPD) Neutralization, Staged RunOnce GPO Execution, and WindowsAI SYSTEM-Only Task ACL Defense (2026-10-04)
+- **Status:** Accepted
+- **Context:**
+  1. *UCPD Kernel Driver Policy Interception (AllowNewsAndInterests):* In Windows 11 24H2 cumulative updates and 26H2 (Build 26300+), Microsoft expanded the User Choice Protection Driver (`UCPD.sys`) filter scope beyond `TaskbarDa` to actively block user-mode writes to `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests`. When executed on a live host where `UCPD.sys` is running, `Set-RegDwordSafe` failed with `UnauthorizedAccessException: Attempted to perform an unauthorized operation`. Furthermore, because UCPD is a kernel filesystem/registry minifilter driver, it cannot be unloaded on-the-fly without a system restart.
+  2. *UCPD Scheduled Task Resiliency:* Windows maintains `\Microsoft\Windows\AppxDeploymentClient\UCPD velocity` to periodically re-enable the UCPD driver service.
+  3. *SYSTEM-Only Scheduled Task ACLs in WindowsAI:* Stage 11 enumerated `\Microsoft\Windows\WindowsAI\*` dynamically. On 24H2/26H2, Microsoft introduced internal Click to Do, Recall, and Settings Agent tasks under this hive (`ModelCachingLimit`, `ModelCachingUpdate`, `PolicyConfiguration`, `Settings\InitialConfiguration`) with Security Descriptors granting write access exclusively to `NT AUTHORITY\SYSTEM` (`(A;;FRFX;;;BA)(A;;GA;;;SY)`). Calling `Disable-ScheduledTask` as Administrator resulted in Win32 error 5 (`Access is denied`), artificially inflating `$global:FailCount`. These tasks are already neutralized at the service (`WSAIFabricSvc`) and Group Policy layers.
+- **Decision:**
+  - **UCPD Driver Service & Velocity Task Neutralization:** Added `UCPD` service to Section 1 managed services with startup type `Disabled` and `Manual` on `-Undo`. Added `\Microsoft\Windows\AppxDeploymentClient\UCPD velocity` to `$tasksToToggle` in Section 11.
+  - **Graceful Kernel Driver Staging in Set-RegDwordSafe:** In `Set-RegDwordSafe`, if a registry write to `Dsh` or `Advanced` fails with `UnauthorizedAccessException` while `UCPD` is running in memory, unslop stages the key via `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\unslop_<name>`, applying the policy cleanly on the subsequent post-execution reboot without false failure tracking.
+  - **WindowsAI Protected Task Exclusion & Set-TaskState ACL Guard:** Filtered out known SYSTEM-only tasks (`ModelCachingLimit`, `ModelCachingUpdate`, `PolicyConfiguration`, `Settings\InitialConfiguration`) from `WindowsAI` dynamic scans. Guarded `Set-TaskState` against tasks with SYSTEM-only SDDLs (`(A;;FRFX;;;BA)`).
+  - **Symmetrical Parity:** Aligned defensive helper updates into `unslop-win10.ps1` and added unit and AST validation tests to `tests/unslop-win11.Tests.ps1`.
+- **Consequences:** Eliminates all 5 live execution warnings/failures on Windows 11 26H2, ensures Widgets GPO applies cleanly post-reboot, preserves failure honesty invariants, and passes 100% of Master Quality Gate checks.
+
+---
+
+## ADR-034: Machine-Wide Search Highlights (WSB), Location, and Cloud Search GPO Hardening (2026-10-04)
+- **Status:** Accepted
+- **Context:**
+  1. *User-Level vs. Machine-Wide Search Highlights:* In Section 6 (Search Privacy & History), `unslop-windows` previously suppressed Search Highlights at the user level via `HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings\IsDynamicSearchBoxEnabled = 0`. However, under multi-user configurations, new profile generation, or major Windows cumulative updates, user-level flags can be bypassed or re-initialized.
+  2. *Search UI Framework vs. Web Content Architecture:* Windows 11 `SearchHost.exe` (`MicrosoftWindows.Client.CBS`) embeds Microsoft Edge WebView2 (`msedgewebview2.exe`) as its core UI rendering framework. While `DisableWebSearch = 1` and `BingSearchEnabled = 0` stop search queries from transmitting to Bing, enforcing the official Group Policy `EnableDynamicContentInWSB = 0` under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search` ensures that Search Highlights (daily Bing doodles, trending queries, and dynamic web cards) are disabled machine-wide across all accounts.
+  3. *Location & Cloud Account Egress in SearchHost:* Windows Search and Cortana previously retained default permission to query location services for geo-targeted search results unless `AllowSearchToUseLocation = 0` was configured. Additionally, while user-scoped MSA/AAD search history was disabled, the machine-level policy `AllowCloudSearch = 0` was missing from Group Policy enforcement.
+- **Decision:**
+  - Added `EnableDynamicContentInWSB` (`debloatValue 0`, `undoValue 1`, `-removeOnUndo $true`) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search` in both `unslop-win11.ps1` and `unslop-win10.ps1`.
+  - Added `AllowSearchToUseLocation` (`debloatValue 0`, `undoValue 1`, `-removeOnUndo $true`) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search` across both scripts.
+  - Added `AllowCloudSearch` (`debloatValue 0`, `undoValue 1`, `-removeOnUndo $true`) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search` across both scripts.
+  - Added AST invariant unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`.
+- **Consequences:** Guarantees machine-wide immunity against Bing dynamic search highlights, location queries, and cloud account data exposure across all user profiles, maintains 100% symmetrical `-Undo` restoration, and preserves Safe-Tier integrity without touching `SearchHost.exe` app-launch functionality.
+

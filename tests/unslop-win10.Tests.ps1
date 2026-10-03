@@ -956,4 +956,11 @@ Describe 'unslop-windows (Win10): Security & Privilege Boundary Invariants' -Tag
         $script:ast.Extent.Text | Should -Match '"XboxNetApiSvc"' -Because "XboxNetApiSvc service must be managed"
         $script:ast.Extent.Text | Should -Match '"XboxGipSvc"' -Because "XboxGipSvc service must be managed"
     }
+
+    It 'Implements Search Highlights EnableDynamicContentInWSB, AllowSearchToUseLocation and AllowCloudSearch machine policies' {
+        $script:ast.Extent.Text | Should -Match 'EnableDynamicContentInWSB' -Because "EnableDynamicContentInWSB must be configured"
+        $script:ast.Extent.Text | Should -Match 'AllowSearchToUseLocation' -Because "AllowSearchToUseLocation must be configured"
+        $script:ast.Extent.Text | Should -Match 'AllowCloudSearch' -Because "AllowCloudSearch must be configured"
+    }
 }
+

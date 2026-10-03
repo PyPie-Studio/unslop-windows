@@ -354,6 +354,25 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             }
             Should -Invoke -CommandName Disable-ScheduledTask -Times 0
         }
+
+        It 'SYSTEM-only SDDL: Skips tasks with SYSTEM-only security descriptors on Access Denied without incrementing FailCount' {
+            $mockProtectedTask = [PSCustomObject]@{
+                TaskName           = "ModelCachingLimit"
+                TaskPath           = "\Microsoft\Windows\WindowsAI\ClickToDo\"
+                SecurityDescriptor = "D:P(A;;GA;;;SY)(A;;FRFX;;;BA)"
+            }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockProtectedTask }
+            Mock -CommandName Disable-ScheduledTask -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+            Mock -CommandName Enable-ScheduledTask -MockWith { }
+
+            $initialFails = $global:FailCount
+            Set-TaskState "\Microsoft\Windows\WindowsAI\ClickToDo\" "ModelCachingLimit"
+
+            $global:FailCount | Should -Be $initialFails
+            ($script:log | Where-Object { $_ -match "SKIP: ModelCachingLimit requires SYSTEM token" }).Count | Should -BeGreaterThan 0
+        }
     }
 
     Context 'Set-ConsentCapability' {
@@ -915,6 +934,17 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Not -Match 'SdbinstMergeDbTask' -Because "SdbinstMergeDbTask is ACL-restricted to SYSTEM and is non-telemetry"
     }
 
+    It 'Manages UCPD service and UCPD velocity scheduled task symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'Set-SvcState\s+"UCPD"' -Because "UCPD driver service must be neutralized to allow widget policy changes"
+        $script:ast.Extent.Text | Should -Match 'AppxDeploymentClient\\UCPD velocity' -Because "UCPD velocity task must be toggled to prevent driver resurrection"
+    }
+
+    It 'Filters SYSTEM-only tasks from WindowsAI scheduled task enumeration' {
+        $script:ast.Extent.Text | Should -Match 'ModelCachingLimit' -Because "ModelCachingLimit must be excluded from automated debloat task enumeration"
+        $script:ast.Extent.Text | Should -Match 'ModelCachingUpdate' -Because "ModelCachingUpdate must be excluded from automated debloat task enumeration"
+        $script:ast.Extent.Text | Should -Match 'PolicyConfiguration' -Because "PolicyConfiguration must be excluded from automated debloat task enumeration"
+    }
+
     It 'Targets MicrosoftWindows.Client.WebExperience in bloatApps array' {
         $script:ast.Extent.Text | Should -Match '"MicrosoftWindows\.Client\.WebExperience"' -Because "WebExperience must be targeted without typo to remove Widgets"
     }
@@ -1135,4 +1165,30 @@ Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit'
 
         $listener | Should -Not -BeNullOrEmpty -Because "userNotificationListener must be denied via Set-ConsentCapability"
     }
+
+    It 'Implements Search Highlights EnableDynamicContentInWSB, AllowSearchToUseLocation and AllowCloudSearch machine policies' {
+        $wsb = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'EnableDynamicContentInWSB'
+        }, $true)
+        $loc = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'AllowSearchToUseLocation'
+        }, $true)
+        $cloud = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'AllowCloudSearch'
+        }, $true)
+
+        $wsb | Should -Not -BeNullOrEmpty -Because "EnableDynamicContentInWSB must be configured via Set-RegDwordSafe"
+        $loc | Should -Not -BeNullOrEmpty -Because "AllowSearchToUseLocation must be configured via Set-RegDwordSafe"
+        $cloud | Should -Not -BeNullOrEmpty -Because "AllowCloudSearch must be configured via Set-RegDwordSafe"
+    }
 }
+

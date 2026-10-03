@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1] - 2026-10-04
+
+### Fixed
+- **UCPD Kernel Driver Policy Interception (`AllowNewsAndInterests`)**: Neutralized the User Choice Protection Driver (`UCPD.sys`) in Stage 1 Services (`Set-SvcState "UCPD" ... "Manual"`) and disabled the companion `\Microsoft\Windows\AppxDeploymentClient\UCPD velocity` scheduled task in Stage 11. In `Set-RegDwordSafe`, if a registry write to `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests` or `TaskbarDa` is intercepted by the active in-memory UCPD kernel filter driver before reboot, the policy is staged seamlessly via `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\unslop_<name>` for automatic post-restart application, eliminating `UnauthorizedAccessException` and false failure alerts.
+- **WindowsAI SYSTEM-Only Scheduled Tasks Access Denied**: Filtered out internal Click to Do, Recall, and Settings Agent tasks (`ModelCachingLimit`, `ModelCachingUpdate`, `PolicyConfiguration`, `Settings\InitialConfiguration`) from `\Microsoft\Windows\WindowsAI\*` dynamic scans. These tasks have hardened Security Descriptors granting write access exclusively to `NT AUTHORITY\SYSTEM` (`(A;;FRFX;;;BA)(A;;GA;;;SY)`) and are already fully inert due to GPO policies and `WSAIFabricSvc` service neutralization.
+- **Defensive ACL & Driver Service Handling**: Hardened `Set-SvcState` to set service startup type to `Disabled` first and gracefully catch stop errors on non-unloadable kernel filter drivers. Hardened `Set-TaskState` to detect tasks with SYSTEM-only SDDLs and skip them with informative logging rather than raising unhandled exceptions. Symmetrically aligned `unslop-win10.ps1` helper functions.
+
+### Added
+- **Machine-Wide Search Highlights (WSB), Location & Cloud Search GPOs**: Enforced `EnableDynamicContentInWSB = 0` (disabling Bing dynamic search highlights and doodles machine-wide), `AllowSearchToUseLocation = 0` (blocking location harvesting by SearchHost/Cortana), and `AllowCloudSearch = 0` (disabling cloud account integration in search results) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search` across both `unslop-win11.ps1` and `unslop-win10.ps1` with 100% symmetrical `-Undo` restoration.
+- **Unit & AST Invariant Tests**: Added automated tests to `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying symmetrical UCPD management, SYSTEM-only AI task exclusion, and search machine GPO enforcement.
+- **Architectural Decision Records (ADR-033 & ADR-034)**: Documented UCPD driver behavior, RunOnce staging mechanics, WindowsAI task security descriptor defenses, and machine-wide search policy hardening in `docs/decisions.md`.
+
+---
+
 ## [1.4.0] - 2026-10-04
 
 ### Added
@@ -477,7 +491,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.8...v1.4.0
 [1.3.8]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.6...v1.3.7

@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.4.0)
+# unslop-windows: Windows 11 Debloater (v1.4.1)
 # Targets Windows 11 26H2 (Build 26300+), 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -167,7 +167,11 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
             } else {
                 try {
                     Set-Service -Name $name -StartupType $undoStartupType -ErrorAction Stop
-                    Start-Service -Name $name -ErrorAction Stop
+                    if ($undoStartupType -ne "Manual") {
+                        Start-Service -Name $name -ErrorAction Stop
+                    } else {
+                        try { Start-Service -Name $name -ErrorAction Stop } catch { }
+                    }
                     Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
                 } catch {
                     $global:FailCount++
@@ -179,7 +183,9 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                 Log "  [WOULD DISABLE]: $name ($desc)" -DryRun:$DryRun
             } else {
                 try {
-                    if ($s.Status -eq "Running") { Stop-Service -Name $name -Force -ErrorAction Stop }
+                    if ($s.Status -eq "Running") {
+                        try { Stop-Service -Name $name -Force -ErrorAction Stop } catch { }
+                    }
                     Set-Service -Name $name -StartupType Disabled -ErrorAction Stop
                     Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
                 } catch {
@@ -204,8 +210,12 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
                     Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
                     Log "  ENABLED: $name" -DryRun:$DryRun
                 } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not enable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    if ($_.Exception.Message -match "Access is denied" -and ($t.SecurityDescriptor -and $t.SecurityDescriptor -match '\(A;;FRFX;;;BA\)')) {
+                        Log "  SKIP: $name requires SYSTEM token (managed via policy/service)" -DryRun:$DryRun
+                    } else {
+                        $global:FailCount++
+                        Log "  FAILED: Could not enable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
                 }
             }
         } else {
@@ -216,8 +226,12 @@ function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = 
                     Disable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null
                     Log "  DISABLED: $name" -DryRun:$DryRun
                 } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not disable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    if ($_.Exception.Message -match "Access is denied" -and ($t.SecurityDescriptor -and $t.SecurityDescriptor -match '\(A;;FRFX;;;BA\)')) {
+                        Log "  SKIP: $name requires SYSTEM token (managed via policy/service)" -DryRun:$DryRun
+                    } else {
+                        $global:FailCount++
+                        Log "  FAILED: Could not disable task $name - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
                 }
             }
         }
@@ -246,6 +260,15 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                     }
                 }
             }
+            # Clean up staged RunOnce entry on undo if present
+            if (-not $DryRun -and (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce")) {
+                try {
+                    $roVal = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -ErrorAction SilentlyContinue)."unslop_$name"
+                    if ($roVal) {
+                        Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "unslop_$name" -Force -ErrorAction SilentlyContinue
+                    }
+                } catch { }
+            }
         } else {
             if ($DryRun) {
                 Log "  [WOULD SET REG]: $path\$name = $undoValue" -DryRun:$DryRun
@@ -269,8 +292,23 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                 Set-ItemProperty -Path $path -Name $name -Value $debloatValue -Type DWord -ErrorAction Stop
                 Log "  SET: $name = $debloatValue" -DryRun:$DryRun
             } catch {
-                $global:FailCount++
-                Log "  FAILED: Could not set $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
+                if ($_.Exception.Message -match "unauthorized operation" -and ($path -match "Dsh|Advanced") -and (Get-Service -Name "UCPD" -ErrorAction SilentlyContinue).Status -eq "Running") {
+                    # User Choice Protection Driver (UCPD) is actively loaded in kernel memory and intercepts direct writes.
+                    # Stage via RunOnce so it executes on next logon after UCPD driver shutdown takes effect.
+                    try {
+                        $runOncePath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+                        if (-not (Test-Path $runOncePath)) { New-Item -Path $runOncePath -Force -ErrorAction Stop | Out-Null }
+                        $cmd = "reg.exe add `"$($path -replace 'HKLM:\\', 'HKLM\')`" /v `"$name`" /t REG_DWORD /d $debloatValue /f"
+                        Set-ItemProperty -Path $runOncePath -Name "unslop_$name" -Value $cmd -ErrorAction Stop
+                        Log "  STAGED: $name in $path (UCPD driver active in kernel; policy staged via RunOnce for post-restart apply)" -DryRun:$DryRun
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not stage $name in RunOnce - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
+                } else {
+                    $global:FailCount++
+                    Log "  FAILED: Could not set $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
+                }
             }
         }
     }
@@ -417,7 +455,7 @@ $osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.4.0: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.4.1: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -444,6 +482,9 @@ Set-SvcState "InventorySvc"     "Inventory and Compatibility Appraisal service" 
 Set-SvcState "whesvc"           "Windows Health and Optimized Experiences telemetry" "Automatic"
 Set-SvcState "WSAIFabricSvc"    "Windows AI Components Host background service" "Automatic"
 Set-SvcState "PcaSvc"           "Program Compatibility Assistant Service" "Automatic"
+
+# 23H2+ / 24H2 / 25H2 / 26H2 User Choice Protection Driver (UCPD)
+Set-SvcState "UCPD"             "User Choice Protection Driver - blocks taskbar & widget policies" "Manual"
 
 # Connected Devices Platform (CDP) Service
 if ($IsUndo -or -not $KeepPhoneLink) {
@@ -726,8 +767,11 @@ Set-RegDwordSafe -path $searchUserPath -name "BingSearchEnabled" -debloatValue 0
 Set-RegDwordSafe -path $searchUserPath -name "CortanaConsent"     -debloatValue 0 -undoValue 1
 
 $searchPolicyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
-Set-RegDwordSafe -path $searchPolicyPath -name "DisableWebSearch"        -debloatValue 1 -undoValue 0 -removeOnUndo $true
-Set-RegDwordSafe -path $searchPolicyPath -name "ConnectedSearchUseWeb"   -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "DisableWebSearch"          -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "ConnectedSearchUseWeb"     -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "EnableDynamicContentInWSB" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "AllowSearchToUseLocation"  -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $searchPolicyPath -name "AllowCloudSearch"          -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
 # Device search history & cloud search scope
 $searchSettingsPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings"
@@ -795,7 +839,8 @@ Log "--- 9. Taskbar & Explorer Cleanliness ---"
 Set-RegDwordSafe -path $explorerAdv -name "HideFileExt" -debloatValue 0 -undoValue 1
 
 # Clean Taskbar clutter (Hide Widgets via official GPO policy and Chat/Teams buttons)
-# Note: On Windows 11 23H2+/24H2/25H2/26H1+/26H2+, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa; HKLM Dsh policy disables Widgets system-wide
+# Note: On Windows 11 23H2+/24H2/25H2/26H1+/26H2+, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa and HKLM Dsh while running in memory.
+# UCPD service and UCPD velocity task are disabled in Sections 1 & 11; if UCPD is currently active, policy is staged via RunOnce for seamless post-restart apply.
 $dshPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
 Set-RegDwordSafe -path $dshPolicy -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $explorerAdv -name "TaskbarMn" -debloatValue 0 -undoValue 1
@@ -914,6 +959,8 @@ $tasksToToggle = @(
     # Shell Family Safety Telemetry Listeners
     "\Microsoft\Windows\Shell\FamilySafetyMonitor"
     "\Microsoft\Windows\Shell\FamilySafetyRefreshTask"
+    # 23H2+/24H2/25H2/26H2 UCPD auto-re-enablement task
+    "\Microsoft\Windows\AppxDeploymentClient\UCPD velocity"
 )
 foreach ($task in $tasksToToggle) {
     $path = $task -replace '\\[^\\]+$', '\'
@@ -921,11 +968,20 @@ foreach ($task in $tasksToToggle) {
     Set-TaskState -path $path -name $name
 }
 
-# Scan any Recall & WindowsAI tasks if present
+# Scan any Recall & WindowsAI tasks if present (filtering out internal tasks with SYSTEM-only ACLs)
+$systemProtectedAITasks = @(
+    "ModelCachingLimit"
+    "ModelCachingUpdate"
+    "PolicyConfiguration"
+)
 Get-ScheduledTask -TaskPath "\Microsoft\Windows\Recall\*" -ErrorAction SilentlyContinue | ForEach-Object {
     Set-TaskState -path $_.TaskPath -name $_.TaskName
 }
-Get-ScheduledTask -TaskPath "\Microsoft\Windows\WindowsAI\*" -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ScheduledTask -TaskPath "\Microsoft\Windows\WindowsAI\*" -ErrorAction SilentlyContinue | Where-Object {
+    $_.TaskName -notin $systemProtectedAITasks -and
+    -not ($_.TaskPath -like "*\Settings\*" -and $_.TaskName -eq "InitialConfiguration") -and
+    ($null -eq $_.SecurityDescriptor -or $_.SecurityDescriptor -notmatch '\(A;;FRFX;;;BA\)')
+} | ForEach-Object {
     Set-TaskState -path $_.TaskPath -name $_.TaskName
 }
 
