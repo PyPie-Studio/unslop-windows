@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-10-04
+
+### Added
+- **Windows 11 26H2 (Build 26300+) Full Platform Support**: Added native identification of Windows 11 26H2 ("Windows 11 2026 Update", Build 26300+) in `unslop-win11.ps1` (`$osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } ...`) and `unslop.bat`, eliminating "25H2" misclassification in logs and console banners.
+- **Click to Do Screen OCR Analysis Neutralization**: Added `DisableClickToDo = 1` under `HKLM/HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI` and `HKCU:\Software\Microsoft\Windows\Shell\ClickToDo` with 100% symmetrical `-Undo` removal, preventing on-demand screen scraping and OCR indexing.
+- **Recall Hardening Policies**: Added `AllowRecallEnablement = 0` (preventing activation in Settings) and `AllowRecallExport = 0` (blocking snapshot vector export) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI`.
+- **Settings AI Agent & Agent Connectors Neutralization**: Added `DisableSettingsAgent = 1` (disabling natural language SLM in Windows Settings) and `ConfigureAgentConnectors = 2` (ForceDisable autonomous AI agent system connectors) under `WindowsAI`.
+- **MS Paint Generative AI Killswitches**: Added `DisableImageCreator = 1`, `DisableCocreator = 1`, and `DisableGenerativeFill = 1` under `HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Paint`.
+- **File Explorer Cloud Graph & Prelaunch Suppression**: Added `DisableGraphRecentItems = 1` (stopping File Explorer from polling Microsoft Graph for cloud activity/recommendations) and `DisableFileExplorerPrelaunch = 1` under `HKLM:\Software\Policies\Microsoft\Windows\Explorer`.
+- **CloudContent Promotional Screen Suppression**: Added `DisableCopilotPinScreen = 1` (blocking full-screen Copilot taskbar pin nags) and `DisableGetStarted = 1` under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent`. Added `DisableSpotlightCollectionOnDesktop = 1` and `DisableThirdPartySuggestions = 1` under `HKCU`.
+- **DataCollection Log & Dump Minimization**: Added `LimitDiagnosticLogCollection = 1` and `LimitDumpCollection = 1` under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection`.
+- **ConsentStore Notification Harvesting Revocation**: Enforced `userNotificationListener` capability (`Value = "Deny"`) with symmetrical restore back to `"Allow"`.
+- **26H2 Flighting FeatureConfig Telemetry Scheduled Tasks**: Added wildcard query and disablement of active telemetry tasks under `\Microsoft\Windows\Flighting\FeatureConfig\*` (including `UsageDataReporting`, `UsageDataReceiver`, `UsageDataFlushing`, `ReconcileFeatures`, `GovernedFeatureUsageProcessing`).
+- **Performance Feedback & WER Scheduled Tasks**: Added disablement of `PerformanceTrace\ShowFeedbackToast`, `PerformanceTrace\WhesvcToast`, `Windows Error Reporting\QueueReporting`, `Shell\FamilySafetyMonitor`, and `Shell\FamilySafetyRefreshTask`.
+- **26H2 AppX Bloatware & Start Menu Companions**: Added `Microsoft.PowerAutomateDesktop` and `MicrosoftCorporationII.MicrosoftFamily` to `$bloatApps`. Suppressed Start Menu Companions Phone Link panel (`Start\Companions\Microsoft.YourPhone...`) under `-KeepPhoneLink` gate.
+- **Unit & AST Test Suite Expansion**: Added Pester test coverage in `tests/unslop-win11.Tests.ps1` verifying 26H2/26300 descending build ordering and AST declarations for all new 26H2 AI and telemetry policies.
+- **Architectural Decision Record (ADR-032)**: Documented 26H2 enablement architecture, decompiled ADMX schemas, and AI slop hardening in `docs/decisions.md`.
+
+### Fixed
+- **Build 26300 Misidentification**: Fixed an issue where Windows 11 26H2 hosts were misidentified as "25H2" because `$build -ge 26200` was evaluated prior to checking for Build 26300.
+
+---
+
 ## [1.3.8] - 2026-10-02
 
 ### Added
@@ -454,7 +477,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.8...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.8...v1.4.0
 [1.3.8]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.5...v1.3.6

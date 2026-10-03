@@ -136,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo -DryRun
    * Verify all 7 pillars pass locally with zero skips via:
      `powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict`
    * Follow the checklists provided in our [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md).
-   * Include the Windows build number tested (e.g. 24H2 Build 26100 or 25H2 Build 26200).
+   * Include the Windows build number tested (e.g. 26H2 Build 26300, 25H2 Build 26200, or 24H2 Build 26100).
    * Include the relevant excerpt from `.\logs\unslop_25h2_dryrun_*.log`.
    * Add a line under `[Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) summarizing your enhancement or fix.
    * If working towards an item on our [`ROADMAP.md`](ROADMAP.md), cite the corresponding milestone.

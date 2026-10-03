@@ -479,3 +479,28 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - **`-KeepPCManager` Parameter Flag & Pre-Uninstall Locking Resolution:** Introduced `[switch]$KeepPCManager` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` (including argument token whitelist and interactive toggle menus). When `-KeepPCManager` is omitted, the `PCManager Service Store` service is disabled in Stage 1 and running `MSPCManagerService` processes are terminated before Stage 12, releasing all file locks and enabling clean package de-provisioning.
 - **Consequences:** Eliminates lingering background svchost bloat and Cross-Device host re-spawns on 25H2/26H1 builds, safely preserves Microsoft PC Manager when requested, and guarantees clean package removal when debloated while preserving full 100% `-Undo` symmetry.
 
+---
+
+## ADR-032: Windows 11 26H2 (Build 26300+) Enablement Package Support & AI Slop Hardening (2026-10-04)
+- **Status:** Accepted
+- **Context:**
+  1. *Windows 11 26H2 Enablement Package Architecture:* Microsoft released Windows 11 Version 26H2 ("Windows 11 2026 Update", Build 26300, GA September 29, 2026) as an enablement package (eKB KB5121794) activating features atop the shared 24H2/25H2 Germanium servicing core. In `unslop-win11.ps1`, the `$osTag` detection logic evaluated `$build -ge 26200` before checking for 26H2, causing Build 26300 systems to be misclassified as "25H2" in headers, logs, and summary output.
+  2. *New 26H2 AI Slop & On-Screen Context Analysis:* Microsoft introduced several new AI and sensor subsystems in 26H2 governed by official Group Policy templates (`WindowsCopilot.admx`, `CAM_AI.admx`, `Explorer.admx`, `CloudContent.admx`):
+     - **Click to Do:** Interactive on-screen OCR text/image analysis overlay that continuously monitors active windows on user gesture (`DisableClickToDo = 1`).
+     - **Recall Hardening:** Added explicit policies `AllowRecallEnablement = 0` (blocks user or OEM activation) and `AllowRecallExport = 0` (blocks snapshot export to third-party apps).
+     - **Settings AI Agent & Agent Connectors:** Local SLM search assistant in Windows Settings (`DisableSettingsAgent = 1`) and autonomous background agent API connectors (`ConfigureAgentConnectors = 2`).
+     - **MS Paint Generative AI:** DALL-E cloud image generation, NPU Cocreator, and Generative Fill cloud hooks (`DisableImageCreator = 1`, `DisableCocreator = 1`, `DisableGenerativeFill = 1`).
+     - **File Explorer Graph Cloud Telemetry:** Polling Microsoft Graph for recent/shared cloud documents across accounts (`DisableGraphRecentItems = 1`) and background window prelaunch (`DisableFileExplorerPrelaunch = 1`).
+     - **CloudContent Promotional Screens:** OOBE/post-update Copilot taskbar pin nags (`DisableCopilotPinScreen = 1`), Get Started nags (`DisableGetStarted = 1`), and desktop Spotlight icon injections (`DisableSpotlightCollectionOnDesktop = 1`).
+  3. *Unmanaged Flighting & Performance Telemetry Tasks:* Live enumeration on 26H2 hosts revealed 7 unmanaged tasks under `\Microsoft\Windows\Flighting\FeatureConfig\*` (e.g., `UsageDataReporting`, `UsageDataReceiver`), performance feedback toasts (`ShowFeedbackToast`, `WhesvcToast`), and Watson error report queueing (`QueueReporting`).
+  4. *ConsentStore Notification Harvesting:* The `userNotificationListener` capability was set to `Allow` by default, granting background apps unrestricted access to read user notification text.
+  5. *Store Injections:* `Microsoft.PowerAutomateDesktop` and `MicrosoftCorporationII.MicrosoftFamily` packages were staged in 26H2 images but omitted from `$bloatApps`.
+- **Decision:**
+  - **Build Detection:** Inserted `elseif ($build -ge 26300) { "26H2" }` into `$osTag` descending order chain before the `26200` ("25H2") evaluation.
+  - **Stage 2 AI Neutralization:** Configured `DisableClickToDo = 1` across `HKLM/HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI` and `HKCU:\Software\Microsoft\Windows\Shell\ClickToDo`. Added `AllowRecallEnablement = 0`, `AllowRecallExport = 0`, `DisableSettingsAgent = 1`, and `ConfigureAgentConnectors = 2` under `WindowsAI`. Added Paint generative AI killswitches under `Policies\Paint`.
+  - **Stage 3 & 4 Telemetry/Shell Policies:** Enforced `LimitDiagnosticLogCollection = 1` and `LimitDumpCollection = 1` under `DataCollection`. Configured `DisableCopilotPinScreen = 1`, `DisableGetStarted = 1`, `DisableSpotlightCollectionOnDesktop = 1`, `DisableGraphRecentItems = 1`, and `DisableFileExplorerPrelaunch = 1`.
+  - **Stage 10 ConsentStore Hardening:** Revoked `userNotificationListener` capability (`Value = "Deny"`) with symmetrical restore to `"Allow"`.
+  - **Stage 11 Scheduled Tasks:** Added dynamic query for `\Microsoft\Windows\Flighting\FeatureConfig\*` and `\Microsoft\Windows\WindowsAI\*`. Added explicit task toggling for `ShowFeedbackToast`, `WhesvcToast`, `QueueReporting`, `FamilySafetyMonitor`, and `FamilySafetyRefreshTask`.
+  - **Stage 12 & 16 Bloat & Companions:** Added `Microsoft.PowerAutomateDesktop` and `MicrosoftCorporationII.MicrosoftFamily` to `$bloatApps`. Suppressed Start Menu Companions Phone Link panel (`Start\Companions\Microsoft.YourPhone...`) under `-KeepPhoneLink` gate.
+- **Consequences:** Provides native, comprehensive support for Windows 11 26H2 with zero version confusion, neutralizes all newly introduced 26H2 AI slop, screen scraping, and background telemetry tasks, ensures 100% symmetrical `-Undo` restoration, and maintains full compliance with the Master Quality Gate.
+

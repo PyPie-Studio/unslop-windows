@@ -7,11 +7,11 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 [![GitHub release](https://img.shields.io/github/v/release/PyPie-Studio/unslop-windows?style=for-the-badge&logo=github&color=green)](https://github.com/PyPie-Studio/unslop-windows/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/PyPie-Studio/unslop-windows/lint.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/PyPie-Studio/unslop-windows/actions)
-[![Windows 11](https://img.shields.io/badge/Windows%2011-26H1%20%7C%2025H2%20%7C%2024H2%20%7C%2023H2%20%7C%2022H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
+[![Windows 11](https://img.shields.io/badge/Windows%2011-26H2%20%7C%2026H1%20%7C%2025H2%20%7C%2024H2%20%7C%2023H2%20%7C%2022H2-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.8.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
+[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.4.0.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -19,13 +19,13 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 ```text
 ============================================================
-  unslop-windows (v1.3.8) - PyPie Studio
+  unslop-windows (v1.4.0) - PyPie Studio
   Windows 10 & 11 Debloater and Privacy Tool
 ============================================================
 
   Select your Windows version:
 
-  [1] Windows 11 (26H1 / 25H2 / 24H2 / 23H2 / 22H2 / 21H2)
+  [1] Windows 11 (26H2 / 26H1 / 25H2 / 24H2 / 23H2 / 22H2 / 21H2)
   [2] Windows 10 (22H2 / 21H2 / 20H2 / Enterprise LTSC / Builds 10240-19045)
   [0] Exit
 
@@ -46,7 +46,7 @@ Select an option [0-2]:
 
 ### Direct Download (No Git Required)
 
-1. Download **[`unslop-windows-v1.3.8.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.3.8.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.4.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.4.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
@@ -108,6 +108,7 @@ Two separate PowerShell scripts — one for Windows 11, one for Windows 10 — s
 
 | OS | Builds | Script |
 | :--- | :--- | :--- |
+| Windows 11 26H2 | 26300+ | `unslop-win11.ps1` |
 | Windows 11 26H1 | 28000+ | `unslop-win11.ps1` |
 | Windows 11 25H2 | 26200+ | `unslop-win11.ps1` |
 | Windows 11 24H2 | 26100–26120 | `unslop-win11.ps1` |
@@ -126,21 +127,21 @@ Two separate PowerShell scripts — one for Windows 11, one for Windows 10 — s
 Each script runs 18 modules. Here is what they touch:
 
 1. **Background services** — Disables `SysMain`, `WSearch`, `DiagTrack`, `dmwappushservice`, `TrkWks`, `lfsvc`, `InventorySvc` (compatibility appraisal), `whesvc` (experience telemetry), `WSAIFabricSvc` (AI host), `PcaSvc` (compatibility assistant), `CDPSvc` (connected devices), and Xbox Live background daemon services. Start menu search stays fast (shell in-memory index). Skip with `-KeepSysMain`, `-KeepSearch`, `-KeepXbox`, `-KeepPhoneLink`, or `-KeepPCManager`.
-2. **Recall and Copilot (Win11) / Cortana and Copilot (Win10)** — Win11: disables Recall snapshotting (`DisableAIDataAnalysis=1`), removes Copilot policies, providers and taskbar shortcuts. Win10: disables Cortana (`AllowCortana=0`) and Copilot (`TurnOffWindowsCopilot=1`), uninstalls the apps.
-3. **Telemetry and Game DVR** — Sets `AllowTelemetry=0`, disables CEIP, Application Impact Telemetry, OneSettings downloads and Game DVR / Game Bar background recording policies (skip with `-KeepXbox`).
-4. **Start menu and lock screen ads** — Disables lock screen tips, app recommendations, notification promotions, IrisService programmable tiles and scrubs sponsored app stubs (LinkedIn, Copilot).
+2. **Recall, Copilot and AI features (Win11) / Cortana and Copilot (Win10)** — Win11: disables Recall snapshotting (`DisableAIDataAnalysis=1`, `AllowRecallEnablement=0`, `AllowRecallExport=0`), Click to Do screen context analysis, Settings AI Agent, autonomous agent connectors, MS Paint AI features (Cocreator/Generative Fill), and removes Copilot policies, providers and taskbar shortcuts. Win10: disables Cortana (`AllowCortana=0`) and Copilot (`TurnOffWindowsCopilot=1`), uninstalls the apps.
+3. **Telemetry and Game DVR** — Sets `AllowTelemetry=0`, disables CEIP, Application Impact Telemetry, diagnostic log/dump collection, OneSettings downloads and Game DVR / Game Bar background recording policies (skip with `-KeepXbox`).
+4. **Start menu and lock screen ads** — Disables lock screen tips, app recommendations, notification promotions, IrisService programmable tiles, File Explorer Graph cloud activity polling (`DisableGraphRecentItems=1`), Copilot pin nags and scrubs sponsored app stubs (LinkedIn, Copilot).
 5. **Speech and typing data** — Disables cloud speech recognition and inking/typing dictionary collection.
 6. **Search tracking** — Disables search history, Microsoft account integration and Bing suggestions in Start.
 7. **Network privacy** — Disables LLMNR (`EnableMulticast=0`) to block credential sniffing. Disables Wi-Fi hotspot reporting.
 8. **Driver updates (kept safe)** — Preserves Windows Update hardware driver delivery by default. Exclude driver updates with `-ExcludeWUDrivers`.
 9. **Taskbar and Explorer** — Win11: disables Widgets via GPO, hides Chat. Win10: hides News & Interests, People bar, Meet Now. Both: shows file extensions. Left-align taskbar icons with `-LeftTaskbar`.
-10. **App permissions (ConsentStore)** — Revokes background access for location, diagnostics, contacts, calendar, phone. Win11 also blocks `foregroundTextAccess` and `systemAIModels`.
-11. **Diagnostic scheduled tasks** — Disables 20+ background telemetry tasks (OneSettings, CEIP, Customer Experience, Disk Diagnostics, etc).
-12. **Bloatware removal** — Removes TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video, Weather, Maps, Teams, Copilot, LinkedIn, Xbox Game Bar overlay packages, PC Manager and other pre-installed apps from current user and system image (so they don't come back for new accounts). Win11 also removes AI integrations (aimgr, AIFabric, AugLoop). Skip with `-KeepXbox`, `-KeepTodos`, `-KeepSpotify`, `-KeepTeams`, `-KeepPCManager`, `-KeepPhoneLink`, `-KeepMail` or `-KeepClock`.
+10. **App permissions (ConsentStore)** — Revokes background access for location, diagnostics, contacts, calendar, phone. Win11 also blocks `foregroundTextAccess`, `systemAIModels`, and `userNotificationListener` (background notification harvesting).
+11. **Diagnostic scheduled tasks** — Disables 25+ background telemetry tasks (OneSettings, Flighting FeatureConfig, CEIP, Customer Experience, Performance Feedback toasts, WER QueueReporting, Disk Diagnostics, etc).
+12. **Bloatware removal** — Removes TikTok, Spotify, Instagram, Netflix, Candy Crush, Disney+, Prime Video, Weather, Maps, Teams, Copilot, LinkedIn, Power Automate, Family Safety, Xbox Game Bar overlay packages, PC Manager and other pre-installed apps from current user and system image (so they don't come back for new accounts). Win11 also removes AI integrations (aimgr, AIFabric, AugLoop). Skip with `-KeepXbox`, `-KeepTodos`, `-KeepSpotify`, `-KeepTeams`, `-KeepPCManager`, `-KeepPhoneLink`, `-KeepMail` or `-KeepClock`.
 13. **OneDrive removal** — Stops OneDrive, runs uninstaller, unpins from Explorer sidebar, blocks sync. Skip with `-KeepOneDrive`.
 14. **Startup and Edge cleanup** — Stops Edge background tasks and suppresses Edge Copilot / sidebar web hubs (`HubsSidebarEnabled=0`, `AllowCopilot=0`). Backs up removed startup entries to the registry for `-Undo`.
 15. **Defender sample submissions** — Sets `SubmitSamplesConsent=2` (NeverSend) to stop automatic file uploads. Real-time AV stays active. Skip with `-KeepDefenderDefaults`.
-16. **Activity history** — Disables timeline feeds, Connected Devices Platform and Cross-Device Resume.
+16. **Activity history** — Disables timeline feeds, Connected Devices Platform, Cross-Device Resume and Start Menu Companions panel.
 17. **Delivery Optimization** — Disables P2P update sharing via GPO (`DODownloadMode=0`). Throttles Store auto-downloads (skip with `-KeepStoreAutoUpdate`). `DoSvc` service stays active so the Store works.
 18. **Outbound firewall rules** — Blocks outbound traffic for diagnostic endpoints, SSDP discovery and connected device tracking.
 
@@ -203,7 +204,7 @@ Pass these flags via CLI or enter them under Option `[7]` (Custom CLI Flags) in 
 I tried the popular debloaters and ran into real problems:
 
 - Some broke the WebView2 engine that Microsoft is integrating into most Windows 11 components.
-- Some were built for older Windows versions and didn't cover Recall, Copilot or the 24H2/25H2/26H1 AI features.
+- Some were built for older Windows versions and didn't cover Recall, Copilot or the 24H2/25H2/26H1/26H2 AI features.
 - Some had changes that came back after Windows feature updates because they only removed apps from the current user instead of de-provisioning from the system image.
 - None had a clean `-Undo` flag that could revert every single change with one command.
 
@@ -215,7 +216,7 @@ This script takes a different approach:
 - **`-DryRun` for inspection.** Run without admin rights to see every proposed change before committing.
 - **Delivery Optimization done right.** Disables P2P sharing via GPO (`DODownloadMode=0`) without killing `DoSvc`, so the Microsoft Store doesn't throw error `0x80d03805`.
 
-Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 (26H1, 25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
+Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 (26H2, 26H1, 25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
 
 ---
 

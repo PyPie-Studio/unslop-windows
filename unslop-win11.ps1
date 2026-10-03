@@ -1,5 +1,5 @@
-# unslop-windows: Windows 11 Debloater (v1.3.8)
-# Targets Windows 11 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
+# unslop-windows: Windows 11 Debloater (v1.4.0)
+# Targets Windows 11 26H2 (Build 26300+), 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
 
@@ -8,7 +8,7 @@
     unslop-windows: Windows 11 Debloater and Privacy Hardener.
 
 .DESCRIPTION
-    Debloats Windows 11 26H1, 25H2, 24H2, 23H2, 22H2 and 21H2 by disabling telemetry,
+    Debloats Windows 11 26H2, 26H1, 25H2, 24H2, 23H2, 22H2 and 21H2 by disabling telemetry,
     stopping unnecessary services and background tasks, removing pre-installed
     bloatware, disabling Recall and Copilot and revoking ConsentStore permissions.
     Does not touch WinSxS or DISM manifests. All changes reversible via -Undo.
@@ -413,11 +413,11 @@ if (-not $SkipBuildCheck) {
         exit 1
     }
 }
-$osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } elseif ($build -ge 22621) { "22H2" } elseif ($build -ge 22000) { "21H2" } else { "Dev/Canary" }
+$osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } elseif ($build -ge 26200) { "25H2" } elseif ($build -ge 26100) { "24H2" } elseif ($build -ge 22631) { "23H2" } elseif ($build -ge 22621) { "22H2" } elseif ($build -ge 22000) { "21H2" } else { "Dev/Canary" }
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.3.8: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.4.0: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -439,7 +439,7 @@ Set-SvcState "DiagTrack"        "Diagnostics Tracking (main telemetry)" "Automat
 Set-SvcState "TrkWks"           "Distributed Link Tracking - tracks file shortcuts" "Automatic"
 Set-SvcState "lfsvc"            "Location Framework - GPS/location tracking" "Manual"
 
-# 25H2 / 26H1 Telemetry, Compatibility Appraisal & AI Host Services
+# 25H2 / 26H1 / 26H2 Telemetry, Compatibility Appraisal & AI Host Services
 Set-SvcState "InventorySvc"     "Inventory and Compatibility Appraisal service" "Automatic"
 Set-SvcState "whesvc"           "Windows Health and Optimized Experiences telemetry" "Automatic"
 Set-SvcState "WSAIFabricSvc"    "Windows AI Components Host background service" "Automatic"
@@ -470,9 +470,9 @@ if ($IsUndo -or -not $KeepXbox) {
 Log ""
 
 # ============================================================
-# 2. 24H2/25H2/26H1 WINDOWS RECALL & WINDOWS COPILOT KILLSWITCH
+# 2. 24H2/25H2/26H1/26H2 WINDOWS RECALL, COPILOT & AI KILLSWITCH
 # ============================================================
-Log "--- 2. Windows Recall & Windows Copilot ---"
+Log "--- 2. Windows Recall, Windows Copilot & AI Features ---"
 # Windows AI & Recall (Screenray Snapshotting / Click to Do analysis)
 $winAI_LM = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"
 $winAI_CU = "HKCU:\Software\Policies\Microsoft\Windows\WindowsAI"
@@ -480,6 +480,26 @@ Set-RegDwordSafe -path $winAI_LM -name "DisableAIDataAnalysis" -debloatValue 1 -
 Set-RegDwordSafe -path $winAI_CU -name "DisableAIDataAnalysis" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $winAI_LM -name "AllowRecall"            -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $winAI_CU -name "AllowRecall"            -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# 26H2 Recall Enablement & Snapshot Export Policies
+Set-RegDwordSafe -path $winAI_LM -name "AllowRecallEnablement"  -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $winAI_LM -name "AllowRecallExport"      -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+# 26H2 Click to Do Screen Context Analysis Policies
+$clickToDoShell = "HKCU:\Software\Microsoft\Windows\Shell\ClickToDo"
+Set-RegDwordSafe -path $clickToDoShell -name "DisableClickToDo" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $winAI_LM -name "DisableClickToDo"       -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $winAI_CU -name "DisableClickToDo"       -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
+# 26H2 Natural Language Settings AI Agent & Autonomous Agent Connectors Policies
+Set-RegDwordSafe -path $winAI_LM -name "DisableSettingsAgent"    -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $winAI_LM -name "ConfigureAgentConnectors" -debloatValue 2 -undoValue 0 -removeOnUndo $true
+
+# 26H2 MS Paint Generative AI Policies (Cocreator, Image Creator & Generative Fill)
+$paintPolicy = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Paint"
+Set-RegDwordSafe -path $paintPolicy -name "DisableImageCreator"  -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $paintPolicy -name "DisableCocreator"     -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $paintPolicy -name "DisableGenerativeFill" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
 # Windows Copilot Policy
 $copilot_LM = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot"
@@ -508,6 +528,8 @@ Set-RegDwordSafe -path $dataColl -name "DisableEnterpriseAuthProxy"   -debloatVa
 Set-RegDwordSafe -path $dataColl -name "CommercialDataOptIn"          -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $dataColl -name "DisableOneSettingsDownloads"  -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $dataColl -name "DoNotShowFeedbackNotifications" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $dataColl -name "LimitDiagnosticLogCollection"    -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $dataColl -name "LimitDumpCollection"             -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
 $privacyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy"
 Set-RegDwordSafe -path $privacyPath -name "TailoredExperiencesWithDiagnosticDataEnabled" -debloatValue 0 -undoValue 1
@@ -588,8 +610,20 @@ $cloudContentPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
 Set-RegDwordSafe -path $cloudContentPolicy -name "DisableWindowsConsumerFeatures" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $cloudContentPolicy -name "DisableCloudOptimizedContent" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $cloudContentPolicy -name "DisableConsumerAccountStateContent" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableCopilotPinScreen" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentPolicy -name "DisableGetStarted"        -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
-# 25H2 Start avatar account nagging badges (OneDrive/M365 promotions) & Iris web recommendations
+# User-scope Cloud Content & Desktop Spotlight suppression
+$cloudContentCU = "HKCU:\Software\Policies\Microsoft\Windows\CloudContent"
+Set-RegDwordSafe -path $cloudContentCU -name "DisableSpotlightCollectionOnDesktop" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $cloudContentCU -name "DisableThirdPartySuggestions"        -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
+# File Explorer Graph Cloud Activity Polling & Window Prelaunch Policies
+$explorerPolicy = "HKLM:\Software\Policies\Microsoft\Windows\Explorer"
+Set-RegDwordSafe -path $explorerPolicy -name "DisableGraphRecentItems"     -debloatValue 1 -undoValue 0 -removeOnUndo $true
+Set-RegDwordSafe -path $explorerPolicy -name "DisableFileExplorerPrelaunch" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
+# 25H2/26H2 Start avatar account nagging badges (OneDrive/M365 promotions) & Iris web recommendations
 Set-RegDwordSafe -path $explorerAdv -name "Start_AccountNotifications" -debloatValue 0 -undoValue 1
 Set-RegDwordSafe -path $explorerAdv -name "Start_IrisRecommendations"  -debloatValue 0 -undoValue 1
 Set-RegDwordSafe -path $explorerAdv -name "ShowSyncProviderNotifications" -debloatValue 0 -undoValue 1
@@ -761,7 +795,7 @@ Log "--- 9. Taskbar & Explorer Cleanliness ---"
 Set-RegDwordSafe -path $explorerAdv -name "HideFileExt" -debloatValue 0 -undoValue 1
 
 # Clean Taskbar clutter (Hide Widgets via official GPO policy and Chat/Teams buttons)
-# Note: On Windows 11 23H2+/24H2/25H2/26H1+, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa; HKLM Dsh policy disables Widgets system-wide
+# Note: On Windows 11 23H2+/24H2/25H2/26H1+/26H2+, User Choice Protection Driver (UCPD) blocks direct edits to HKCU TaskbarDa; HKLM Dsh policy disables Widgets system-wide
 $dshPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Dsh"
 Set-RegDwordSafe -path $dshPolicy -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $explorerAdv -name "TaskbarMn" -debloatValue 0 -undoValue 1
@@ -820,9 +854,9 @@ if ($ClassicContextMenu) {
 Log ""
 
 # ============================================================
-# 10. APP PERMISSIONS & 25H2 CAPABILITIES (ConsentStore)
+# 10. APP PERMISSIONS & 25H2/26H2 CAPABILITIES (ConsentStore)
 # ============================================================
-Log "--- 10. App Permissions & 25H2 Capabilities ---"
+Log "--- 10. App Permissions & 25H2/26H2 Capabilities ---"
 # Target capabilities that leak metadata, contacts or AI context
 # Microphone, webcam and filesystem libraries are preserved for desktop apps
 Set-ConsentCapability "location"                     "GPS & Location Tracking"
@@ -837,6 +871,7 @@ Set-ConsentCapability "chat"                         "Messaging & SMS"
 Set-ConsentCapability "foregroundTextAccess"         "25H2 Foreground On-Screen Text Scraping"
 Set-ConsentCapability "systemAIModels"               "25H2 Third-Party OS AI Model Execution"
 Set-ConsentCapability "graphicsCaptureWithoutBorder" "25H2 Borderless Screen Capture"
+Set-ConsentCapability "userNotificationListener"     "26H2 Background Notification Harvesting"
 Log ""
 
 # ============================================================
@@ -871,6 +906,14 @@ $tasksToToggle = @(
     "\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload"
     # Power Diagnostics
     "\Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem"
+    # 26H2 Performance Feedback & Diagnostics Toasts
+    "\Microsoft\Windows\PerformanceTrace\ShowFeedbackToast"
+    "\Microsoft\Windows\PerformanceTrace\WhesvcToast"
+    # Windows Error Reporting Queue Processor
+    "\Microsoft\Windows\Windows Error Reporting\QueueReporting"
+    # Shell Family Safety Telemetry Listeners
+    "\Microsoft\Windows\Shell\FamilySafetyMonitor"
+    "\Microsoft\Windows\Shell\FamilySafetyRefreshTask"
 )
 foreach ($task in $tasksToToggle) {
     $path = $task -replace '\\[^\\]+$', '\'
@@ -878,8 +921,16 @@ foreach ($task in $tasksToToggle) {
     Set-TaskState -path $path -name $name
 }
 
-# Scan any Recall tasks if present
+# Scan any Recall & WindowsAI tasks if present
 Get-ScheduledTask -TaskPath "\Microsoft\Windows\Recall\*" -ErrorAction SilentlyContinue | ForEach-Object {
+    Set-TaskState -path $_.TaskPath -name $_.TaskName
+}
+Get-ScheduledTask -TaskPath "\Microsoft\Windows\WindowsAI\*" -ErrorAction SilentlyContinue | ForEach-Object {
+    Set-TaskState -path $_.TaskPath -name $_.TaskName
+}
+
+# 26H2 Flighting FeatureConfig telemetry & feature usage reporting tasks
+Get-ScheduledTask -TaskPath "\Microsoft\Windows\Flighting\FeatureConfig\*" -ErrorAction SilentlyContinue | ForEach-Object {
     Set-TaskState -path $_.TaskPath -name $_.TaskName
 }
 
@@ -908,7 +959,7 @@ if ($nvTasks) {
 Log ""
 
 # ============================================================
-# 12. DUAL-STAGE UWP & PROVISIONED BLOATWARE (24H2/25H2/26H1 INCLUDED)
+# 12. DUAL-STAGE UWP & PROVISIONED BLOATWARE (24H2/25H2/26H1/26H2 INCLUDED)
 # ============================================================
 Log "--- 12. Dual-Stage UWP & Provisioned Bloatware ---"
 
@@ -919,7 +970,7 @@ $bloatApps = @(
     # Microsoft To-Do (modularized: removable by default, protected via -KeepTodos)
     "Microsoft.Todos"
 
-    # 24H2 / 25H2 / 26H1 AI & Shell Injections
+    # 24H2 / 25H2 / 26H1 / 26H2 AI & Shell Injections
     "aimgr"
     "Microsoft.Copilot"
     "Microsoft.Windows.Ai.Copilot.Provider"
@@ -931,6 +982,10 @@ $bloatApps = @(
     "Microsoft.Windows.DevHome"
     "MicrosoftWindows.Client.WebExperience"
     "Microsoft.Windows.Client.WebExperience"
+
+    # Automation & Family Monitoring Injections
+    "Microsoft.PowerAutomateDesktop"
+    "MicrosoftCorporationII.MicrosoftFamily"
 
     # Sponsored third-party bloat & casual games
     "ByteDance.TikTok"
@@ -1331,6 +1386,10 @@ if ($IsUndo -or -not $KeepPhoneLink) {
     Set-RegDwordSafe -path $resumeConfig -name "IsResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
     Set-RegDwordSafe -path $resumeConfig -name "IsOneDriveResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
+    # 26H2 Start Menu Companions (Phone Link sidebar panel)
+    $companionPhone = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Start\Companions\Microsoft.YourPhone_8wekyb3d8bbwe"
+    Set-RegDwordSafe -path $companionPhone -name "IsEnabled" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
     # Terminate active CrossDeviceResume host if running
     if (-not $IsUndo) {
         $resumeProc = Get-Process -Name "CrossDeviceResume" -ErrorAction SilentlyContinue
@@ -1459,7 +1518,7 @@ if ($IsDryRun) {
 if ($IsUndo) {
     $act = if ($IsDryRun) { "Would restore" } else { "Restored" }
     Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc, InventorySvc, whesvc, WSAIFabricSvc, PcaSvc"
-    Log "Recall & Copilot:      Windows Recall, Screenray and Copilot policies reverted"
+    Log "Recall & Copilot:      Windows Recall, Screenray, Click to Do, Settings Agent and Copilot policies reverted"
     if (-not $KeepXbox) {
         $xbAct = if ($IsDryRun) { "Would restore" } else { "Restored" }
         Log "Xbox & Gaming:         $xbAct (Game Bar & Game DVR capture settings restored)"
@@ -1471,12 +1530,12 @@ if ($IsUndo) {
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
     Log "Explorer & Taskbar:    Widgets, Chat and File Extensions restored to Windows default"
-    Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, CEIP, Office, NVIDIA enabled"
+    Log "Telemetry tasks:       OneSettings, FeatureConfig, PowerGridForecast, MareBackup, CEIP, Office, NVIDIA enabled"
     Log "Firewall rules:        8 rules re-enabled"
 } else {
     $act = if ($IsDryRun) { "Would disable" } else { "Disabled" }
     Log "Services:              $act SysMain, WSearch, dmwappushservice, DiagTrack, TrkWks, lfsvc, InventorySvc, whesvc, WSAIFabricSvc, PcaSvc"
-    Log "Recall & Copilot:      Windows Recall (DisableAIDataAnalysis=1) & Copilot policies enforced"
+    Log "Recall & Copilot:      Windows Recall, Click to Do, Settings Agent & Copilot policies enforced"
     if ($KeepOneDrive) {
         Log "OneDrive:              Preserved (-KeepOneDrive enabled)"
     } else {
@@ -1528,11 +1587,11 @@ if ($IsUndo) {
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
     Log "Activity & Resume:     Activity feed, Cross-Device Resume (MDM/CDP) and Cloud Clipboard disabled"
     Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
-    Log "ConsentStore:          12 capabilities blocked (Location, Diagnostics, Contacts, Tasks, AI models)"
+    Log "ConsentStore:          13 capabilities blocked (Location, Diagnostics, Contacts, Tasks, Notifications, AI models)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, Taskbar Widgets & Chat removed"
     if ($ClassicContextMenu) { Log "Context Menu:          Classic Windows 10 style full context menu applied" }
-    Log "Telemetry tasks:       OneSettings, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
+    Log "Telemetry tasks:       OneSettings, FeatureConfig, PowerGridForecast, MareBackup, StartupAppTask, CEIP, Office, Diag"
     Log "UWP bloatware:         Dual-stage removed ($removedInstalled active, $deprovisionedCount staged packages)"
     Log "Firewall:              8 outbound telemetry/remote rules blocked"
     Log "Startup cleaned:       Edge, OneDrive removed from auto-start"

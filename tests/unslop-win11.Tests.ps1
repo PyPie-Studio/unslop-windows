@@ -1009,20 +1009,23 @@ Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit'
         
         $assignmentText = $osTagAssignment.Extent.Text
         
-        $expectedTags = @('26H1', '25H2', '24H2', '23H2', '22H2', '21H2')
+        $expectedTags = @('26H1', '26H2', '25H2', '24H2', '23H2', '22H2', '21H2')
         foreach ($tag in $expectedTags) {
             $assignmentText | Should -Match "`"$tag`"" -Because "Version tag $tag must be present"
         }
         
         $idx28000 = $assignmentText.IndexOf('28000')
+        $idx26300 = $assignmentText.IndexOf('26300')
         $idx26200 = $assignmentText.IndexOf('26200')
         $idx28000 | Should -BeGreaterThan -1
+        $idx26300 | Should -BeGreaterThan -1
         $idx26200 | Should -BeGreaterThan -1
-        $idx28000 | Should -BeLessThan $idx26200 -Because "Build 28000 must be checked before 26200"
+        $idx28000 | Should -BeLessThan $idx26300 -Because "Build 28000 must be checked before 26300"
+        $idx26300 | Should -BeLessThan $idx26200 -Because "Build 26300 must be checked before 26200"
 
         $buildNumbers = [regex]::Matches($assignmentText, '(?<=\$build -ge )\d+') | ForEach-Object { [int]$_.Value }
         
-        $expectedBuilds = @(28000, 26200, 26100, 22631, 22621, 22000)
+        $expectedBuilds = @(28000, 26300, 26200, 26100, 22631, 22621, 22000)
         $buildNumbers.Count | Should -Be $expectedBuilds.Count
         for ($i = 0; $i -lt $expectedBuilds.Count; $i++) {
             $buildNumbers[$i] | Should -Be $expectedBuilds[$i] -Because "Build number ordering must be strictly descending"
@@ -1038,5 +1041,98 @@ Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit'
         }, $true)
 
         $copilotPolicy | Should -Not -BeNullOrEmpty -Because "RemoveMicrosoftCopilotApp policy must be configured via Set-RegDwordSafe"
+    }
+
+    It 'Implements 26H2 DisableClickToDo via Set-RegDwordSafe' {
+        $clickToDo = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'DisableClickToDo'
+        }, $true)
+
+        $clickToDo | Should -Not -BeNullOrEmpty -Because "DisableClickToDo policy must be configured via Set-RegDwordSafe"
+    }
+
+    It 'Implements 26H2 AllowRecallEnablement and AllowRecallExport via Set-RegDwordSafe' {
+        $enablement = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'AllowRecallEnablement'
+        }, $true)
+        $export = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'AllowRecallExport'
+        }, $true)
+
+        $enablement | Should -Not -BeNullOrEmpty -Because "AllowRecallEnablement must be configured"
+        $export | Should -Not -BeNullOrEmpty -Because "AllowRecallExport must be configured"
+    }
+
+    It 'Implements 26H2 DisableSettingsAgent and ConfigureAgentConnectors via Set-RegDwordSafe' {
+        $settingsAgent = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'DisableSettingsAgent'
+        }, $true)
+        $connectors = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'ConfigureAgentConnectors'
+        }, $true)
+
+        $settingsAgent | Should -Not -BeNullOrEmpty -Because "DisableSettingsAgent must be configured"
+        $connectors | Should -Not -BeNullOrEmpty -Because "ConfigureAgentConnectors must be configured"
+    }
+
+    It 'Implements 26H2 MS Paint AI policies via Set-RegDwordSafe' {
+        $paintPolicies = @('DisableImageCreator', 'DisableCocreator', 'DisableGenerativeFill')
+        foreach ($p in $paintPolicies) {
+            $found = $script:ast.Find({
+                param($node)
+                $node -is [System.Management.Automation.Language.CommandAst] -and
+                $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+                $node.Extent.Text -match $p
+            }, $true)
+            $found | Should -Not -BeNullOrEmpty -Because "$p must be configured via Set-RegDwordSafe"
+        }
+    }
+
+    It 'Implements 26H2 File Explorer DisableGraphRecentItems via Set-RegDwordSafe' {
+        $graphRecent = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'DisableGraphRecentItems'
+        }, $true)
+
+        $graphRecent | Should -Not -BeNullOrEmpty -Because "DisableGraphRecentItems must be configured via Set-RegDwordSafe"
+    }
+
+    It 'Implements 26H2 CloudContent DisableCopilotPinScreen via Set-RegDwordSafe' {
+        $copilotPin = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'DisableCopilotPinScreen'
+        }, $true)
+
+        $copilotPin | Should -Not -BeNullOrEmpty -Because "DisableCopilotPinScreen must be configured via Set-RegDwordSafe"
+    }
+
+    It 'Implements 26H2 userNotificationListener ConsentStore capability' {
+        $listener = $script:ast.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-ConsentCapability' -and
+            $node.Extent.Text -match 'userNotificationListener'
+        }, $true)
+
+        $listener | Should -Not -BeNullOrEmpty -Because "userNotificationListener must be denied via Set-ConsentCapability"
     }
 }

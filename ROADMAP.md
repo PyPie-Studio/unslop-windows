@@ -22,12 +22,16 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Milestone 2: Windows 11 25H2, 26H1 & 26H2 Hardening
-- [x] Disable Windows Recall and Screenray snapshots (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`).
-- [x] Windows Copilot taskbar and policy suppression.
-- [x] 25H2 ConsentStore permissions (screen text scraping `foregroundTextAccess`, OS AI models `systemAIModels` and borderless capture `graphicsCaptureWithoutBorder`).
+- [x] Disable Windows Recall and Screenray snapshots (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`, `AllowRecallEnablement = 0`, `AllowRecallExport = 0`).
+- [x] Windows Copilot taskbar and policy suppression (`DisableCopilotPinScreen = 1`).
+- [x] Click to Do OCR analysis & Screen scraping suppression (`DisableClickToDo = 1`).
+- [x] Windows Settings AI SLM & Agent Connectors neutralization (`DisableSettingsAgent = 1`, `ConfigureAgentConnectors = 2`).
+- [x] MS Paint Generative AI killswitches (`DisableImageCreator = 1`, `DisableCocreator = 1`, `DisableGenerativeFill = 1`).
+- [x] 25H2/26H2 ConsentStore permissions (screen text scraping `foregroundTextAccess`, OS AI models `systemAIModels`, borderless capture `graphicsCaptureWithoutBorder`, notification listener `userNotificationListener`).
+- [x] Flighting FeatureConfig telemetry task tree suppression (`\Microsoft\Windows\Flighting\FeatureConfig\*`).
 - [ ] **OneSettings Flighting DNS Hardening:** Block background telemetry endpoints downloaded via OneSettings config payloads.
 - [ ] **Edge Sidebar Policy:** Enforce GPO policies blocking Edge copilot sidebar integration without breaking WebView2.
-- [ ] **Cumulative Update Invariant Verification:** Automated testing against novel 25H2 monthly CU rollouts to ensure zero `0x800f0922` update rollbacks.
+- [ ] **Cumulative Update Invariant Verification:** Automated testing against novel 25H2/26H2 monthly CU rollouts to ensure zero `0x800f0922` update rollbacks.
 
 ---
 
@@ -51,4 +55,4 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Architecture Decisions
-See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-029) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
+See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-032) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
