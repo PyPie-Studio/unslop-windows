@@ -106,7 +106,9 @@ function Get-SystemMetrics {
     try {
         $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
         if ($provisioned) { $appxProvisionedCount = $provisioned.Count }
-    } catch {}
+    } catch {
+        Write-Verbose "Non-elevated execution cannot query provisioned packages: $($_.Exception.Message)"
+    }
 
     [PSCustomObject]@{
         Timestamp          = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")

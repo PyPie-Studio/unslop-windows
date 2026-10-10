@@ -170,7 +170,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                     if ($undoStartupType -ne "Manual") {
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
-                        try { Start-Service -Name $name -ErrorAction Stop } catch { }
+                        try { Start-Service -Name $name -ErrorAction Stop } catch { Write-Verbose "Best-effort manual service start skipped for ${name}: $($_.Exception.Message)" }
                     }
                     Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
                 } catch {
@@ -184,7 +184,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
             } else {
                 try {
                     if ($s.Status -eq "Running") {
-                        try { Stop-Service -Name $name -Force -ErrorAction Stop } catch { }
+                        try { Stop-Service -Name $name -Force -ErrorAction Stop } catch { Write-Verbose "Best-effort service stop skipped for ${name}: $($_.Exception.Message)" }
                     }
                     Set-Service -Name $name -StartupType Disabled -ErrorAction Stop
                     Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
@@ -267,7 +267,9 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                     if ($roVal) {
                         Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "unslop_$name" -Force -ErrorAction SilentlyContinue
                     }
-                } catch { }
+                } catch {
+                    Write-Verbose "Best-effort RunOnce property cleanup skipped for ${name}: $($_.Exception.Message)"
+                }
             }
         } else {
             if ($DryRun) {
