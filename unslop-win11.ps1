@@ -170,7 +170,9 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                     if ($undoStartupType -ne "Manual") {
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
-                        try { Start-Service -Name $name -ErrorAction Stop } catch { }
+                        try { Start-Service -Name $name -ErrorAction Stop } catch {
+                            # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
+                        }
                     }
                     Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
                 } catch {
@@ -184,7 +186,9 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
             } else {
                 try {
                     if ($s.Status -eq "Running") {
-                        try { Stop-Service -Name $name -Force -ErrorAction Stop } catch { }
+                        try { Stop-Service -Name $name -Force -ErrorAction Stop } catch {
+                            # Best-effort service stop; safe to ignore so Set-Service can still disable startup type
+                        }
                     }
                     Set-Service -Name $name -StartupType Disabled -ErrorAction Stop
                     Log "  DISABLED: $name ($desc)" -DryRun:$DryRun
@@ -267,7 +271,9 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                     if ($roVal) {
                         Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "unslop_$name" -Force -ErrorAction SilentlyContinue
                     }
-                } catch { }
+                } catch {
+                    # Best-effort cleanup of staged RunOnce entry on undo; safe to ignore if property absent or registry locked
+                }
             }
         } else {
             if ($DryRun) {
