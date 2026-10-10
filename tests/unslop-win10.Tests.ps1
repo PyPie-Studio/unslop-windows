@@ -558,7 +558,7 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
 
             $cortanaApp = "Microsoft.549981C3F5F10"
             $isAdmin = $false
-            $allInstalled = Get-AppxPackage -ErrorAction SilentlyContinue
+            $allInstalled = @(Get-AppxPackage -ErrorAction SilentlyContinue)
             $installed = if ($allInstalled) { $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($cortanaApp))" }) } else { $null }
             if ($installed) {
                 foreach ($pkg in $installed) {
