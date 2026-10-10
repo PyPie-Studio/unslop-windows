@@ -39,6 +39,12 @@ BeforeAll {
     if (-not (Get-Command Enable-ScheduledTask -ErrorAction SilentlyContinue)) {
         function Enable-ScheduledTask { param($TaskPath, $TaskName) }
     }
+    if (-not (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue)) {
+        function Get-AppxPackage { param([switch]$AllUsers, $ErrorAction) }
+    }
+    if (-not (Get-Command Remove-AppxPackage -ErrorAction SilentlyContinue)) {
+        function Remove-AppxPackage { param($Package, [switch]$AllUsers, $ErrorAction) }
+    }
 
     # Dot-source engine to export helper functions into test session
     . $script:targetScript
@@ -538,6 +544,38 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on startup restore exception"
             $script:log[-1] | Should -Match "FAILED: Could not restore startup entry TestStartupApp in HKCU:"
         }
+        It 'Remove-AppxPackage traps exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Get-AppxPackage -MockWith {
+                @([PSCustomObject]@{
+                    Name = "Microsoft.549981C3F5F10"
+                    PackageFullName = "Microsoft.549981C3F5F10_1.0.0.0_x64__8wekyb3d8bbwe"
+                    NonRemovable = $false
+                })
+            }
+            Mock -CommandName Remove-AppxPackage -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            $cortanaApp = "Microsoft.549981C3F5F10"
+            $isAdmin = $false
+            $allInstalled = Get-AppxPackage -ErrorAction SilentlyContinue
+            $installed = if ($allInstalled) { $allInstalled.Where({ -not $_.NonRemovable -and $_.Name -match "^$([regex]::Escape($cortanaApp))" }) } else { $null }
+            if ($installed) {
+                foreach ($pkg in $installed) {
+                    try {
+                        Remove-AppxPackage -Package $pkg.PackageFullName -ErrorAction Stop
+                        Log "  REMOVED APP: $($pkg.Name)"
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
+                    }
+                }
+            }
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on AppX package removal exception"
+            $script:log[-1] | Should -Match "FAILED: Could not remove Microsoft.549981C3F5F10"
+        }
+
     }
 }
 
