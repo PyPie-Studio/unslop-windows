@@ -122,7 +122,6 @@ param(
     [switch]$ForceRestart
 )
 
-$ErrorActionPreference = "SilentlyContinue"
 $IsUndo = $Undo.IsPresent
 $IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
 
