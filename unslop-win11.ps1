@@ -130,6 +130,14 @@ $global:FailCount = 0
 # List avoids += array copy overhead
 [System.Collections.Generic.List[string]]$script:log = [System.Collections.Generic.List[string]]::new()
 
+# ------------------------------------------------------------
+# CORE ENGINE HELPER FUNCTIONS (ADR-022 Architectural Invariant)
+# Note: Helper functions (Log, Set-SvcState, Set-TaskState, Set-RegDwordSafe,
+# Set-ConsentCapability, Remove-StartupEntry) are intentionally duplicated
+# across unslop-win10.ps1 and unslop-win11.ps1 to guarantee single-file
+# standalone execution, zero external module dependencies, and dot-sourcing test isolation.
+# ------------------------------------------------------------
+
 function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
     $ts = Get-Date -Format "HH:mm:ss"
     $prefix = if ($DryRun) { "[DRY-RUN] " } else { "" }
