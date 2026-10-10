@@ -216,7 +216,7 @@ This script takes a different approach:
 - **`-DryRun` for inspection.** Run without admin rights to see every proposed change before committing.
 - **Delivery Optimization done right.** Disables P2P sharing via GPO (`DODownloadMode=0`) without killing `DoSvc`, so the Microsoft Store doesn't throw error `0x80d03805`.
 
-Tested across 30+ machines (physical PCs and VMware VMs) running Windows 11 (26H2, 26H1, 25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
+Tested across 50+ machines (physical PCs and VMs) running Windows 11 (26H2, 26H1, 25H2, 24H2 and 23H2) and Windows 10 (22H2 and LTSC).
 
 ---
 
