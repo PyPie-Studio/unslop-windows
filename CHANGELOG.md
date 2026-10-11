@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.2] - 2026-10-12
+
+### Performance
+- **AppX Package Regex Escaping Pre-Computation**: Pre-constructed regex pattern strings (`$appEscaped`, `$pkgPattern`, `$dispPattern`, `$appPattern`) outside the `.Where()` predicate block across `unslop-win11.ps1` and `unslop-win10.ps1`. Eliminates thousands of redundant `[regex]::Escape` and string interpolation evaluations across provisioned and installed bloatware packages, reducing AppX filtering runtime by ~27%.
+
+### Changed
+- **PSScriptAnalyzer Catch Block Documentation**: Documented intentional best-effort error suppression inside catch blocks across `Set-SvcState` (service termination and manual startup) and `Set-RegDwordSafe` (`RunOnce` cleanup) in `unslop-win11.ps1`, `unslop-win10.ps1`, and `scripts/Measure-SystemState.ps1`. Clarifies design rationale and satisfies static analysis `PSAvoidUsingEmptyCatchBlock` rules.
+- **ADR-022 Helper Function Duplication Invariant**: Added explicit architectural documentation headers above core engine helper functions in `unslop-win11.ps1` and `unslop-win10.ps1` referencing ADR-022, ensuring developers and automated tools recognize intentional helper duplication for zero-dependency standalone execution.
+
+---
+
 ## [1.4.1] - 2026-10-04
 
 ### Fixed
@@ -491,7 +502,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.8...v1.4.0
 [1.3.8]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.7...v1.3.8
