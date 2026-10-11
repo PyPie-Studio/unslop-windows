@@ -106,7 +106,9 @@ function Get-SystemMetrics {
     try {
         $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
         if ($provisioned) { $appxProvisionedCount = $provisioned.Count }
-    } catch {}
+    } catch {
+        # Non-elevated execution safe fallback if provisioned packages cannot be queried
+    }
 
     [PSCustomObject]@{
         Timestamp          = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
