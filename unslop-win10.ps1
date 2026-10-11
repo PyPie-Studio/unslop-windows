@@ -999,11 +999,14 @@ if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
+        $appEscaped = [regex]::Escape($app)
+        $pkgPattern = "^$appEscaped(_|$)"
+        $dispPattern = "^$appEscaped($|\s)"
         # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
         $match = if ($provisioned) {
             $provisioned.Where({
-                ($_.PackageName -match "^$([regex]::Escape($app))(_|$)") -or
-                ($_.DisplayName -and $_.DisplayName -match "^$([regex]::Escape($app))($|\s)")
+                ($_.PackageName -match $pkgPattern) -or
+                ($_.DisplayName -and $_.DisplayName -match $dispPattern)
             })
         } else { $null }
         if ($match) {
@@ -1041,11 +1044,14 @@ if ($IsUndo) {
 
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     foreach ($app in $bloatApps) {
+        $appEscaped = [regex]::Escape($app)
+        $pkgPattern = "^$appEscaped(_|$)"
+        $dispPattern = "^$appEscaped($|\s)"
         # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
         $staged = if ($stagedPackages) {
             $stagedPackages.Where({
-                ($_.PackageName -match "^$([regex]::Escape($app))(_|$)") -or
-                ($_.DisplayName -and $_.DisplayName -match "^$([regex]::Escape($app))($|\s)")
+                ($_.PackageName -match $pkgPattern) -or
+                ($_.DisplayName -and $_.DisplayName -match $dispPattern)
             })
         } else { $null }
         if ($staged) {
@@ -1079,11 +1085,12 @@ if ($IsUndo) {
 
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
+        $appPattern = "^$([regex]::Escape($app))"
         # .Where() avoids pipeline overhead; match against Name (PackageId) or PackageFamilyName
         $installed = if ($allInstalled) {
             $allInstalled.Where({
                 -not $_.NonRemovable -and
-                ($_.Name -match "^$([regex]::Escape($app))" -or ($_.PackageFamilyName -and $_.PackageFamilyName -match "^$([regex]::Escape($app))"))
+                ($_.Name -match $appPattern -or ($_.PackageFamilyName -and $_.PackageFamilyName -match $appPattern))
             })
         } else { $null }
 
