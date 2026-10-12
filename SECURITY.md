@@ -19,7 +19,7 @@
 | **Windows 10 1809 / LTSC 2019** | Build 17763 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
 | **Windows 10 1803 / 1709 / 1703** | Build 17134 / 16299 / 15063 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
 | **Windows 10 1607 / LTSB 2016** | Build 14393 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
-| **Windows 10 1511 / 1507 / LTSB 2015**| Build 10586 / 10240 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
+| **Windows 10 1511 / 1507 / LTSB 2015** | Build 10586 / 10240 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
 | **Windows 10 Enterprise LTSC 2021** | Build 19044.1288+ | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
 | **Windows 10 IoT Enterprise LTSC** | Build 19044 / 19045 | Yes ([`unslop-win10.ps1`](unslop-win10.ps1)) |
 

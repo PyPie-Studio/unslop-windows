@@ -11,19 +11,24 @@ To maintain system stability across Windows updates, all contributions must adhe
 Every Pull Request must meet these eight requirements:
 
 ### 1. Safety Rules (Never Break Windows)
+
 * **Never touch WinSxS or DISM servicing components.**
 * **Never break Windows Update.** Cumulative updates and security patches must install cleanly.
 * **Never break the Microsoft Store.** Do not disable `DoSvc` (*Delivery Optimization* service); use GPO `DODownloadMode = 0` to block peer-to-peer uploads instead.
 * **Never disable critical security hardware or system drivers.**
 
 ### 2. Symmetrical Rollback (`-Undo`)
+
 Any modification added to `unslop-win11.ps1` or `unslop-win10.ps1` must have an exact inverse restore path. If you disable a service, scheduled task, firewall rule or registry key in the main debloat path, you must restore it to its default state in the `$IsUndo` block.
 
 ### 3. Zero Binary Dependencies
+
 The project is pure PowerShell. Pull requests introducing external `.exe`, `.dll` or third-party binary dependencies will be rejected. Use native Windows APIs, Group Policy registry paths or PowerShell cmdlets.
 
 ### 4. Protected Apps & Components (What We Never Touch)
+
 The following components must remain functional and un-targeted:
+
 * Windows Terminal, Microsoft Store and WinGet (`DesktopAppInstaller`).
 * Calculator, Photos, Paint and Snipping Tool (`ScreenSketch`).
 * Microphone and webcam access (for Discord, Teams and OBS).
@@ -31,16 +36,19 @@ The following components must remain functional and un-targeted:
 * Developer toolchains (VS Code, Git, Docker and Ollama).
 
 ### 5. Idempotent & Auditable
+
 * Your additions must be safe to execute multiple times without corrupting keys or failing on missing elements.
 * All additions must support `-DryRun` by logging intended actions with `[DRY-RUN]` without modifying system state.
 
 ### 6. Failure Honesty & Console UI/UX Standards
+
 * **Zero Placebo Logging:** Never suppress mutation errors with blanket `-ErrorAction SilentlyContinue` while logging success text. All state modifications must run with `-ErrorAction Stop` inside `try/catch` and emit explicit `[-] FAILED:` feedback on error.
 * **Signal-to-Noise Ratio:** Aggregate repetitive non-events (such as apps not installed on the system) into a single summary line instead of cluttering the console.
 * **Terminal Usability:** Batch and CLI routines must not clear the screen before the user has reviewed audit or diagnostic output. Batch launchers must handle UAC dismissal gracefully without abruptly closing the console.
 * **Preserve CRLF Line Endings:** All batch scripts (`*.bat`) must strictly maintain CRLF (`\r\n`) line endings.
 
 ### 7. Security & Privilege Boundary Standards
+
 * **No User-Space Execution Without Validation:** Never spawn executables located in user-writable paths (`$env:LOCALAPPDATA`, `$env:USERPROFILE`, `$env:TEMP`) from elevated scripts unless cryptographically validated via `Get-AuthenticodeSignature` (verifying `Status -eq 'Valid'` and authorized publisher).
 * **Batch Parameter Whitelisting:** Batch launchers must never pass unfiltered CLI parameters (`%*`) to dynamic execution strings or elevated commands. All switches must be validated against a strict allowlist.
 * **Strictly Offline-First:** Pull requests introducing dynamic script fetching (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) will be rejected. The debloater must execute completely offline.
@@ -48,6 +56,7 @@ The following components must remain functional and un-targeted:
 * **Symlink & Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks or junctions before writing files.
 
 ### 8. Automated Test Enforcement
+
 * **Automated Test Enforcement:** No policy, privacy rule or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop-win11.Tests.ps1` (or `tests/unslop-win10.Tests.ps1`) or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
 * **Universal Mutating AST Audit:** Naked calls to mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) outside approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) will fail the AST quality gate.
 
@@ -60,6 +69,7 @@ The following components must remain functional and un-targeted:
 Every change must pass our unified 7-pillar quality gate. You have two options for testing:
 
 #### Option A: 1-Command Automated Setup (Recommended)
+
 Automatically install required testing modules (`Pester 6+` and `PSScriptAnalyzer`), configure Git hooks (`pre-commit` and `pre-push`) and verify the test gate:
 
 ```powershell
@@ -67,6 +77,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Install
 ```
 
 #### Option B: Manual Module Installation
+
 If you prefer to manage PowerShell modules manually, install them in your user profile:
 
 ```powershell
@@ -82,6 +93,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Install-GitHooks.ps1 -Test
 > **Remote CI/CD Automation**: Even if you do not install testing modules locally, our GitHub Actions CI pipeline (`.github/workflows/lint.yml`) automatically provisions fresh Windows environments, installs Pester 6 and PSScriptAnalyzer and runs the full 7-pillar gate across both PowerShell 7 (Core) and Windows PowerShell 5.1 (Desktop) in `-Strict` mode on every pull request and push.
 
 ### 2. Automated Master Quality Gate
+
 Run the unified 7-pillar verification gate locally (AST syntax, PSScriptAnalyzer, CRLF/conflict check, Pester unit tests & code coverage, DryRun, Undo DryRun and Batch launcher passthrough):
 
 ```powershell
@@ -99,7 +111,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
 ```
 
 ### 3. Git Hook Lifecycle (`pre-commit` & `pre-push`)
+
 When initialized via `Install-GitHooks.ps1`, your repository enforces quality checks automatically:
+
 * **`pre-commit`**:
   * On feature branches: Runs rapid lint (`Test-MasterGate.ps1 -Fast`) to catch syntax, CRLF and conflict errors immediately upon every commit (<1s).
   * On `main`/`master`: Enforces the full 7-pillar Master Quality Gate before any commit is finalized.
@@ -107,6 +121,7 @@ When initialized via `Install-GitHooks.ps1`, your repository enforces quality ch
   * Blocks any `git push` targeting `main` or `master` if the full 7-pillar gate fails.
 
 ### 4. Dry-Run Execution Test
+
 Verify both standard debloat and symmetrical restoration audit output:
 
 ```powershell
@@ -125,13 +140,17 @@ powershell -ExecutionPolicy Bypass -File .\unslop-win10.ps1 -Undo -DryRun
 
 1. **Fork the Repository** to your personal GitHub account.
 2. **Create a Feature Branch**:
+
    ```bash
    git checkout -b feature/your-hardening-policy
    ```
+
 3. **Commit with Clear Messages**:
+
    ```bash
    git commit -m "feat(telemetry): disable novel 25h2 activity tracking task"
    ```
+
 4. **Push and Open a PR**:
    * Verify all 7 pillars pass locally with zero skips via:
      `powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict`

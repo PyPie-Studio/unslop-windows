@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.4.2)
+# unslop-windows: Windows 11 Debloater (v1.4.3)
 # Targets Windows 11 26H2 (Build 26300+), 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -179,6 +179,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
                         try { Start-Service -Name $name -ErrorAction Stop } catch {
+                            $null = $_
                             # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
                         }
                     }
@@ -195,6 +196,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                 try {
                     if ($s.Status -eq "Running") {
                         try { Stop-Service -Name $name -Force -ErrorAction Stop } catch {
+                            $null = $_
                             # Best-effort service stop; safe to ignore so Set-Service can still disable startup type
                         }
                     }
@@ -280,6 +282,7 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                         Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "unslop_$name" -Force -ErrorAction SilentlyContinue
                     }
                 } catch {
+                    $null = $_
                     # Best-effort cleanup of staged RunOnce entry on undo; safe to ignore if property absent or registry locked
                 }
             }
@@ -368,11 +371,11 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
             if (Test-Path $backupPath) {
                 $props = Get-ItemProperty -Path $backupPath -ErrorAction SilentlyContinue
                 if ($props) {
-                    $matches = $props.PSObject.Properties | Where-Object {
+                    $matchedEntries = $props.PSObject.Properties | Where-Object {
                         $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
                         ($_.Name -match $pattern -or $_.Value -match $pattern)
                     }
-                    foreach ($entry in $matches) {
+                    foreach ($entry in $matchedEntries) {
                         if ($DryRun) {
                             Log "  [WOULD RESTORE STARTUP]: $($entry.Name) -> $runKey" -DryRun:$DryRun
                         } else {
@@ -398,11 +401,11 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
     foreach ($runKey in $runKeys) {
         $props = Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue
         if ($props) {
-            $matches = $props.PSObject.Properties | Where-Object {
+            $matchedEntries = $props.PSObject.Properties | Where-Object {
                 $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
                 ($_.Name -match $pattern -or $_.Value -match $pattern)
             }
-            foreach ($entry in $matches) {
+            foreach ($entry in $matchedEntries) {
                 if ($DryRun) {
                     Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey (archive to backup)" -DryRun:$DryRun
                 } else {
@@ -469,7 +472,7 @@ $osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.4.2: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.4.3: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -562,7 +565,7 @@ $copilot_CU = "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot"
 Set-RegDwordSafe -path $copilot_LM -name "TurnOffWindowsCopilot" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $copilot_CU -name "TurnOffWindowsCopilot" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
-# Copilot App Removal Policy (26H1+, April 2026 ADMX — supersedes TurnOffWindowsCopilot on newer builds)
+# Copilot App Removal Policy (26H1+, April 2026 ADMX - supersedes TurnOffWindowsCopilot on newer builds)
 Set-RegDwordSafe -path $winAI_LM -name "RemoveMicrosoftCopilotApp" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 Set-RegDwordSafe -path $winAI_CU -name "RemoveMicrosoftCopilotApp" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 

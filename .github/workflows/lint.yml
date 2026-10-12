@@ -33,10 +33,15 @@ jobs:
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
+      - name: Markdown Lint Audit
+        shell: pwsh
+        run: |
+          npx --yes markdownlint-cli "**/*.md"
+
       - name: Run 7-Pillar Master Quality Gate
         shell: pwsh
         run: |
-          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-pwsh.xml" -CodeCoveragePath "test-results/coverage-pwsh.xml"
+          ./scripts/Test-MasterGate.ps1 -Strict -TestResultsPath "test-results/pester-pwsh.xml" -CodeCoveragePath "test-results/coverage-pwsh.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
@@ -136,7 +141,7 @@ jobs:
       - name: Run 7-Pillar Master Quality Gate
         shell: powershell
         run: |
-          ./scripts/Test-MasterGate.ps1 -TestResultsPath "test-results/pester-powershell.xml" -CodeCoveragePath "test-results/coverage-powershell.xml"
+          ./scripts/Test-MasterGate.ps1 -Strict -TestResultsPath "test-results/pester-powershell.xml" -CodeCoveragePath "test-results/coverage-powershell.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
@@ -236,7 +241,7 @@ jobs:
       - name: Run 7-Pillar Master Quality Gate (Win10)
         shell: pwsh
         run: |
-          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -TestResultsPath "test-results/pester-win10-pwsh.xml" -CodeCoveragePath "test-results/coverage-win10-pwsh.xml"
+          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -Strict -TestResultsPath "test-results/pester-win10-pwsh.xml" -CodeCoveragePath "test-results/coverage-win10-pwsh.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
@@ -331,7 +336,7 @@ jobs:
       - name: Run 7-Pillar Master Quality Gate (Win10)
         shell: powershell
         run: |
-          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -TestResultsPath "test-results/pester-win10-powershell.xml" -CodeCoveragePath "test-results/coverage-win10-powershell.xml"
+          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -Strict -TestResultsPath "test-results/pester-win10-powershell.xml" -CodeCoveragePath "test-results/coverage-win10-powershell.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()

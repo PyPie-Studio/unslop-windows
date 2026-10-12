@@ -7,12 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.3] - 2026-10-12
+
+### Added
+
+- **Treat Warnings as Errors Gate Enforcement**: Enforced zero-warning policy across local quality gates (`scripts/Test-MasterGate.ps1`), Git pre-push hook (`.githooks/pre-push`), and CI/CD pipelines (`.github/workflows/lint.yml`). Any PSScriptAnalyzer warning or static analysis diagnostic immediately fails the build with exit code 1.
+- **Repository-Wide Markdown Linting**: Added root `.markdownlint.json`, `.markdownlintignore`, and CI audit step (`npx markdownlint-cli "**/*.md"`), guaranteeing zero formatting regressions across all project documentation and ADRs.
+- **VS Code Development Synchronization**: Added `.vscode/settings.json` mapping workspace PSScriptAnalyzer rules to `PSScriptAnalyzerSettings.psd1` and markdownlint configuration, ensuring developer editor diagnostics mirror CI/CD standards in real-time.
+- **Architectural Decision Record (ADR-035)**: Documented Zero Static Analysis Warnings & Editor Synchronization policy in `docs/decisions.md`.
+
+### Fixed
+
+- **PowerShell Automatic Variable Shadowing (`$matches`)**: Renamed `$matches` to `$matchedEntries` in `Remove-StartupEntry` across both `unslop-win11.ps1` and `unslop-win10.ps1`, preventing accidental corruption of PowerShell's built-in regex automatic variable.
+- **Empty Catch Block Suppression**: Replaced bare empty catch blocks in `Set-SvcState` and `Set-RegDwordSafe` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `scripts/Measure-SystemState.ps1` with clean `$null = $_` assignment, satisfying `PSAvoidUsingEmptyCatchBlock`.
+- **Unused Variable Declarations**: Removed unused variable assignments in `scripts/Install-GitHooks.ps1`, `scripts/Measure-SystemState.ps1`, and `tests/Measure-SystemState.Tests.ps1`.
+- **Documentation Markdown Formatting**: Fixed heading, list, and table spacing across `docs/decisions.md`, `README.md`, `ROADMAP.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/benchmarks.md`, and `CHANGELOG.md` to achieve 100% compliance with `MD022`, `MD032`, `MD012`, and `MD060`.
+- **Non-ASCII Character Elimination**: Replaced Unicode em-dash with standard ASCII hyphen in `unslop-win11.ps1` (line 568), eliminating file encoding warnings.
+
+---
+
 ## [1.4.2] - 2026-10-12
 
 ### Performance
+
 - **AppX Package Regex Escaping Pre-Computation**: Pre-constructed regex pattern strings (`$appEscaped`, `$pkgPattern`, `$dispPattern`, `$appPattern`) outside the `.Where()` predicate block across `unslop-win11.ps1` and `unslop-win10.ps1`. Eliminates thousands of redundant `[regex]::Escape` and string interpolation evaluations across provisioned and installed bloatware packages, reducing AppX filtering runtime by ~27%.
 
 ### Changed
+
 - **PSScriptAnalyzer Catch Block Documentation**: Documented intentional best-effort error suppression inside catch blocks across `Set-SvcState` (service termination and manual startup) and `Set-RegDwordSafe` (`RunOnce` cleanup) in `unslop-win11.ps1`, `unslop-win10.ps1`, and `scripts/Measure-SystemState.ps1`. Clarifies design rationale and satisfies static analysis `PSAvoidUsingEmptyCatchBlock` rules.
 - **ADR-022 Helper Function Duplication Invariant**: Added explicit architectural documentation headers above core engine helper functions in `unslop-win11.ps1` and `unslop-win10.ps1` referencing ADR-022, ensuring developers and automated tools recognize intentional helper duplication for zero-dependency standalone execution.
 
@@ -21,11 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.1] - 2026-10-04
 
 ### Fixed
+
 - **UCPD Kernel Driver Policy Interception (`AllowNewsAndInterests`)**: Neutralized the User Choice Protection Driver (`UCPD.sys`) in Stage 1 Services (`Set-SvcState "UCPD" ... "Manual"`) and disabled the companion `\Microsoft\Windows\AppxDeploymentClient\UCPD velocity` scheduled task in Stage 11. In `Set-RegDwordSafe`, if a registry write to `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests` or `TaskbarDa` is intercepted by the active in-memory UCPD kernel filter driver before reboot, the policy is staged seamlessly via `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\unslop_<name>` for automatic post-restart application, eliminating `UnauthorizedAccessException` and false failure alerts.
 - **WindowsAI SYSTEM-Only Scheduled Tasks Access Denied**: Filtered out internal Click to Do, Recall, and Settings Agent tasks (`ModelCachingLimit`, `ModelCachingUpdate`, `PolicyConfiguration`, `Settings\InitialConfiguration`) from `\Microsoft\Windows\WindowsAI\*` dynamic scans. These tasks have hardened Security Descriptors granting write access exclusively to `NT AUTHORITY\SYSTEM` (`(A;;FRFX;;;BA)(A;;GA;;;SY)`) and are already fully inert due to GPO policies and `WSAIFabricSvc` service neutralization.
 - **Defensive ACL & Driver Service Handling**: Hardened `Set-SvcState` to set service startup type to `Disabled` first and gracefully catch stop errors on non-unloadable kernel filter drivers. Hardened `Set-TaskState` to detect tasks with SYSTEM-only SDDLs and skip them with informative logging rather than raising unhandled exceptions. Symmetrically aligned `unslop-win10.ps1` helper functions.
 
 ### Added
+
 - **Machine-Wide Search Highlights (WSB), Location & Cloud Search GPOs**: Enforced `EnableDynamicContentInWSB = 0` (disabling Bing dynamic search highlights and doodles machine-wide), `AllowSearchToUseLocation = 0` (blocking location harvesting by SearchHost/Cortana), and `AllowCloudSearch = 0` (disabling cloud account integration in search results) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search` across both `unslop-win11.ps1` and `unslop-win10.ps1` with 100% symmetrical `-Undo` restoration.
 - **Unit & AST Invariant Tests**: Added automated tests to `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying symmetrical UCPD management, SYSTEM-only AI task exclusion, and search machine GPO enforcement.
 - **Architectural Decision Records (ADR-033 & ADR-034)**: Documented UCPD driver behavior, RunOnce staging mechanics, WindowsAI task security descriptor defenses, and machine-wide search policy hardening in `docs/decisions.md`.
@@ -35,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.0] - 2026-10-04
 
 ### Added
+
 - **Windows 11 26H2 (Build 26300+) Full Platform Support**: Added native identification of Windows 11 26H2 ("Windows 11 2026 Update", Build 26300+) in `unslop-win11.ps1` (`$osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } ...`) and `unslop.bat`, eliminating "25H2" misclassification in logs and console banners.
 - **Click to Do Screen OCR Analysis Neutralization**: Added `DisableClickToDo = 1` under `HKLM/HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI` and `HKCU:\Software\Microsoft\Windows\Shell\ClickToDo` with 100% symmetrical `-Undo` removal, preventing on-demand screen scraping and OCR indexing.
 - **Recall Hardening Policies**: Added `AllowRecallEnablement = 0` (preventing activation in Settings) and `AllowRecallExport = 0` (blocking snapshot vector export) under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI`.
@@ -51,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Record (ADR-032)**: Documented 26H2 enablement architecture, decompiled ADMX schemas, and AI slop hardening in `docs/decisions.md`.
 
 ### Fixed
+
 - **Build 26300 Misidentification**: Fixed an issue where Windows 11 26H2 hosts were misidentified as "25H2" because `$build -ge 26200` was evaluated prior to checking for Build 26300.
 
 ---
@@ -58,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.8] - 2026-10-02
 
 ### Added
+
 - **`-KeepPCManager` Parameter Flag**: Added first-class `-KeepPCManager` switch across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` allowing users who actively utilize Microsoft PC Manager to preserve both the application (`Microsoft.MicrosoftPCManager`) and its background service (`PCManager Service Store`).
 - **25H2/26H1 Telemetry & Diagnostics Services Hardening**: Added `InventorySvc` (Inventory and Compatibility Appraisal service), `whesvc` (Windows Health and Optimized Experiences), `WSAIFabricSvc` (Windows AI Components Host), and `PcaSvc` (Program Compatibility Assistant Service) to Stage 1 Services with 100% symmetrical `-Undo` restoration.
 - **Batch Launcher Interactive Toggle (`unslop.bat`)**: Added Option `[5]` in `:toggles_WIN11` and Option `[4]` in `:toggles_WIN10` to toggle Microsoft PC Manager preservation interactively.
@@ -65,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Record (ADR-031)**: Documented 25H2/26H1 service telemetry neutralization and PC Manager file locking resolution in `docs/decisions.md`.
 
 ### Fixed
+
 - **CrossDeviceResume.exe Re-spawning**: Symmetrically managed `CDPSvc` (Connected Devices Platform Service) in Stage 1 and enforced `DisableCrossDeviceResume = 1` in both `default` and active device node `HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Connectivity`, preventing `sihost.exe` from re-spawning `Resume` after reboot.
 - **Microsoft PC Manager AppX File Locking**: Ensured `PCManager Service Store` background service and `MSPCManagerService` process are stopped prior to invoking `Remove-AppxPackage`, releasing binary file locks and allowing clean de-provisioning when `-KeepPCManager` is omitted.
 
@@ -73,11 +100,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.7] - 2026-10-01
 
 ### Added
+
 - **Batch Launcher Pester Test Suite (`tests/unslop.bat.Tests.ps1`)**: Integrated comprehensive unit testing for `unslop.bat` (12 tests) verifying non-empty file existence, CRLF line-ending byte integrity, script dependency guards, CLI switch whitelist completeness, injection token defense, and menu structure routing. Integrated directly into `scripts/Test-MasterGate.ps1` under Pillar 4.
 - **Cross-Platform Cmdlet Test Stubs**: Added fallback stubs for Windows cmdlets (`Get-Service`, `Stop-Service`, `Set-Service`, `Start-Service`, `Get-ScheduledTask`, `Disable-ScheduledTask`, `Enable-ScheduledTask`) across `tests/unslop-win10.Tests.ps1` and `tests/unslop-win11.Tests.ps1` to ensure reliable mock execution across heterogeneous test environments.
 - **Negative Error Handling Tests**: Added explicit unit tests verifying that `Remove-StartupEntry` catches `New-Item` backup creation exceptions, increments `$global:FailCount`, and logs truthful failure entries per ADR-019. Added negative unit test in `tests/Install-GitHooks.Tests.ps1` verifying fail-closed exit when individual `.githooks` scripts are missing.
 
 ### Changed
+
 - **Bloatware Exclusion Filtering Performance Optimization**: Replaced sequential pipeline-chained `Where-Object` array rebuilds with a single-pass `[System.Collections.Generic.HashSet[string]]` case-insensitive lookup and `.Where()` filter across both `unslop-win10.ps1` and `unslop-win11.ps1`.
 
 ---
@@ -85,6 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.6] - 2026-10-01
 
 ### Added
+
 - **Xbox Game Bar & Game DVR Telemetry Suppression**: Added complete de-provisioning and removal of Xbox Game Bar packages (`Microsoft.XboxGamingOverlay`, `Microsoft.XboxGameOverlay`, `Microsoft.XboxSpeechToTextOverlay`) under `if (-not $KeepXbox)` across Windows 11 and Windows 10. Added policy suppression of Game DVR hotkeys (`Win+G`) and background capture (`AppCaptureEnabled = 0`, `HistoricalCaptureEnabled = 0`, `GameDVR_Enabled = 0`, `AllowGameDVR = 0`) with 100% symmetrical `-Undo` restoration. Added symmetrical management of Xbox Live daemon services (`XblAuthManager`, `XblGameSave`, `XboxNetApiSvc`, `XboxGipSvc`).
 - **Edge Copilot & Sidebar Policy Suppression**: Hardened Module 14 in both engines with `HubsSidebarEnabled = 0` and `AllowCopilot = 0` under `HKLM\SOFTWARE\Policies\Microsoft\Edge` to suppress Copilot and promotional sidebar web hubs in Edge, with clean `-Undo` reversal.
 - **Windows 10 Copilot Parity**: Backported Windows Copilot Group Policy enforcement (`TurnOffWindowsCopilot = 1`, `ShowCopilotButton = 0`) to `unslop-win10.ps1` for Windows 10 22H2 (KB5032278) systems.
@@ -92,6 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Record (ADR-030)**: Documented root cause analysis and eradication architecture for Game Bar, LinkedIn stubs, and Copilot apps in `docs/decisions.md`.
 
 ### Fixed
+
 - **LinkedIn DISM Provisioned Package Survival**: Resolved an issue where LinkedIn was not de-provisioned from the Windows system image because `Get-AppxProvisionedPackage` reports `DisplayName` as `LinkedIn` while `PackageName` begins with `7EE7776C.LinkedInforWindows`. Updated DISM package filters across both engines to match against both `PackageName` and `DisplayName`.
 - **Copilot App & Provider Leakage**: Resolved an issue where the standalone Copilot app and background provider (`Microsoft.Windows.Ai.Copilot.Provider`) remained installed on clean installations of Windows 11 and Windows 10.
 - **Xbox Game Bar Retention on Full Debloat**: Resolved an issue where the Xbox Game Bar app and Game DVR background listeners persisted on fresh installs when running without `-KeepXbox`.
@@ -101,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.5] - 2026-09-30
 
 ### Added
+
 - **Windows 11 26H1 (Build 28000+) Official Support**: Extended `unslop-win11.ps1` and `unslop.bat` to recognize and support Windows 11 version 26H1 (Build 28000 series, ARM / Snapdragon X2 targeted release).
 - **Build Version Tagging for 26H1**: Added build threshold check (`$build -ge 28000`) before the 25H2 check in `unslop-win11.ps1` to prevent Build 28000 from being misidentified as "25H2" in headers and log filenames.
 - **`RemoveMicrosoftCopilotApp` Policy Hardening**: Implemented the April 2026 ADMX policy (`HKLM` & `HKCU:\Software\Policies\Microsoft\Windows\WindowsAI\RemoveMicrosoftCopilotApp = 1` with symmetrical `-Undo` removal) to suppress Copilot decoupling on 26H1+ where legacy `TurnOffWindowsCopilot` is bypassed.
@@ -112,12 +144,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.4] - 2026-09-29
 
 ### Added
+
 - **IrisService & Programmable Tiles Suppression**: Hardened `unslop-win11.ps1` Stage 4 to detect and purge dynamic cloud layout manifests (`LocalState\88000963`) and downloaded promotional icons in `ProgrammableTilesAssets` under `Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy`, eliminating cloud-pushed on-demand app stubs (e.g. LinkedIn, new Outlook) while preserving custom user pins in `start2.bin`.
 - **Master CDM Delivery Lockdown (`ContentDeliveryAllowed = 0`)**: Added `ContentDeliveryAllowed = 0` (undo `1`) and `SubscribedContent-88000963Enabled = 0` (undo `1`) to `$cdmSettings` across `unslop-win11.ps1` and `unslop-win10.ps1`, cutting off the master cloud delivery conduit for promotional Start Menu items.
 - **Cloud-Optimized Content GPO Policies**: Added `DisableCloudOptimizedContent = 1` and `DisableConsumerAccountStateContent = 1` under `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent` across both engines (with symmetrical `-Undo` removal), ensuring policy enforcement on Windows 11 Pro where legacy `DisableWindowsConsumerFeatures` is bypassed.
 - **Test Suite Parity Assertions**: Added unit and AST parity assertions for `ContentDeliveryAllowed`, `SubscribedContent-88000963Enabled`, `DisableCloudOptimizedContent`, and `DisableConsumerAccountStateContent` across `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` (86/86 passing on both targets).
 
 ### Fixed
+
 - **Windows 11 Pro Ghost App Injections**: Resolved an issue where sponsored partner tiles (like LinkedIn) were pushed dynamically onto the Start Menu pinned area post-reboot via IrisService and CDM placement `88000963`, bypassing `DisableWindowsConsumerFeatures`.
 
 ---
@@ -125,11 +159,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.3] - 2026-09-27
 
 ### Added
+
 - **Git Hook Installer Unit Tests (`tests/Install-GitHooks.Tests.ps1`)**: Added 9 Pester 6+ unit and mocking tests covering `scripts/Install-GitHooks.ps1`, including git binary availability invariants, repository boundary checks, hook uninstallation (`-Uninstall`), prerequisite package installation (`-InstallPrerequisites`), and gate execution pipelines.
 - **System State Benchmark Test Suite (`tests/Measure-SystemState.Tests.ps1`)**: Added 15 Pester 6+ unit and integration tests covering `scripts/Measure-SystemState.ps1`, including RAM and commit metrics computation, active process/thread counters, telemetry service and task status mapping, AppX package counts, non-elevated error handling, snapshot comparisons (`-Baseline`, `-Target`, `-Compare`), and Markdown benchmark report generation (`-ExportMarkdown`).
 - **Extensible Multi-Suite Discovery in Test-MasterGate.ps1**: Modernized Step 4 of the Master Quality Gate to dynamically discover and execute auxiliary test suites (`Install-GitHooks.Tests.ps1`, `Measure-SystemState.Tests.ps1`) alongside the core Windows 11 and Windows 10 engine test suites in a single unified Pester run (expanding coverage to 85 passing tests).
 
 ### Fixed
+
 - **Divide-by-Zero Protection in Measure-SystemState.ps1**: Added a safe zero-check to `UsedRAM_Percent` calculation in `scripts/Measure-SystemState.ps1` to prevent arithmetic exceptions when querying systems with uninitialized or mocked memory metrics.
 - **Dot-Source Guard in Measure-SystemState.ps1**: Added procedural execution guard (`if ($MyInvocation.InvocationName -eq '.') { return }`) allowing external harnesses and Pester suites to safely import `Get-SystemMetrics` without triggering immediate live metric collection or output generation.
 
@@ -138,12 +174,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.2] - 2026-09-24
 
 ### Added
+
 - **`-KeepTeams` CLI Switch**: Added `-KeepTeams` switch parameter across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat`, enabling users to preserve Microsoft Teams applications (`MicrosoftTeams`, `Microsoft.MSTeams`, `Microsoft.Teams`) while executing full system debloat.
 - **Machine-Wide Cloud Content Policy Lockdown**: Enforces `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableWindowsConsumerFeatures = 1` with symmetrical `-Undo` removal (`-undoValue 0 -removeOnUndo $true`) to permanently suppress background Store pulls of sponsored consumer apps post-install.
 - **Fresh-Install Bloatware Packages Targeted**: Added `Microsoft.BingWeather`, `Microsoft.WindowsMaps`, `Microsoft.Copilot`, `MicrosoftWindows.CrossDevice`, `Microsoft.MicrosoftSudoku`, `7EE7776C.LinkedInforWindows`, `Microsoft.LinkedIn`, `Microsoft.WindowsCommunicationsApps`, and `Microsoft.XboxApp` to `$bloatApps`.
 - **Expanded Test Coverage**: Added Pester 6 unit tests and AST parity assertions covering `-KeepTeams`, `DisableWindowsConsumerFeatures`, and new AppX package additions across both Windows 11 and Windows 10 test suites (61/61 passing on each target).
 
 ### Fixed
+
 - **Fresh-Install Bloatware Leakage**: Fixed omissions in `unslop-win11.ps1` where Weather, Maps, personal Teams, Copilot standalone app, Sudoku, LinkedIn, and CrossDevice background host remained installed post-debloat.
 - **Task Manager "Mobile devices" Startup Item**: Resolved persistent "Mobile devices" startup registration by targeting `MicrosoftWindows.CrossDevice` alongside `Microsoft.YourPhone` in Section 12 (gated via `-KeepPhoneLink`).
 - **Classic Windows Mail & Calendar Parity**: Resolved Windows 10/11 disparity by targeting `Microsoft.WindowsCommunicationsApps` on Windows 11 alongside `Microsoft.OutlookForWindows` (both preserved when `-KeepMail` is passed).
@@ -154,13 +192,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.1] - 2026-09-19
 
 ### Changed
+
 - **Scheduled Task Query Optimization**: Replaced pipeline filtering for NVIDIA auto-update tasks with direct CIM provider queries (`Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate"`) in `unslop-win11.ps1` and `unslop-win10.ps1`.
 - **Quality Gate Marker Scan**: Streamlined conflict marker collection loop in `scripts/Test-MasterGate.ps1`.
 
 ### Fixed
+
 - **Console Key Listener Exception Handling**: Added explicit exception variable handling to raw console key reads in the restart countdown loop, satisfying static analyzer rules.
 
 ### Added
+
 - **Log Formatting and Negative Error Trapping Unit Tests**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` covering log timestamping, dry-run prefixes, ANSI keyword color mapping and failure handling across `Set-ConsentCapability` and `Remove-StartupEntry`.
 
 ---
@@ -168,9 +209,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-09-18
 
 ### Removed
+
 - **Third-Party Discord Startup Removal**: Removed Discord startup entry cleanup from Section 14 in both `unslop-win11.ps1` and `unslop-win10.ps1`. Discord startup suppression was originally added as a personal configuration choice by the author. As the repository grew, debloating was scoped strictly to Windows and Microsoft components rather than third-party desktop software.
 
 ### Added
+
 - **Granular Custom CLI Flags**: Added 10 granular switches across both engines to give users control over individual components without modifying core scripts:
   - `-KeepSysMain`: Preserves the `SysMain` (Superfetch) service. Recommended for mechanical hard drives and hybrid storage setups where background caching prevents I/O thrashing.
   - `-KeepSearch`: Preserves the Windows Search indexer service (`WSearch`).
@@ -187,6 +230,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-026 detailing third-party scope correction, `-KeepSysMain` and custom CLI flags architecture.
 
 ### Changed
+
 - **Batch CLI Argument Whitelist (`unslop.bat`)**: Expanded the headless parameter whitelist in `unslop.bat` to support all 10 new flags for direct command-line execution.
 
 ---
@@ -194,10 +238,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.3] - 2026-09-15
 
 ### Fixed
+
 - **AppX Restoration Parameter Binding (`Add-AppxPackage`)**: Removed invalid `-AllUsers` parameter from `Add-AppxPackage -RegisterByFamilyName -MainPackage ...` in Stage 12 of `unslop-win11.ps1` and Stages 2 and 12 of `unslop-win10.ps1`. `Add-AppxPackage` does not support `-AllUsers` (only `Remove-AppxPackage` and `Get-AppxPackage` do), resolving 5 parameter binding exceptions during `-Undo` runs on provisioned packages (`aimgr`, `MicrosoftWindows.Client.WebExperience`, `Microsoft.Office.ActionsServer`, `Microsoft.OfficePushNotificationUtility`, `Microsoft.GamingApp`).
 - **Idempotent Registry Property Deletion (`Set-RegDwordSafe`)**: Updated `Set-RegDwordSafe`'s `-removeOnUndo` exception handler in both engines to recognize when a target registry property is already absent (`does not exist` or `PSArgumentException`), safely recording `SKIP: <name> not present in <path>` instead of emitting a hard `FAILED:` error and incrementing `$global:FailCount`. Real permission or mutation errors continue to be trapped and reported truthfully.
 
 ### Added
+
 - **Automated Parameter Binding & Idempotency Tests**:
   - Added unit test cases verifying that non-existent registry property deletions on `-Undo` exit cleanly with 0 failures (`$global:FailCount -eq 0`).
   - Added AST assertions across both `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` ensuring `Add-AppxPackage` never binds the invalid `-AllUsers` switch.
@@ -208,6 +254,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.2] - 2026-09-15
 
 ### Added
+
 - **Microsoft Store Background Auto-Download Suppression (`AutoDownload = 2`)**: Configured machine-wide policy `HKLM:\SOFTWARE\Policies\Microsoft\WindowsStore\AutoDownload = 2` across both Windows 11 and Windows 10 engines to prevent silent background updates from waking up `wsappx` (`AppXSVC`) and `WinGet COM Server`, eliminating unprompted NVMe write spikes while preserving manual Store updates.
 - **Cross-Device Resume (XDR) & Connected Devices Platform Disabling**:
   - Configured MDM PolicyManager gate `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Connectivity\DisableCrossDeviceResume\value = 1` in `unslop-win11.ps1`, preventing `sihost.exe` from spawning `CrossDeviceResume.exe` into RAM at user logon.
@@ -217,6 +264,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-024 detailing Store auto-download throttling, Cross-Device Resume MDM/CDP disabling and WebExperience package alignment.
 
 ### Fixed
+
 - **Windows Web Experience Pack (`WebExperience`) Package Typo**: Added `"MicrosoftWindows.Client.WebExperience"` to `$bloatApps` in `unslop-win11.ps1`, resolving a dot-notation mismatch that previously prevented Windows Widgets from being de-provisioned.
 
 ---
@@ -224,6 +272,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2026-09-15
 
 ### Added
+
 - **Dedicated Windows 11 Engine (`unslop-win11.ps1`)**: Standalone, symmetrically named Windows 11 debloater and privacy hardening engine targeting Windows 11 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000).
 - **Bidirectional OS Build Gating (`unslop-win11.ps1`)**: Added pre-flight OS build guard validating build $\ge 22000$, providing actionable redirection to `unslop-win10.ps1` when executed on Windows 10, accompanied by `-SkipBuildCheck` switch for CI and offline test harnesses.
 - **Dedicated `-Win11` CLI Parameter (`unslop.bat`, `scripts/Test-MasterGate.ps1`)**: Whitelisted `-Win11` switch in `unslop.bat` and parameterized `scripts/Test-MasterGate.ps1` to allow explicit headless testing of the Windows 11 engine.
@@ -232,6 +281,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-023 detailing symmetrical dual-engine architecture, removal of `unslop.ps1` and granular version documentation standard.
 
 ### Changed
+
 - **Removed Ambiguous `unslop.ps1`**: Retired `unslop.ps1` in favor of pure symmetrical dual standalone engines (`unslop-win11.ps1` and `unslop-win10.ps1`) launched and elevated via `unslop.bat`.
 - **Symmetrical Test Harnesses**: Renamed `tests/unslop.Tests.ps1` to `tests/unslop-win11.Tests.ps1` to pair symmetrically with `tests/unslop-win10.Tests.ps1`.
 - **Unified Batch Launcher Modernization (`unslop.bat`)**: Enforces presence of both `unslop-win11.ps1` and `unslop-win10.ps1`, modernizes the interactive OS selection menu with exact release brackets and maintains CRLF integrity.
@@ -243,6 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-09-10
 
 ### Added
+
 - **Universal Windows 10 Debloat Engine (`unslop-win10.ps1`)**: Complete, standalone debloater and privacy hardener targeting all Windows 10 versions (Build 10240 through 19045 22H2). Replicates all 6 core helper functions for complete isolation from the Windows 11 engine, with full 100% symmetrical `-Undo` restoration and safe non-elevated `-DryRun` audit support.
 - **Windows 10-Specific Debloating Modules (`unslop-win10.ps1`)**:
   - **Cortana Removal**: Group Policy enforcement (`AllowCortana = 0`, `AllowSearchToUseLocation = 0`, `SearchboxTaskbarMode = 0`, `AllowCortanaAboveLock = 0`) coupled with dual-stage de-provisioning and removal of the Cortana UWP app (`Microsoft.549981C3F5F10`).
@@ -261,19 +312,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.5] - 2026-09-10
 
 ### Security
+
 - **Reparse Point & Symlink Traversal Defense (`scripts/Measure-SystemState.ps1`)**: Resolved `$snapshotPath` before checking directory attributes and enforced `exit 1` fail-closed termination when a reparse point or directory junction is encountered in user profiles, preventing symlink redirection attacks (OPSEC-01).
 
 ### Added
+
 - **Local Pre-Commit Git Hook (`.githooks/pre-commit`)**: Added automated pre-commit quality gate execution running rapid AST, PSScriptAnalyzer and CRLF integrity checks on feature branches and full 7-pillar gates on `main`.
 - **Automated Developer Prerequisite Installer (`scripts/Install-GitHooks.ps1`)**: Added `-InstallPrerequisites` switch to automatically discover and install `Pester 5+` and `PSScriptAnalyzer` into the current user's profile and configure Git hook paths in a single command.
 - **Production PR Standards Documentation (`CONTRIBUTING.md`)**: Testing guidelines, Git hook lifecycles and mandatory pull request checklist requiring 0 failures under `Test-MasterGate.ps1 -Strict`.
 - **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-021 detailing diagnostic benchmark security, multi-architecture AppX array binding and local developer hook gates.
 
 ### Fixed
+
 - **AppX Multi-Architecture Parameter Binding (`unslop.ps1`)**: Handled multi-architecture AppX matches safely by iterating over matched packages (`foreach ($pkg in $match)`) rather than binding package arrays directly to `Add-AppxPackage -PackagePath`.
 - **Log Buffer Variable Scoping (`unslop.ps1`)**: Explicitly scoped `$script:log` in the log buffer export routine, guaranteeing complete log flushing even when called across nested scopes.
 
 ### Changed
+
 - **Interactive Batch Toggles Sub-Menu UX (`unslop.bat`)**: Added a dynamic active flags preview banner, a quick reset toggle (`[0] Reset all options to default`) and streamlined argument construction by directly reusing validated active switches.
 
 ---
@@ -281,12 +336,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.4] - 2026-09-09
 
 ### Fixed
+
 - **Widgets Policy Alignment & UCPD Defense (`unslop.ps1`)**: Switched Widgets disablement from user-mode `HKCU:\...\Advanced\TaskbarDa` to machine-wide Group Policy `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (undo `1`, `removeOnUndo = $true`). This avoids `UnauthorizedAccessException` from the Windows 11 User Choice Protection Driver (`UCPD.sys`) introduced in 23H2/24H2 while cleanly disabling Widgets system-wide.
 - **SYSTEM-Restricted Task Cleanup (`unslop.ps1`)**: Removed `\Microsoft\Windows\Application Experience\SdbinstMergeDbTask` from debloat scheduled tasks list. This task is Windows' internal app compat shim DB merger (non-telemetry) and has an explicit SDDL descriptor restricting write access to `SYSTEM` (`BA` only has Read/Execute), which caused `Access is denied` under standard Administrator elevation.
 - **Inbox SystemApps Depuration & NonRemovable Filter (`unslop.ps1`)**: Removed protected inbox SystemApps (`MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, `MicrosoftWindows.UndockedDevKit`) from `$bloatApps` and added `-not $_.NonRemovable` filtering to `Get-AppxPackage` retrieval, preventing `0x80070032` (`ERROR_NOT_SUPPORTED`) deployment errors on immutable system components while keeping AI engines disabled via GPO and ConsentStore.
 - **PowerShell Registry Drive Mapping (`unslop.ps1`)**: Replaced unmounted `HKCR:\CLSID\{018D5C66-...}` with `HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-...}` in both debloat and undo OneDrive unpinning routines, eliminating "Cannot find drive HKCR" errors.
 
 ### Added
+
 - **Automated Registry & System Package Invariant Tests (`tests/unslop.Tests.ps1`)**: Added test assertions ensuring `AllowNewsAndInterests` is used for Widgets, forbidding unmounted `HKCR:` paths in registry operations, verifying `SdbinstMergeDbTask` is excluded and locking `Photon`, `CoreAI` and `UndockedDevKit` into the non-removable package invariants.
 - **Architectural Decision Record (`docs/decisions.md`)**: Documented ADR-020 detailing Windows 11 24H2/25H2 Protection Driver (UCPD), Inbox SystemApps and Elevation ACL Alignment.
 
@@ -295,6 +352,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.3] - 2026-09-09
 
 ### Fixed
+
 - **Defender Telemetry Invariant Alignment (`unslop.ps1`)**: Corrected Defender `SubmitSamplesConsent` from `0` (`AlwaysPrompt`, which caused interactive prompts) to `2` (`NeverSend`) in debloat mode and `1` (`SendSafeSamples`) in undo mode (BUG-01).
 - **Startup Entry Preservation & Restoration Symmetry (`unslop.ps1`)**: Upgraded `Remove-StartupEntry` to archive target startup entries under `HKCU:\Software\unslop-windows\StartupBackup` during debloat, enabling 100% lossless symmetrical restoration under `-Undo` (BUG-02).
 - **AppX Package List Depuration (`unslop.ps1`)**: Removed system-protected and non-removable packages (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`, `MicrosoftEdge.Stable`, `MicrosoftEdgeDevToolsClient`) from `$bloatApps`, preventing `0x80073CFA` de-provisioning errors (BUG-03).
@@ -305,6 +363,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI PSScriptAnalyzer Pre-Installation (`lint.yml`, `release.yml`)**: Added automated `PSScriptAnalyzer` module installation to CI workflows to guarantee static analysis coverage is never skipped in automated pipelines.
 
 ### Added
+
 - **Universal Mutating AST Audit (`tests/unslop.Tests.ps1`)**: Expanded the AST parity suite to scan all registry, scheduled task and service mutations, strictly forbidding naked mutating cmdlets outside approved bidirectional helper functions.
 - **Negative Error-Trap Unit Tests (`tests/unslop.Tests.ps1`)**: Added test cases injecting exceptions into helper mocks, verifying error trapping, `$global:FailCount` increments and truthful `FAILED:` logging.
 - **System Package Blacklist Assertions (`tests/unslop.Tests.ps1`)**: Added automated checks ensuring `$bloatApps` never contains immutable system packages or essential Windows Store runtimes.
@@ -317,6 +376,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.2] - 2026-09-08
 
 ### Security
+
 - **Elevated Binary Authenticode Verification (`unslop.ps1`)**: Prioritized protected system directories (`SysWOW64`, `System32`) for `OneDriveSetup.exe` uninstaller resolution. Strictly enforced cryptographic `Get-AuthenticodeSignature` verification (`Status = Valid`, `CN=Microsoft Corporation`) before executing any user-writable `%LOCALAPPDATA%` binary in an elevated Administrator context (VULN-01).
 - **CLI & Parameter Whitelist Validation Loop (`unslop.bat`)**: Implemented strict token whitelist checking (`-Undo`, `-Restore`, `-DryRun`, `-WhatIf`, `-KeepXbox`, `-KeepOneDrive`, `-KeepTodos`, `-ClassicContextMenu`, `-NoRestart`, `-ForceRestart`, `-RunDirect`), rejecting unlisted parameters and metacharacters with exit code 1 to eliminate command and argument injection vectors (VULN-02).
 - **Fail-Closed Offline Architecture (`unslop.bat`)**: Removed unauthenticated `Invoke-RestMethod` script downloads from GitHub CDN. If `unslop.ps1` is missing, the launcher halts with a clear error requiring users to extract the full release archive, eliminating supply chain and MITM risks (VULN-03).
@@ -324,9 +384,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release Archive Unit Test Packaging (`.github/workflows/release.yml`)**: Added `tests/` directory to `Compress-Archive` in GitHub Actions release packaging step per ADR-010.
 
 ### Changed
+
 - **Windows Update Hardware Driver & Firmware Preservation (`unslop.ps1`)**: Removed `ExcludeWUDriversInQualityUpdate = 1` from debloat passes and added proactive removal of any legacy key so Windows Update hardware CVE patches and firmware updates flow freely (REG-02).
 
 ### Added
+
 - **Security & Privilege Boundary Unit Tests (`tests/unslop.Tests.ps1`)**: Added 3 new unit and AST invariant tests verifying Authenticode verification enforcement, reparse point detection and legacy driver policy cleanup, expanding the test suite to 25 passing assertions.
 
 ---
@@ -334,12 +396,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - 2026-09-08
 
 ### Added
+
 - **PowerShell Comment-Based Help (`unslop.ps1`)**: Integrated `<# .SYNOPSIS ... #>` documentation enabling native `Get-Help .\unslop.ps1 -Full` inspection across all parameters, switches and usage examples.
 - **Pure-Batch Interactive Feature Toggles Sub-Menu (`unslop.bat`)**: Added Option `[4] Interactive Toggles` allowing users to configure custom combinations (Xbox, OneDrive, To-Do, Classic Menu, Dry-Run) with visual `[ ON  ]` / `[ OFF ]` toggle states without typing CLI parameters.
 - **Curated Launcher Presets (`unslop.bat`)**: Replaced rigid single-app options with curated profiles: `[2] Gamer Preset (-KeepXbox)` and `[3] Productivity Preset (-KeepOneDrive -KeepTodos)`.
 - **Dynamic Build Detection (`unslop.ps1`)**: Dynamically resolves the Windows 11 build tag (`23H2`, `24H2`, `25H2`) for runtime console banners and log file names instead of hardcoding `25h2`.
 
 ### Changed
+
 - **Semantic Console Logging (`unslop.ps1`)**: Modernized terminal output with contextual `-ForegroundColor` formatting (Cyan headers, Green mutations, Yellow dry-run predictions, DarkGray skips, Red errors, Magenta preserved items) while maintaining clean timestamped disk logs.
 - **AppX Package Skip Condensation (`unslop.ps1`)**: Collapsed 40+ repetitive `SKIP: [App] (not installed)` lines into a single aggregate summary line (`SKIP: X bloatware packages not installed on system`), drastically reducing terminal noise.
 - **Dynamic & Honest Summary Reporting (`unslop.ps1`)**: Replaced static summary text with dynamic reporting that honors `-KeepOneDrive`, `-KeepXbox` and `-KeepTodos` parameter flags and explicitly marks `-DryRun` as preview-only with zero modifications written.
@@ -347,6 +411,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Anti-Screen-Amnesia Protection (`unslop.bat`)**: Added an interactive post-audit prompt (`Press [Enter] to return to the menu or [Q] to exit...`) preventing `cls` from wiping dry-run inspection output.
 
 ### Fixed
+
 - **Placebo Logging Elimination (`unslop.ps1`)**: Replaced silent error suppression across helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) with `try/catch` error trapping that logs honest `FAILED:` feedback when operations encounter locked hives or permissions errors.
 - **UAC Elevation Cancellation Handling (`unslop.bat`)**: Added explicit `%errorlevel%` checks after `Start-Process ... -Verb RunAs` to prevent the terminal window from silently vanishing when a user cancels or denies the UAC elevation prompt.
 
@@ -355,6 +420,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-09-08
 
 ### Fixed
+
 - **Windows PowerShell 5.1 Dual-Runtime Compatibility**:
   - Replaced Unicode em dashes (`—`, byte `0x94`) with standard hyphens in `unslop.ps1` service descriptions, preventing premature string-quote termination under Windows-1252 ANSI codepages.
   - Simplified mock service status in `tests/unslop.Tests.ps1` from .NET `[System.ServiceProcess.ServiceControllerStatus]` to string literals (`"Running"` / `"Stopped"`), preventing type resolution exceptions in environments where `System.ServiceProcess` is not preloaded.
@@ -366,6 +432,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.9] - 2026-09-08
 
 ### Fixed
+
 - **CI/CD Pipeline (`lint.yml`)**: Resolved GitHub Actions workflow parse failure caused by unsupported expression evaluation in the `shell` keyword (`shell: ${{ matrix.shell }}`). Split execution into two explicit, parallel jobs (`quality-gate-core` for PowerShell 7 and `quality-gate-desktop` for Windows PowerShell 5.1), with `PSScriptAnalyzer` gated on both.
 
 ---
@@ -373,6 +440,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.8] - 2026-09-08
 
 ### Fixed
+
 - **Documentation**: Corrected reboot countdown timer from 60 seconds to 30 seconds in developer documentation and `docs/decisions.md` to match actual implementation.
 
 ---
@@ -380,6 +448,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.7] - 2026-09-08
 
 ### Removed
+
 - **`scripts/Publish-Release.ps1`**: Deleted redundant local release publisher. The GitHub Actions `release.yml` pipeline is the single source of truth for building release zips, SHA256 checksums, SLSA build provenance attestations and publishing to GitHub Releases.
 
 ---
@@ -387,6 +456,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.6] - 2026-09-08
 
 ### Changed
+
 - **Leaner Release Zip**: Trimmed `scripts/`, `docs/` and `tests/` from the release zip bundle. End users only receive the four essential files (`unslop.bat`, `unslop.ps1`, `README.md`, `LICENSE`). Developer tooling remains available in the source repository.
 
 ---
@@ -394,6 +464,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.5] - 2026-09-08
 
 ### Added
+
 - **Automated Static Symmetry Verification via AST Parity Check (`tests/unslop.Tests.ps1`)**: Added 5 automated static AST parity tests using PowerShell's Abstract Syntax Tree parser (`[System.Management.Automation.Language.Parser]::ParseFile`) to enforce 100% Symmetrical Restoration Contract invariants:
   1. Every `Set-RegDwordSafe` call defines both debloat and undo values.
   2. Zero naked mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Stop-Service`, `Disable-ScheduledTask`, `Remove-AppxPackage`) exist outside approved defensive helper functions.
@@ -411,6 +482,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.4] - 2026-09-08
 
 ### Added
+
 - **Pester 5 Unit & Mocking Test Suite (`tests/unslop.Tests.ps1`)**: Introduced 17 isolated unit and integration tests mocking native cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Set-Service`, `Disable-ScheduledTask`, `Enable-ScheduledTask`), parameter flags (`-KeepXbox`, `-KeepOneDrive`) and non-elevated exit contracts with 100% test pass rate.
 - **Dedicated Dot-Source Test Guard (`unslop.ps1`)**: Added early top-level exit guard (`if ($MyInvocation.InvocationName -eq '.') { return }`) allowing the engine to export its helper functions into test harnesses without triggering elevation checks or executing debloat logic.
 - **Dual PowerShell Runtime Matrix in CI (`.github/workflows/lint.yml`)**: Multi-runtime matrix testing across both `pwsh` (PowerShell 7 Core) and `powershell` (Windows PowerShell 5.1 Desktop) on `windows-latest` with automated Pester 5 module provisioning.
@@ -420,6 +492,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Decision Records (`docs/decisions.md`)**: Added `ADR-008` (Pester 5 Unit Suite), `ADR-009` (Dual PS Runtime Matrix), `ADR-010` (Gated Releases), `ADR-011` (Dedicated Batch Smoke Test) and `ADR-012` (CI Concurrency & Annotations).
 
 ### Fixed
+
 - **Helper Function Parameter Binding & Switch Scope Collisions (`unslop.ps1`)**: Fixed PowerShell parameter binding collisions where `-Undo` was interpreted as a partial prefix match for `-undoValue` by adding explicit `[switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun` switches across all helper functions.
 
 ---
@@ -427,9 +500,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.3] - 2026-09-08
 
 ### Fixed
+
 - **UAC Elevation Batch Syntax Crash (`unslop.bat`)**: Resolved an issue where nested `cmd.exe` quote escaping inside delayed expansion caused `\"'" was unexpected at this time.` syntax errors, crashing `unslop.bat` immediately upon launch. Replaced with clean, native PowerShell process elevation (`Start-Process -FilePath '%~f0' -Verb RunAs`).
 
 ### Added
+
 - **Local Master Quality Gate (`scripts/Test-MasterGate.ps1`)**: 5-pillar verification suite combining AST syntax parsing, PSScriptAnalyzer static analysis, CRLF audits, `cmd.exe` batch syntax validation, non-elevated `-DryRun` execution and symmetrical `-Undo -DryRun` restoration. Includes `-Fast` mode for rapid iteration.
 - **Git Pre-Push Hook (`.githooks/pre-push` & `scripts/Install-GitHooks.ps1`)**: Automatic pre-push hook enforcing the 5-pillar quality gate prior to publishing to `main` or `master`.
 - **System State Diagnostic Auditor (`scripts/Measure-SystemState.ps1`)**: Standalone tool measuring physical RAM, commit charge, process/thread counts, telemetry services and AppX packages. Supports `-Snapshot`, `-Baseline`, `-Target` and `-ExportMarkdown` (`docs/benchmarks.md`).
@@ -440,6 +515,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository Governance**: Added `.gitattributes`, `.editorconfig`, `.github/PULL_REQUEST_TEMPLATE.md` and `ROADMAP.md`.
 
 ### Security & Hardening
+
 - **Batch Syntax Gate Hardening**: Upgraded `scripts/Test-MasterGate.ps1` to directly test `cmd.exe /c "call unslop.bat -DryRun"` in Step 3 to ensure batch syntax corruptions or quote-escaping bugs can never pass local pre-push or CI/CD gates again.
 
 ---
@@ -447,14 +523,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.2] - 2026-09-07
 
 ### Added
+
 - **In-Place Abort Shortcut (`A`)**: Replaced the cumbersome manual requirement of opening a separate terminal to run `shutdown /a`. Users can now tap **`A`** directly in the active countdown window to immediately cancel the scheduled restart.
 - **Instant Reboot Shortcut (`R`)**: Tapping **`R`** or pressing **Enter** during the 30-second countdown immediately triggers the system reboot on demand.
 - **Ctrl+C Abort Safeguard**: Interrupting the countdown via `Ctrl+C` automatically triggers `shutdown /a` in a `finally` block, ensuring no scheduled reboot timer is left active in the background.
 
 ### Changed
+
 - Live in-place countdown display rendering remaining seconds and active keyboard shortcuts on a single line (`Restarting in 28s... [Press 'A' to Abort | 'R' to Restart Now]`).
 
 ### Fixed
+
 - Resolved an issue where `unslop.bat` remained paused at `Press any key to continue . . .` after a reboot was initiated. The launcher now detects exit code `100` and automatically closes the terminal window so Windows can restart without hanging.
 
 ---
@@ -462,11 +541,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2026-09-07
 
 ### Added
+
 - **Administrator Privileges Enforcement**: Added an explicit pre-flight check in `unslop.ps1` that blocks non-elevated executions with actionable error messages (while keeping non-elevated `-DryRun` audit inspection intact).
 - **Post-Run Restart Prompt**: Introduced an interactive prompt upon script completion offering to restart the system, along with the `-NoRestart` and `-ForceRestart` parameters.
 - **System Restart Requirement**: Prominently documented that a reboot is required to flush cached telemetry threads, reload service states and apply group policy changes.
 
 ### Changed
+
 - Updated `README.md` to document mandatory admin rights and post-run reboot requirements across all installation methods.
 
 ---
@@ -474,6 +555,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-09-05
 
 ### Added
+
 - **Initial Public Release**: Safe-Tier Universal Windows 11 23H2, 24H2 & 25H2 Debloater and Privacy Hardener.
 - **18 Hardening Modules**:
   1. Services optimization (`SysMain`, `WSearch`, `DiagTrack`, `dmwappushservice`, `TrkWks`, `lfsvc`).
@@ -502,7 +584,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.2...HEAD
+[1.4.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.3.8...v1.4.0

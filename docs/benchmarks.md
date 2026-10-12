@@ -46,6 +46,7 @@ The following benchmark represents empirical measurements taken on a stock, fres
 > [!NOTE]
 > **Measuring Pre-Configured or Workstation Systems:**
 > If you execute `Measure-SystemState.ps1` on a machine that has already been debloated or on a developer workstation running third-party workloads (such as Docker Desktop, local LLM runtimes, web browsers with multiple tabs, developer IDEs or background utilities):
+>
 > - The measured baseline reflects active user applications rather than stock Windows telemetry overhead.
 > - Telemetry services and scheduled tasks will already be stopped or disabled, resulting in minimal delta.
 >

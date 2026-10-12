@@ -107,6 +107,7 @@ function Get-SystemMetrics {
         $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
         if ($provisioned) { $appxProvisionedCount = $provisioned.Count }
     } catch {
+        $null = $_
         # Non-elevated execution safe fallback if provisioned packages cannot be queried
     }
 

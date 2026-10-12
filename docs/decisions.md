@@ -1,4 +1,4 @@
-# unslop-windows Architecture Decision Records (ADRs)
+﻿# unslop-windows Architecture Decision Records (ADRs)
 
 This document logs significant architectural, security and quality decisions for **unslop-windows**.
 
@@ -9,6 +9,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-001: Safe-Tier Hardening Invariant & WinSxS Component Preservation (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** Aggressive Windows debloaters frequently break Windows Cumulative Updates (resulting in rollback error `0x800f0922` or `0x80073701`), brick the Microsoft Store or cause irreparable OS instability by deleting components from the WinSxS store (`dism /online /cleanup-image /startcomponentcleanup /resetbase`).
 - **Decision:** unslop-windows strictly enforces a **Safe-Tier invariant**:
@@ -21,6 +22,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-002: Symmetrical 1-Click Restoration Engine (`-Undo` Contract) (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** System administrators and privacy-conscious users need total confidence that any applied policy or configuration change can be cleanly reverted without reinstalling the operating system or restoring system restore points.
 - **Decision:** Every single debloating or hardening tweak across all 18 modules must have an exact, tested inverse operation implemented in the `if ($Undo)` branch:
@@ -32,6 +34,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-003: Non-Elevated `-DryRun` Auditing & Zero Administrative Trap (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** Users, security auditors and CI pipelines need the ability to inspect the operations that `unslop.ps1` would perform before granting administrative privileges. Scripts that fail immediately on missing administrator rights prevent pre-flight auditing.
 - **Decision:** Decoupled administrative elevation checks from the `-DryRun` audit path:
@@ -42,6 +45,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-004: In-Place Reboot Lifecycle, Keyboard Abort Shortcut & Exit Code Contract (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** Many Windows policy tweaks and service state changes require a system restart to take effect. However, abrupt restarts risk user data loss. Additionally, requiring the user to open a secondary terminal to run `shutdown /a` provides a poor user experience. Halting on `pause` after initiating a restart countdown leaves unnecessary windows open.
 - **Decision:**
@@ -54,6 +58,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-005: Local Master Quality Gate & Git Pre-Push Hook (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** Changes committed to `main` must not introduce syntax errors, break `unslop.bat` with LF line endings, fail static analysis or regress dry-run execution.
 - **Decision:** Onboarded a 5-pillar local quality gate adapted from A3MALI and NodeRadar Pro:
@@ -64,6 +69,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-006: Modular Architecture Standards & Verification Protocol (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** To maintain system stability across Windows feature updates and ensure repeatable, error-free contributions, the codebase requires clear modular boundaries, strict safe-tier invariants and automated verification protocols.
 - **Decision:** Established standardized architecture specifications across all modules:
@@ -75,6 +81,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-007: Diagnostic State Auditor & CI/CD Cryptographic Verification (2026-09-07)
+
 - **Status:** Accepted
 - **Context:** Users and enterprise administrators require measurable empirical proof of system debloating (RAM delta, thread reduction, stopped telemetry services). Additionally, binary releases packaged in GitHub Actions require cryptographic integrity verification to protect against supply-chain tampering.
 - **Decision:**
@@ -86,6 +93,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-008: Pester 5 Unit & Mocking Test Suite and Dot-Source Guard Architecture (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** The Master Quality Gate previously relied solely on static linting and black-box `-DryRun` console text parsing. Swapped parameter bugs, inverted registry values or broken whitelist filters could pass undetected so long as the script completed without throwing unhandled exceptions. Furthermore, the monolithic structure of `unslop.ps1` prevented isolated function testing because dot-sourcing immediately triggered elevation checks and executed all 18 debloat modules.
 - **Decision:**
@@ -98,6 +106,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-009: Dual PowerShell Runtime Matrix & Engine Parity Contract (PS 5.1 Desktop & PS 7 Core) (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** `unslop-windows` targets Windows 11 systems running Windows PowerShell 5.1 (`powershell.exe`) via `unslop.bat` as well as modern PowerShell 7+ (`pwsh`). While `#requires -Version 5.1` is declared, the CI pipeline historically tested only `shell: pwsh`. This introduced the risk that PS 7-only syntax features (e.g., ternary operators `?:`, null-coalescing `??`, pipeline chains `&&` / `||` or newer .NET APIs) could pass CI while crashing in production on stock Windows 11 installations. Additionally, `Test-MasterGate.ps1` previously defaulted subprocess execution (`$psExec`) to `pwsh` whenever `pwsh` was present in PATH, causing false-positive passes under PS 5.1 runners.
 - **Decision:**
@@ -109,6 +118,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-010: Gated Production Releases via Quality Gate Prerequisite (`needs: verify`) (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** Pushing a release tag (`v*`) previously triggered immediate packaging, checksum calculation and asset publication to GitHub Releases without running `Test-MasterGate.ps1` or verifying that the tagged commit passed unit tests or dry-run smoke tests. A tagged commit containing an undetected syntax error or regression would be published to users as an official release bundle with valid cryptographic hashes.
 - **Decision:**
@@ -120,6 +130,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-011: Dedicated Batch Launcher CLI Passthrough Smoke Test (Pillar 7) (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** `unslop.bat` is the primary entry point for standard users launching debloat and restoration operations. To ensure that batch script syntax errors, line-ending corruption or CLI parameter forwarding flaws are caught automatically, a batch execution check was previously embedded inside Step 3 (`Line-Ending & File Integrity Audit`). However, because Step 3 is executed even during rapid quality gate checks (`Test-MasterGate.ps1 -Fast`), this caused pre-commit and rapid development audits to jump from sub-second runtimes (<0.2s) to ~12 seconds.
 - **Decision:**
@@ -132,6 +143,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-012: CI Concurrency, NUnit XML Test Reporting & Native Step Summaries (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** Rapid commits and branch updates in pull requests can trigger redundant, overlapping CI matrix runs, needlessly consuming Windows runner minutes. Furthermore, Pester 5 unit test results were previously emitted solely to the runner stdout stream. When failures occurred, developers were required to scroll through extensive console logs to diagnose test assertions.
 - **Decision:**
@@ -145,6 +157,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-013: Automated Static Symmetry Verification via AST Parity Check (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** Guardrail 3 (100% Symmetrical Restoration Contract) mandates that every single state-mutating registry tweak, service modification or policy change has an exact inverse in the `-Undo` restoration branch. While dynamic dry-run smoke tests and Pester unit tests test behavior at runtime, they cannot catch missing undo logic or newly introduced naked mutating cmdlets prior to runtime execution.
 - **Decision:**
@@ -160,6 +173,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-014: Native Pester Code Coverage Instrumentation & JaCoCo Reporting (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** While 17 Pester unit tests verified helper function behavior, the project had no visibility into total line or instruction coverage across `unslop.ps1`, making it difficult to assess testing blind spots.
 - **Decision:**
@@ -171,6 +185,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-015: Version-Controlled Static Analysis Ruleset (`PSScriptAnalyzerSettings.psd1`) (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** `PSScriptAnalyzer` previously ran with default unpinned rules, leading to potential variance between developer workstations and CI runners, while triggering irrelevant warnings for single-file monolithic CLI scripts (e.g. comment-based help requirements).
 - **Decision:**
@@ -181,6 +196,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-016: GitHub Actions Supply Chain Hardening & SLSA Build Provenance (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** Third-party GitHub Actions referenced via mutable floating tags (e.g., `@v4`) are vulnerable to tag spoofing and upstream supply chain attacks. Furthermore, published release zip archives and checksums lacked cryptographic provenance proving they were built on untampered GitHub Actions runners.
 - **Decision:**
@@ -192,6 +208,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-017: Terminal UI/UX Modernization, Interactive Batch Toggles & Honest Error Feedback (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** A critical analysis of `unslop-windows` UI/UX identified 8 architectural deficiencies:
   1. *Placebo logging:* Silent error suppression (`-ErrorAction SilentlyContinue`) logged success even when mutating registry or service calls failed.
@@ -214,6 +231,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-018: Production Security Hardening & Vulnerability Remediation (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** A rigorous critical security review of `unslop-windows` identified 5 vulnerabilities and architectural security concerns:
   1. *Elevated untrusted binary execution (VULN-01):* `unslop.ps1` prioritized user-writable `%LOCALAPPDATA%\Microsoft\OneDrive\OneDriveSetup.exe` ahead of protected system paths, executing the uninstaller with Administrator privileges without digital signature validation.
@@ -234,6 +252,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-019: Engine Integrity, Startup Symmetry, Defender Realignment and Audit Fidelity (2026-09-08)
+
 - **Status:** Accepted
 - **Context:** A critical systems analysis and code audit of `unslop-windows` identified 4 critical bugs and 3 invariant violations:
   1. *Inverted Defender sample submission value (BUG-01):* `Set-MpPreference -SubmitSamplesConsent 0` configured Defender to `AlwaysPrompt` rather than `NeverSend` (`2`).
@@ -258,6 +277,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-020: Windows 11 24H2/25H2 Protection Driver (UCPD), Inbox SystemApps and Elevation ACL Alignment (2026-09-09)
+
 - **Status:** Accepted
 - **Context:** Live execution of `unslop-windows v1.1.3` on Windows 11 24H2/25H2 revealed 6 specific operation warnings/failures due to new OS-level kernel/driver protections and unmounted registry drives:
   1. *UCPD driver registry blocking (TaskbarDa):* Microsoft introduced the User Choice Protection Driver (`UCPD.sys`) in Windows 11 23H2 (March 2024+) and 24H2/25H2. UCPD actively filters and intercepts direct user-mode registry writes to `HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDa`, throwing `UnauthorizedAccessException` ("Attempted to perform an unauthorized operation") even under elevated Administrator tokens.
@@ -275,6 +295,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-021: Diagnostic Benchmark Reparse Point Defense, Multi-Arch AppX Binding and Local Hook Automation (2026-09-10)
+
 - **Status:** Accepted
 - **Context:**
   1. *Benchmark Reparse Point Vulnerability (OPSEC-01):* `scripts/Measure-SystemState.ps1` wrote diagnostic snapshots without verifying whether `$snapshotDir` was a reparse point or directory junction, creating a potential symlink redirection vector. Additionally, using `return` in standalone scripts exited with code `0` instead of failing closed with `exit 1`.
@@ -290,6 +311,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-022: Windows 10 Multi-OS Support Architecture & Dual-Script Engine (2026-09-10)
+
 - **Status:** Accepted
 - **Context:** The unslop-windows project was exclusively designed for Windows 11 (23H2/24H2/25H2). Despite Windows 10 reaching official end of support in October 2025, millions of machines remain on Win10 with Microsoft's Extended Security Updates (ESU) program running through October 2027. Users requested Win10 debloating support following the same safe-tier principles, symmetrical undo and quality standards.
 - **Alternatives Considered:**
@@ -307,6 +329,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-023: Symmetrical Dual-Engine Architecture (`unslop-win11.ps1` & `unslop-win10.ps1`), Removal of Ambiguous `unslop.ps1` and Granular Version Documentation Standard (2026-09-14)
+
 - **Status:** Accepted
 - **Context:** While ADR-022 introduced `unslop-win10.ps1`, the Windows 11 engine retained the legacy name `unslop.ps1`. This introduced asymmetry and ambiguity:
   1. Script naming was confusing: users and automation tools could not immediately tell which script targeted Windows 11 vs Windows 10 without reading internal comments.
@@ -330,6 +353,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-024: Store Auto-Download Suppression (AutoDownload=2), Cross-Device Resume (CDP/MDM) Disabling and WebExperience Package Alignment (2026-09-15)
+
 - **Status:** Accepted
 - **Context:**
   1. *Microsoft Store Background NVMe Churn:* The Microsoft Store client in Windows 11 (24H2/25H2) automatically triggers silent background app updates (e.g. `Microsoft.Winget.Source` catalog refresh and inbox apps), waking up `wsappx` (`AppXSVC`), `WinGet COM Server`, `State Repository Service` and Delivery Optimization (`DoSvc`), generating 2+ MB/s of unprompted disk I/O on NVMe drives.
@@ -352,6 +376,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-025: AppX Restoration Parameter Defense (`-AllUsers` Removal) and Idempotent Registry Property Deletion (2026-09-15)
+
 - **Status:** Accepted
 - **Context:**
   1. *`Add-AppxPackage` Parameter Binding Failure:* During `-Undo` restoration in Stage 12 of `unslop-win11.ps1` and Stages 2 and 12 of `unslop-win10.ps1`, re-registering provisioned AppX packages failed with `A parameter cannot be found that matches parameter name 'AllUsers'`. `Add-AppxPackage` does not accept an `-AllUsers` parameter (only `Remove-AppxPackage` and `Get-AppxPackage` support it). In earlier versions, this was masked by `-ErrorAction SilentlyContinue`. In v1.2.2, with the introduction of honest error logging (`$global:FailCount++` under `-ErrorAction Stop`), this exposed 5 hard failures on Windows 11 (`aimgr`, `MicrosoftWindows.Client.WebExperience`, `Microsoft.Office.ActionsServer`, `Microsoft.OfficePushNotificationUtility`, `Microsoft.GamingApp`).
@@ -368,6 +393,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-026: Third-Party Scope Correction (Discord Removal), -KeepSysMain and Granular Custom CLI Flags Architecture (2026-09-18)
+
 - **Status:** Accepted
 - **Context:**
   1. *Third-Party Scope Creep:* Section 14 previously contained hardcoded startup entry removal for Discord (`HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Discord`). Discord is third-party software rather than a Windows OS or Microsoft component. This was initially added as a personal configuration choice by the author. As the repository grew to serve a wider user base, retaining third-party app manipulation conflicted with the core project focus on Windows debloating and privacy hardening.
@@ -390,6 +416,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-027: Windows 11 23H2/24H2 Fresh-Install Bloat Parity, Cloud Content GPO Enforcement, and -KeepTeams Architecture (2026-09-24)
+
 - **Status:** Accepted
 - **Context:**
   1. *Fresh Install AppX Leakage:* On clean installations of Windows 11 (23H2/24H2), executing `unslop-win11.ps1` on full debloat left several pre-installed packages and startup items intact:
@@ -415,6 +442,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-028: Windows 11 Programmable Tiles (IrisService/DynamicLayoutsSV) Suppression and Master ContentDeliveryAllowed Lockdown (2026-09-29)
+
 - **Status:** Accepted
 - **Context:**
   1. *Windows 11 Pro GPO Bypass:* In Windows 11 Pro, Microsoft intentionally ignores `DisableWindowsConsumerFeatures` in `HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent` (officially documenting it as restricted to Enterprise/Education editions). Consequently, Pro systems continue to receive cloud-pushed recommendations and sponsored partner placements.
@@ -445,6 +473,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-030: Eradication of Xbox Game Bar, Sponsored LinkedIn Stubs, and Backported Copilot in Windows 10 & 11 (2026-10-01)
+
 - **Status:** Accepted
 - **Context:**
   1. *Xbox Game Bar & Background DVR Leakage:* On fresh installations of Windows 10 and 11, the Xbox Game Bar overlay remained installed and listening for hotkeys (`Win+G`). Previous versions only stripped `Microsoft.XboxApp`, `GamingApp`, and `GamingServices`, omitting `Microsoft.XboxGamingOverlay`, `Microsoft.XboxGameOverlay`, and `Microsoft.XboxSpeechToTextOverlay`. Furthermore, Game DVR hotkeys and background telemetry capture remained enabled in `HKCU/HKLM:\System\GameConfigStore` (`GameDVR_Enabled = 1`, `AppCaptureEnabled = 1`, `HistoricalCaptureEnabled = 1`) and `HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR` (`AllowGameDVR = 1`), while Xbox Live daemon services (`XblAuthManager`, `XblGameSave`, `XboxNetApiSvc`, `XboxGipSvc`) ran in the background even on full debloat unless `-KeepXbox` was passed.
@@ -463,6 +492,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-031: Windows 11 25H2/26H1 Telemetry & AI Host Service Neutralization and Microsoft PC Manager Locking Resolution (2026-10-02)
+
 - **Status:** Accepted
 - **Context:**
   1. *Windows 11 25H2/26H1 Telemetry Services Migration:* On modern Windows 11 builds (Build 26200-26300+), Microsoft migrated several telemetry and appraisal pipelines from legacy scheduled tasks into standalone background services running under `svchost.exe`:
@@ -482,6 +512,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-032: Windows 11 26H2 (Build 26300+) Enablement Package Support & AI Slop Hardening (2026-10-04)
+
 - **Status:** Accepted
 - **Context:**
   1. *Windows 11 26H2 Enablement Package Architecture:* Microsoft released Windows 11 Version 26H2 ("Windows 11 2026 Update", Build 26300, GA September 29, 2026) as an enablement package (eKB KB5121794) activating features atop the shared 24H2/25H2 Germanium servicing core. In `unslop-win11.ps1`, the `$osTag` detection logic evaluated `$build -ge 26200` before checking for 26H2, causing Build 26300 systems to be misclassified as "25H2" in headers, logs, and summary output.
@@ -507,6 +538,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-033: User Choice Protection Driver (UCPD) Neutralization, Staged RunOnce GPO Execution, and WindowsAI SYSTEM-Only Task ACL Defense (2026-10-04)
+
 - **Status:** Accepted
 - **Context:**
   1. *UCPD Kernel Driver Policy Interception (AllowNewsAndInterests):* In Windows 11 24H2 cumulative updates and 26H2 (Build 26300+), Microsoft expanded the User Choice Protection Driver (`UCPD.sys`) filter scope beyond `TaskbarDa` to actively block user-mode writes to `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests`. When executed on a live host where `UCPD.sys` is running, `Set-RegDwordSafe` failed with `UnauthorizedAccessException: Attempted to perform an unauthorized operation`. Furthermore, because UCPD is a kernel filesystem/registry minifilter driver, it cannot be unloaded on-the-fly without a system restart.
@@ -522,6 +554,7 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
 ---
 
 ## ADR-034: Machine-Wide Search Highlights (WSB), Location, and Cloud Search GPO Hardening (2026-10-04)
+
 - **Status:** Accepted
 - **Context:**
   1. *User-Level vs. Machine-Wide Search Highlights:* In Section 6 (Search Privacy & History), `unslop-windows` previously suppressed Search Highlights at the user level via `HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings\IsDynamicSearchBoxEnabled = 0`. However, under multi-user configurations, new profile generation, or major Windows cumulative updates, user-level flags can be bypassed or re-initialized.
@@ -534,3 +567,19 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   - Added AST invariant unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`.
 - **Consequences:** Guarantees machine-wide immunity against Bing dynamic search highlights, location queries, and cloud account data exposure across all user profiles, maintains 100% symmetrical `-Undo` restoration, and preserves Safe-Tier integrity without touching `SearchHost.exe` app-launch functionality.
 
+---
+
+## ADR-035: Treat Warnings as Errors Policy, VS Code Static Analysis Synchronization, and Zero-Warning Enforcement (2026-10-12)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Placebo Gate Pass on Warnings:* `scripts/Test-MasterGate.ps1` previously segregated static analysis results into `$errors` and `$warnings`, but only assigned `$fail = $true` when `$errors.Count -gt 0`. Warnings were logged as "non-blocking" notices, allowing scripts with static analysis warnings to pass the local master gate, git pre-push hooks, and CI workflows.
+  2. *Editor Configuration Drift:* Visual Studio Code's PowerShell extension runs an internal PSScriptAnalyzer engine. Because the repository lacked a checked-in `.vscode/settings.json` binding `"powershell.scriptAnalysis.settingsPath": "PSScriptAnalyzerSettings.psd1"`, VS Code evaluated open files against default unpinned rules, flooding the editor with hundreds of irrelevant warnings for legitimate CLI constructs (such as `PSAvoidUsingWriteHost` on colored console UI and `PSUseShouldProcessForStateChangingFunctions` on internal `-DryRun` helper functions).
+  3. *Unenforced Code Quality Flaws:* Because warnings were non-blocking, actual code quality flaws accumulated silently across the codebase: assignment to the built-in PowerShell automatic variable `$matches` in `unslop-win11.ps1` and `unslop-win10.ps1`, empty catch blocks containing only comments, a Unicode em-dash in a script comment triggering `PSUseBOMForUnicodeEncodedFile`, and unused parameter and variable declarations in scripts and test suites.
+- **Decision:**
+  1. *Treat Warnings as Errors:* Updated `scripts/Test-MasterGate.ps1` Pillar 2 so that ANY static analysis finding (`$errors.Count + $warnings.Count > 0`) immediately fails the quality gate (`$fail = $true`) with exit code 1.
+  2. *Fail-Closed Tooling Invariant:* Updated `scripts/Test-MasterGate.ps1` to fail closed if `PSScriptAnalyzer` is absent locally rather than silently skipping the check. Updated `.githooks/pre-push` to run with `-Strict`.
+  3. *VS Code Settings Synchronization:* Created `.vscode/settings.json` configured with `"powershell.scriptAnalysis.enable": true` and `"powershell.scriptAnalysis.settingsPath": "PSScriptAnalyzerSettings.psd1"`, and un-ignored `.vscode/settings.json` in `.gitignore`.
+  4. *Ruleset Alignment:* Updated `PSScriptAnalyzerSettings.psd1` with explicit architectural exclusions (`PSAvoidUsingWriteHost` for CLI UI, `PSUseShouldProcessForStateChangingFunctions` for internal `-DryRun` functions, `PSAvoidOverwritingBuiltInCmdlets` and `PSReviewUnusedParameter` for cross-platform test stubs and Pester mocks, and `PSUseSingularNouns` for internal diagnostic utilities like `Get-SystemMetrics`).
+  5. *Code Defect Remediation:* Fixed all legitimate code issues: renamed `$matches` to `$matchedEntries`, populated empty catch blocks with `$null = $_`, replaced non-ASCII em-dash with standard ASCII hyphen, and eliminated unused parameter/variable assignments.
+- **Consequences:** Enforces zero warnings and zero errors across the entire codebase. Both local master gate runs, git pre-push hooks, CI runners, and the VS Code Problems pane operate against the identical configuration and guarantee that no code with static analysis warnings can ever be committed or pushed.

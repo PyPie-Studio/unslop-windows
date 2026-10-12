@@ -1,0 +1,5 @@
+node_modules/
+graphify-out/
+logs/
+.git/
+test-results/

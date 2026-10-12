@@ -11,7 +11,8 @@ unslop_logs/
 *.zip
 
 # IDE / Editor configuration
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.sublime-project
 *.sublime-workspace

@@ -305,7 +305,7 @@ Describe 'Measure-SystemState: CLI Execution & Benchmark Workflows' -Tag 'Integr
 
         It 'Exports Markdown report when -ExportMarkdown parameter is specified' {
             $mdPath = Join-Path $script:tempDir "report.md"
-            $out = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Baseline $script:snap1Path -Target $script:snap2Path -ExportMarkdown $mdPath 2>&1
+            $null = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Baseline $script:snap1Path -Target $script:snap2Path -ExportMarkdown $mdPath 2>&1
             $LASTEXITCODE | Should -Be 0
             (Test-Path $mdPath) | Should -Be $true
 
@@ -320,7 +320,7 @@ Describe 'Measure-SystemState: CLI Execution & Benchmark Workflows' -Tag 'Integr
     Context 'Single Snapshot Mode (-Snapshot)' {
         It 'Saves current live metrics snapshot to specified snapshot JSON path' {
             $snapOut = Join-Path $script:tempDir "live_snap.json"
-            $out = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Snapshot $snapOut 2>&1
+            $null = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Snapshot $snapOut 2>&1
             $LASTEXITCODE | Should -Be 0
             (Test-Path $snapOut) | Should -Be $true
 

@@ -1,0 +1,11 @@
+{
+    "powershell.scriptAnalysis.enable": true,
+    "powershell.scriptAnalysis.settingsPath": "PSScriptAnalyzerSettings.psd1",
+    "markdownlint.configFile": ".markdownlint.json",
+    "markdownlint.ignore": [
+        "graphify-out/**",
+        "logs/**",
+        "node_modules/**",
+        "test-results/**"
+    ]
+}

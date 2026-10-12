@@ -7,6 +7,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Milestone 1: Project Governance & Testing (Completed)
+
 - [x] Full 1-click rollback engine (`-Undo`).
 - [x] Safe non-elevated dry-run inspection (`-DryRun`).
 - [x] In-place abort shortcut (`A`) and auto-closing launcher.
@@ -22,6 +23,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Milestone 2: Windows 11 25H2, 26H1 & 26H2 Hardening
+
 - [x] Disable Windows Recall and Screenray snapshots (`DisableAIDataAnalysis = 1`, `AllowRecall = 0`, `AllowRecallEnablement = 0`, `AllowRecallExport = 0`).
 - [x] Windows Copilot taskbar and policy suppression (`DisableCopilotPinScreen = 1`).
 - [x] Click to Do OCR analysis & Screen scraping suppression (`DisableClickToDo = 1`).
@@ -36,6 +38,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Milestone 4: Diagnostic Benchmarking & Automated Testing
+
 - [x] **System State Auditor (`scripts/Measure-SystemState.ps1`):** Standalone before/after diagnostic tool measuring:
   - Real-time idle RAM and commit charge changes.
   - Active telemetry services and background thread counts.
@@ -46,6 +49,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Milestone 5: Windows 10 Multi-OS Support (Completed)
+
 - [x] **Dedicated Windows 10 Engine (`unslop-win10.ps1`):** Complete debloat and hardening engine for Windows 10 releases (22H2, 21H2, 21H1, 20H2, 2004, 1909, 1809, 1607, 1507, Enterprise LTSC 2021/2019/2016, IoT Enterprise LTSC, Builds 10240 through 19045).
 - [x] **Remove Cortana & Suppress Taskbar Feeds:** Group Policy and AppX removal of Cortana, Feeds / News & Interests, People Bar and Meet Now.
 - [x] **Unified Dual-OS Launcher (`unslop.bat`):** Interactive OS selection menu with `-Win10` and `-Win11` CLI pass-through routing.
@@ -55,4 +59,5 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 ---
 
 ## Architecture Decisions
-See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-032) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
+
+See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-035) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.

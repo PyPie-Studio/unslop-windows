@@ -1,4 +1,4 @@
-# unslop-windows: Windows 10 Debloater (v1.4.2)
+# unslop-windows: Windows 10 Debloater (v1.4.3)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
@@ -175,6 +175,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
                         try { Start-Service -Name $name -ErrorAction Stop } catch {
+                            $null = $_
                             # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
                         }
                     }
@@ -191,6 +192,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                 try {
                     if ($s.Status -eq "Running") {
                         try { Stop-Service -Name $name -Force -ErrorAction Stop } catch {
+                            $null = $_
                             # Best-effort service stop; safe to ignore so Set-Service can still disable startup type
                         }
                     }
@@ -338,11 +340,11 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
             if (Test-Path $backupPath) {
                 $props = Get-ItemProperty -Path $backupPath -ErrorAction SilentlyContinue
                 if ($props) {
-                    $matches = $props.PSObject.Properties | Where-Object {
+                    $matchedEntries = $props.PSObject.Properties | Where-Object {
                         $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
                         ($_.Name -match $pattern -or $_.Value -match $pattern)
                     }
-                    foreach ($entry in $matches) {
+                    foreach ($entry in $matchedEntries) {
                         if ($DryRun) {
                             Log "  [WOULD RESTORE STARTUP]: $($entry.Name) -> $runKey" -DryRun:$DryRun
                         } else {
@@ -368,11 +370,11 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
     foreach ($runKey in $runKeys) {
         $props = Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue
         if ($props) {
-            $matches = $props.PSObject.Properties | Where-Object {
+            $matchedEntries = $props.PSObject.Properties | Where-Object {
                 $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
                 ($_.Name -match $pattern -or $_.Value -match $pattern)
             }
-            foreach ($entry in $matches) {
+            foreach ($entry in $matchedEntries) {
                 if ($DryRun) {
                     Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey (archive to backup)" -DryRun:$DryRun
                 } else {
@@ -440,7 +442,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.4.2: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.4.3: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================

@@ -62,6 +62,10 @@ $psExec = if ($PSVersionTable.PSEdition -eq 'Desktop' -or -not (Get-Command pwsh
     "pwsh"
 }
 
+if ($Win11 -and $Win10) {
+    Write-Host "ERROR: Cannot specify both -Win11 and -Win10 simultaneously." -ForegroundColor Red
+    exit 1
+}
 $targetEngine = if ($Win10) { "unslop-win10.ps1" } else { "unslop-win11.ps1" }
 $targetTests  = if ($Win10) { "tests\unslop-win10.Tests.ps1" } else { "tests\unslop-win11.Tests.ps1" }
 $targetBatArgs = if ($Win10) { "-DryRun -Win10" } else { "-DryRun -Win11" }
@@ -123,31 +127,25 @@ if (-not $SkipAnalyzer) {
             $analyzerResults = Invoke-ScriptAnalyzer @analyzerParams |
                 Where-Object { $_.ScriptPath -notmatch '\\(logs|\.git|videos)\\' }
 
-            $errors = $analyzerResults | Where-Object { $_.Severity -eq 'Error' }
-            $warnings = $analyzerResults | Where-Object { $_.Severity -eq 'Warning' }
+            $errors = @($analyzerResults | Where-Object { $_.Severity -eq 'Error' })
+            $warnings = @($analyzerResults | Where-Object { $_.Severity -eq 'Warning' })
+            $totalIssues = $errors.Count + $warnings.Count
 
-            if ($errors -and $errors.Count -gt 0) {
+            if ($totalIssues -gt 0) {
                 $fail = $true
-                Write-Host "  FAILED: PSScriptAnalyzer found $($errors.Count) blocking errors:" -ForegroundColor Red
-                $errors | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Red
-            } elseif ($warnings -and $warnings.Count -gt 0) {
-                Write-Host "  NOTICE: PSScriptAnalyzer found $($warnings.Count) non-blocking warnings:" -ForegroundColor Yellow
-                $warnings | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Yellow
-                Write-Host "  PASSED: 0 blocking errors found." -ForegroundColor Green
+                Write-Host "  FAILED: PSScriptAnalyzer found $totalIssues issue(s) ($($errors.Count) error(s), $($warnings.Count) warning(s)). Treating warnings as blocking errors:" -ForegroundColor Red
+                $analyzerResults | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor Red
             } else {
-                Write-Host "  PASSED: PSScriptAnalyzer clean scan, 0 issues found." -ForegroundColor Green
+                Write-Host "  PASSED: PSScriptAnalyzer clean scan, 0 errors and 0 warnings found." -ForegroundColor Green
             }
         } catch {
-            Write-Host "  WARNING: ScriptAnalyzer execution encountered an error: $_" -ForegroundColor Yellow
+            $fail = $true
+            Write-Host "  FAILED: ScriptAnalyzer execution encountered an error: $_" -ForegroundColor Red
         }
     } else {
-        if ($Strict) {
-            $fail = $true
-            Write-Host "  FAILED: PSScriptAnalyzer is required in CI / Strict mode but is not installed." -ForegroundColor Red
-        } else {
-            Write-Host "  SKIPPED: PSScriptAnalyzer module is not installed locally." -ForegroundColor DarkGray
-            Write-Host "  (To install: Install-Module PSScriptAnalyzer -Scope CurrentUser)" -ForegroundColor DarkGray
-        }
+        $fail = $true
+        Write-Host "  FAILED: PSScriptAnalyzer is required for Master Quality Gate but is not installed." -ForegroundColor Red
+        Write-Host "  (To install: Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck)" -ForegroundColor Red
     }
 } else {
     Write-Host "  SKIPPED: -SkipAnalyzer parameter supplied." -ForegroundColor DarkGray

@@ -46,7 +46,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 Push-Location $root
 try {
     # Verify inside a git repository
-    $gitDir = git rev-parse --git-dir 2>&1
+    $null = git rev-parse --git-dir 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Not inside a git repository." -ForegroundColor Red
         exit 1
