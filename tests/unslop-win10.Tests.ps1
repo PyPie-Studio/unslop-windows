@@ -39,6 +39,10 @@ BeforeAll {
     if (-not (Get-Command Enable-ScheduledTask -ErrorAction SilentlyContinue)) {
         function Enable-ScheduledTask { param($TaskPath, $TaskName) }
     }
+    if (-not $IsWindows -and $env:OS -ne "Windows_NT") {
+        function Set-ItemProperty { param($Path, $Name, $Value, $Type, $ErrorAction, $Force) }
+        function Remove-ItemProperty { param($Path, $Name, $Force, $ErrorAction) }
+    }
 
     # Dot-source engine to export helper functions into test session
     . $script:targetScript
@@ -440,17 +444,59 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not set TestKey"
         }
 
-        It 'Set-SvcState traps exceptions, increments FailCount and emits FAILED log' {
+        It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Get-Service -MockWith {
                 [PSCustomObject]@{ Name = "LockedService"; Status = "Running" }
             }
-            Mock -CommandName Stop-Service -MockWith { throw [System.InvalidOperationException]::new("Cannot stop service") }
+            Mock -CommandName Stop-Service -MockWith { }
+            Mock -CommandName Set-Service -MockWith { throw [System.InvalidOperationException]::new("Cannot disable service") }
 
             Set-SvcState -name "LockedService" -desc "Failure Test" -DryRun:$false
 
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on service exception"
             $script:log[-1] | Should -Match "FAILED: Could not disable service LockedService"
+        }
+
+        It 'Set-SvcState traps exceptions in undo mode when Set-Service fails, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            Mock -CommandName Get-Service -MockWith {
+                [PSCustomObject]@{ Name = "LockedService"; Status = "Stopped" }
+            }
+            Mock -CommandName Set-Service -MockWith { throw [System.InvalidOperationException]::new("Cannot restore service startup") }
+
+            Set-SvcState -name "LockedService" -desc "Failure Test" -undoStartupType "Automatic" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on service exception"
+            $script:log[-1] | Should -Match "FAILED: Could not restore service LockedService"
+        }
+
+        It 'Set-SvcState traps exceptions in undo mode when Start-Service fails (Automatic), increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            Mock -CommandName Get-Service -MockWith {
+                [PSCustomObject]@{ Name = "LockedService"; Status = "Stopped" }
+            }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { throw [System.InvalidOperationException]::new("Service failed to start") }
+
+            Set-SvcState -name "LockedService" -desc "Failure Test" -undoStartupType "Automatic" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on service exception"
+            $script:log[-1] | Should -Match "FAILED: Could not restore service LockedService"
+        }
+
+        It 'Set-SvcState ignores Start-Service failure in undo mode when startup type is Manual (best-effort)' {
+            $global:FailCount = 0
+            Mock -CommandName Get-Service -MockWith {
+                [PSCustomObject]@{ Name = "LockedService"; Status = "Stopped" }
+            }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { throw [System.InvalidOperationException]::new("Service cannot start immediately") }
+
+            Set-SvcState -name "LockedService" -desc "Failure Test" -undoStartupType "Manual" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 0 -Because "Manual startup start failure is best-effort and ignored"
+            $script:log[-1] | Should -Match "RESTORED: LockedService \(Startup: Manual\)"
         }
 
         It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log (Debloat Mode)' {

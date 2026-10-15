@@ -39,6 +39,10 @@ BeforeAll {
     if (-not (Get-Command Enable-ScheduledTask -ErrorAction SilentlyContinue)) {
         function Enable-ScheduledTask { param($TaskPath, $TaskName) }
     }
+    if (-not $IsWindows -and $env:OS -ne "Windows_NT") {
+        function Set-ItemProperty { param($Path, $Name, $Value, $Type, $ErrorAction, $Force) }
+        function Remove-ItemProperty { param($Path, $Name, $Force, $ErrorAction) }
+    }
 
     # Dot-source engine to export helper functions into test session
     . $script:targetScript
@@ -470,10 +474,11 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
         }
 
-        It 'Set-SvcState traps exceptions, increments FailCount and emits FAILED log' {
+        It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $mockSvc = [PSCustomObject]@{ Status = "Running" }
             Mock -CommandName Get-Service -MockWith { $mockSvc }
-            Mock -CommandName Stop-Service -MockWith { throw "Service cannot be stopped" }
+            Mock -CommandName Stop-Service -MockWith { }
+            Mock -CommandName Set-Service -MockWith { throw "Access denied setting service startup" }
             $global:FailCount = 0
             $script:log.Clear()
 
@@ -481,6 +486,47 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
 
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable service TestSvc" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-SvcState traps exceptions in undo mode when Set-Service fails, increments FailCount and emits FAILED log' {
+            $mockSvc = [PSCustomObject]@{ Status = "Stopped" }
+            Mock -CommandName Get-Service -MockWith { $mockSvc }
+            Mock -CommandName Set-Service -MockWith { throw "Access denied restoring service startup" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-SvcState -name "TestSvc" -desc "Test service" -undoStartupType "Automatic" -Undo:$true
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore service TestSvc" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-SvcState traps exceptions in undo mode when Start-Service fails (Automatic), increments FailCount and emits FAILED log' {
+            $mockSvc = [PSCustomObject]@{ Status = "Stopped" }
+            Mock -CommandName Get-Service -MockWith { $mockSvc }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { throw "Service failed to start" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-SvcState -name "TestSvc" -desc "Test service" -undoStartupType "Automatic" -Undo:$true
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore service TestSvc" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-SvcState ignores Start-Service failure in undo mode when startup type is Manual (best-effort)' {
+            $mockSvc = [PSCustomObject]@{ Status = "Stopped" }
+            Mock -CommandName Get-Service -MockWith { $mockSvc }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { throw "Service cannot start immediately" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-SvcState -name "TestSvc" -desc "Test service" -undoStartupType "Manual" -Undo:$true
+
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "RESTORED: TestSvc \(Startup: Manual\)" }).Count | Should -BeGreaterThan 0
         }
 
         It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log (Debloat Mode)' {
