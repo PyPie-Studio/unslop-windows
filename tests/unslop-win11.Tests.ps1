@@ -842,6 +842,11 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
         $fwCmds | Should -Contain 'Disable-NetFirewallRule' -Because "Firewall hardening must block outbound telemetry rules"
         $fwCmds | Should -Contain 'Enable-NetFirewallRule' -Because "Firewall restoration must restore original firewall state on -Undo"
     }
+
+    It 'Filters staged provisioned packages and installed app candidates in single-pass regex scans' {
+        $script:ast.Extent.Text | Should -Match '\$stagedPackages\s*-and\s*\$bloatApps\.Count\s*-gt\s*0' -Because "Staged provisioned packages must be checked and filtered in a single pass"
+        $script:ast.Extent.Text | Should -Match '\$candidateInstalled\s*=\s*if' -Because "Installed package candidates must be pre-filtered in a single pass"
+    }
 }
 
 Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Security', 'Unit' {
