@@ -371,10 +371,10 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
             if (Test-Path $backupPath) {
                 $props = Get-ItemProperty -Path $backupPath -ErrorAction SilentlyContinue
                 if ($props) {
-                    $matchedEntries = $props.PSObject.Properties | Where-Object {
+                    $matchedEntries = $props.PSObject.Properties.Where({
                         $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
                         ($_.Name -match $pattern -or $_.Value -match $pattern)
-                    }
+                    })
                     foreach ($entry in $matchedEntries) {
                         if ($DryRun) {
                             Log "  [WOULD RESTORE STARTUP]: $($entry.Name) -> $runKey" -DryRun:$DryRun
@@ -401,10 +401,10 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
     foreach ($runKey in $runKeys) {
         $props = Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue
         if ($props) {
-            $matchedEntries = $props.PSObject.Properties | Where-Object {
+            $matchedEntries = $props.PSObject.Properties.Where({
                 $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
                 ($_.Name -match $pattern -or $_.Value -match $pattern)
-            }
+            })
             foreach ($entry in $matchedEntries) {
                 if ($DryRun) {
                     Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey (archive to backup)" -DryRun:$DryRun
