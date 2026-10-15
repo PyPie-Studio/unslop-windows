@@ -845,6 +845,13 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
 }
 
 Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Security', 'Unit' {
+    BeforeAll {
+        if (-not $script:ast) {
+            $script:tokens = $null
+            $script:errors = $null
+            $script:ast = [System.Management.Automation.Language.Parser]::ParseFile($script:targetScript, [ref]$script:tokens, [ref]$script:errors)
+        }
+    }
     It 'Enforces Authenticode signature verification on user-space executables' {
         $setupCalls = $script:ast.FindAll({
             param($node)
@@ -1016,6 +1023,22 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match '"XblGameSave"' -Because "XblGameSave service must be managed"
         $script:ast.Extent.Text | Should -Match '"XboxNetApiSvc"' -Because "XboxNetApiSvc service must be managed"
         $script:ast.Extent.Text | Should -Match '"XboxGipSvc"' -Because "XboxGipSvc service must be managed"
+    }
+
+    It 'Enforces double-quoted FilePath arguments on Start-Process invocations' {
+        $spCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Start-Process'
+        }, $true)
+
+        $spCalls.Count | Should -BeGreaterThan 0 -Because "Script must invoke Start-Process for external setup execution"
+        foreach ($call in $spCalls) {
+            $fpElem = $call.CommandElements | Where-Object { $_.Extent.Text -match '\$oneDriveUninstaller' }
+            if ($fpElem) {
+                $fpElem.Extent.Text | Should -Match '"\$oneDriveUninstaller"' -Because "Start-Process -FilePath must be double-quoted to prevent unquoted argument vulnerabilities"
+            }
+        }
     }
 }
 
