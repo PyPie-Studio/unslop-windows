@@ -362,56 +362,50 @@ function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", 
     }
 }
 
+function Get-MatchedStartupEntries($keyPath, $pattern) {
+    $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
+    if (-not $props) { return @() }
+    $excludeRegex = [regex]'^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$'
+    return @($props.PSObject.Properties).Where({
+        -not $excludeRegex.IsMatch($_.Name) -and
+        ($_.Name -match $pattern -or $_.Value -match $pattern)
+    })
+}
+
 function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $backupBase = "HKCU:\Software\unslop-windows\StartupBackup"
-    if ($Undo) {
-        foreach ($runKey in $runKeys) {
-            $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
-            $backupPath = "$backupBase\$keySub"
+    foreach ($runKey in $runKeys) {
+        $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
+        $backupPath = "$backupBase\$keySub"
+
+        if ($Undo) {
             if (Test-Path $backupPath) {
-                $props = Get-ItemProperty -Path $backupPath -ErrorAction SilentlyContinue
-                if ($props) {
-                    $matchedEntries = $props.PSObject.Properties | Where-Object {
-                        $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
-                        ($_.Name -match $pattern -or $_.Value -match $pattern)
-                    }
-                    foreach ($entry in $matchedEntries) {
-                        if ($DryRun) {
-                            Log "  [WOULD RESTORE STARTUP]: $($entry.Name) -> $runKey" -DryRun:$DryRun
-                        } else {
-                            try {
-                                if (-not (Test-Path $runKey)) { New-Item -Path $runKey -Force -ErrorAction Stop | Out-Null }
-                                Set-ItemProperty -Path $runKey -Name $entry.Name -Value $entry.Value -ErrorAction Stop
-                                Remove-ItemProperty -Path $backupPath -Name $entry.Name -Force -ErrorAction SilentlyContinue
-                                Log "  RESTORED STARTUP: $($entry.Name) in $runKey" -DryRun:$DryRun
-                            } catch {
-                                $global:FailCount++
-                                Log "  FAILED: Could not restore startup entry $($entry.Name) in $runKey - $($_.Exception.Message)" -DryRun:$DryRun
-                            }
+                $matchedEntries = Get-MatchedStartupEntries -keyPath $backupPath -pattern $pattern
+                foreach ($entry in $matchedEntries) {
+                    if ($DryRun) {
+                        Log "  [WOULD RESTORE STARTUP]: $($entry.Name) -> $runKey" -DryRun:$DryRun
+                    } else {
+                        try {
+                            if (-not (Test-Path $runKey)) { New-Item -Path $runKey -Force -ErrorAction Stop | Out-Null }
+                            Set-ItemProperty -Path $runKey -Name $entry.Name -Value $entry.Value -ErrorAction Stop
+                            Remove-ItemProperty -Path $backupPath -Name $entry.Name -Force -ErrorAction SilentlyContinue
+                            Log "  RESTORED STARTUP: $($entry.Name) in $runKey" -DryRun:$DryRun
+                        } catch {
+                            $global:FailCount++
+                            Log "  FAILED: Could not restore startup entry $($entry.Name) in $runKey - $($_.Exception.Message)" -DryRun:$DryRun
                         }
                     }
                 }
             } else {
                 Log "  SKIP: No archived startup entry found for '$pattern' in $runKey" -DryRun:$DryRun
             }
-        }
-        return
-    }
-
-    foreach ($runKey in $runKeys) {
-        $props = Get-ItemProperty -Path $runKey -ErrorAction SilentlyContinue
-        if ($props) {
-            $matchedEntries = $props.PSObject.Properties | Where-Object {
-                $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' -and
-                ($_.Name -match $pattern -or $_.Value -match $pattern)
-            }
+        } else {
+            $matchedEntries = Get-MatchedStartupEntries -keyPath $runKey -pattern $pattern
             foreach ($entry in $matchedEntries) {
                 if ($DryRun) {
                     Log "  [WOULD REMOVE STARTUP]: $($entry.Name) from $runKey (archive to backup)" -DryRun:$DryRun
                 } else {
                     try {
-                        $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
-                        $backupPath = "$backupBase\$keySub"
                         if (-not (Test-Path $backupPath)) { New-Item -Path $backupPath -Force -ErrorAction Stop | Out-Null }
                         Set-ItemProperty -Path $backupPath -Name $entry.Name -Value $entry.Value -ErrorAction Stop
                         Remove-ItemProperty -Path $runKey -Name $entry.Name -Force -ErrorAction Stop
