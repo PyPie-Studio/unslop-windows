@@ -483,7 +483,7 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable service TestSvc" }).Count | Should -BeGreaterThan 0
         }
 
-        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log' {
+        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log (Debloat Mode)' {
             $mockTask = [PSCustomObject]@{ TaskName = "TestTask" }
             Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
             Mock -CommandName Disable-ScheduledTask -MockWith { throw "Task operation failed" }
@@ -494,6 +494,32 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
 
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable task TestTask" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log (Undo Mode)' {
+            $mockTask = [PSCustomObject]@{ TaskName = "TestTask" }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
+            Mock -CommandName Enable-ScheduledTask -MockWith { throw "Task operation failed" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-TaskState -path "\TestPath\" -name "TestTask" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not enable task TestTask" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-TaskState handles SYSTEM token restricted task exception gracefully in Undo Mode' {
+            $mockTask = [PSCustomObject]@{ TaskName = "SystemTask"; SecurityDescriptor = "(A;;FRFX;;;BA)" }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
+            Mock -CommandName Enable-ScheduledTask -MockWith { throw "Access is denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-TaskState -path "\TestPath\" -name "SystemTask" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "SKIP: SystemTask requires SYSTEM token" }).Count | Should -BeGreaterThan 0
         }
 
         It 'Set-ConsentCapability traps exceptions, increments FailCount and emits FAILED log' {

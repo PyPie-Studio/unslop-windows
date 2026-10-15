@@ -453,7 +453,7 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not disable service LockedService"
         }
 
-        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log' {
+        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log (Debloat Mode)' {
             $global:FailCount = 0
             Mock -CommandName Get-ScheduledTask -MockWith {
                 [PSCustomObject]@{ TaskName = "LockedTask"; TaskPath = "\" }
@@ -464,6 +464,32 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
 
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on task exception"
             $script:log[-1] | Should -Match "FAILED: Could not disable task LockedTask"
+        }
+
+        It 'Set-TaskState traps exceptions, increments FailCount and emits FAILED log (Undo Mode)' {
+            $global:FailCount = 0
+            Mock -CommandName Get-ScheduledTask -MockWith {
+                [PSCustomObject]@{ TaskName = "LockedTask"; TaskPath = "\" }
+            }
+            Mock -CommandName Enable-ScheduledTask -MockWith { throw [System.UnauthorizedAccessException]::new("Access Denied") }
+
+            Set-TaskState -path "\" -name "LockedTask" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on task enable exception in undo mode"
+            $script:log[-1] | Should -Match "FAILED: Could not enable task LockedTask"
+        }
+
+        It 'Set-TaskState handles SYSTEM token restricted task exception gracefully in Undo Mode' {
+            $global:FailCount = 0
+            Mock -CommandName Get-ScheduledTask -MockWith {
+                [PSCustomObject]@{ TaskName = "SystemTask"; TaskPath = "\"; SecurityDescriptor = "(A;;FRFX;;;BA)" }
+            }
+            Mock -CommandName Enable-ScheduledTask -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-TaskState -path "\" -name "SystemTask" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 0 -Because "SYSTEM token restricted tasks should be skipped without incrementing FailCount"
+            $script:log[-1] | Should -Match "SKIP: SystemTask requires SYSTEM token"
         }
 
         It 'Set-ConsentCapability traps exceptions, increments FailCount and emits FAILED log' {
