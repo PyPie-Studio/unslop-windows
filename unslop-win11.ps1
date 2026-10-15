@@ -366,10 +366,10 @@ function Get-MatchedStartupEntries($keyPath, $pattern) {
     $props = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
     if (-not $props) { return @() }
     $excludeRegex = [regex]'^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$'
-    return $props.PSObject.Properties | Where-Object {
+    return @($props.PSObject.Properties).Where({
         -not $excludeRegex.IsMatch($_.Name) -and
         ($_.Name -match $pattern -or $_.Value -match $pattern)
-    }
+    })
 }
 
 function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
