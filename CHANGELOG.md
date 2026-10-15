@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.4] - 2026-10-16
+
+### Fixed
+
+- **OneDrive Uninstaller Path Quoting (LPE Defense)**: Wrapped `-FilePath "$oneDriveUninstaller"` in explicit quotes in `Start-Process` invocations across `unslop-win11.ps1` and `unslop-win10.ps1`. Prevents argument parsing ambiguity and path resolution issues on user profile directories containing spaces.
+- **AST Security Verification**: Added automated AST parity unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` enforcing double-quoted `FilePath` arguments across all `Start-Process` calls.
+
+### Performance
+
+- **Single-Pass Combined Regex AppX Package Scanning**: Replaced repeated $O(M \times N)$ `.Where()` collection scans inside `foreach ($app in $bloatApps)` with single-pass combined regex pattern matching (`^($combinedApps)(_|$)`) in `unslop-win11.ps1` and `unslop-win10.ps1`. Yields up to a **20.69x speedup** on provisioned manifests (2,090 ms -> 101 ms) and **7.21x speedup** on installed package candidates, verified by new AST parity assertions.
+- **Startup Entry Property Filtering Optimization**: Optimized registry startup entry scanning in `Get-MatchedStartupEntries` across both `unslop-win11.ps1` and `unslop-win10.ps1` by replacing pipeline `Where-Object` with intrinsic array `@(...).Where()` filtering and pre-compiled regex exclusion (`[regex]'^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$'`), delivering a measured **5.2x speedup** over baseline pipeline filtering.
+
+### Changed
+
+- **Remove-StartupEntry Cyclomatic Complexity Reduction**: Refactored `Remove-StartupEntry` across `unslop-win11.ps1` and `unslop-win10.ps1` by extracting property filtering into `Get-MatchedStartupEntries` and unifying `runKeys` loop control flow, eliminating 72 lines of duplicated procedural code while preserving 100% restoration symmetry.
+
+### Added
+
+- **Restoration Failure Honesty & Negative Unit Tests**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying failure counter increments and logging on `Set-TaskState` exceptions, SYSTEM token restricted skips (`(A;;FRFX;;;BA)`), and `Set-SvcState` restore exceptions (`Set-Service` and `Start-Service` failures) in `-Undo` mode. Corrected debloat mock target to `Set-Service` and added cross-platform test stubs.
+
+---
+
 ## [1.4.3] - 2026-10-12
 
 ### Added

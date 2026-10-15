@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.4.3)
+# unslop-windows: Windows 11 Debloater (v1.4.4)
 # Targets Windows 11 26H2 (Build 26300+), 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -466,7 +466,7 @@ $osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.4.3: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.4.4: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
