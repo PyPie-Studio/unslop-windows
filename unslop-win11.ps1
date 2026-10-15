@@ -1171,15 +1171,26 @@ $deprovisionedCount = 0
 if ($IsUndo) {
     Log "  Scanning provisioned app manifests to re-register on-disk packages:"
     $provisioned = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+    $matchedProvisioned = if ($provisioned -and $bloatApps.Count -gt 0) {
+        $escapedApps = $bloatApps | ForEach-Object { [regex]::Escape($_) }
+        $combinedApps = $escapedApps -join '|'
+        $pkgPattern = "^($combinedApps)(_|$)"
+        $dispPattern = "^($combinedApps)($|\s)"
+        $provisioned.Where({
+            ($_.PackageName -match $pkgPattern) -or
+            ($_.DisplayName -and $_.DisplayName -match $dispPattern)
+        })
+    } else { $null }
+
     foreach ($app in $bloatApps) {
         $appEscaped = [regex]::Escape($app)
-        $pkgPattern = "^$appEscaped(_|$)"
-        $dispPattern = "^$appEscaped($|\s)"
-        # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
-        $match = if ($provisioned) {
-            $provisioned.Where({
-                ($_.PackageName -match $pkgPattern) -or
-                ($_.DisplayName -and $_.DisplayName -match $dispPattern)
+        $appPkgPattern = "^$appEscaped(_|$)"
+        $appDispPattern = "^$appEscaped($|\s)"
+        # Match against pre-filtered $matchedProvisioned to avoid scanning full provisioned list per app
+        $match = if ($matchedProvisioned) {
+            $matchedProvisioned.Where({
+                ($_.PackageName -match $appPkgPattern) -or
+                ($_.DisplayName -and $_.DisplayName -match $appDispPattern)
             })
         } else { $null }
         if ($match) {
@@ -1217,17 +1228,16 @@ if ($IsUndo) {
 
     # 1. De-provision staged packages so they never reinstall for new profiles
     $stagedPackages = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-    foreach ($app in $bloatApps) {
-        $appEscaped = [regex]::Escape($app)
-        $pkgPattern = "^$appEscaped(_|$)"
-        $dispPattern = "^$appEscaped($|\s)"
-        # .Where() avoids pipeline overhead; match against PackageName (identity) or DisplayName (friendly)
-        $staged = if ($stagedPackages) {
-            $stagedPackages.Where({
-                ($_.PackageName -match $pkgPattern) -or
-                ($_.DisplayName -and $_.DisplayName -match $dispPattern)
-            })
-        } else { $null }
+    if ($stagedPackages -and $bloatApps.Count -gt 0) {
+        $escapedApps = $bloatApps | ForEach-Object { [regex]::Escape($_) }
+        $combinedApps = $escapedApps -join '|'
+        $pkgPattern = "^($combinedApps)(_|$)"
+        $dispPattern = "^($combinedApps)($|\s)"
+        # Filter stagedPackages in a single pass across all bloatApps
+        $staged = $stagedPackages.Where({
+            ($_.PackageName -match $pkgPattern) -or
+            ($_.DisplayName -and $_.DisplayName -match $dispPattern)
+        })
         if ($staged) {
             foreach ($pkg in $staged) {
                 $pkgTitle = if ($pkg.DisplayName) { $pkg.DisplayName } else { $pkg.PackageName }
@@ -1258,14 +1268,23 @@ if ($IsUndo) {
         }
     }
 
+    $candidateInstalled = if ($allInstalled -and $bloatApps.Count -gt 0) {
+        $escapedApps = $bloatApps | ForEach-Object { [regex]::Escape($_) }
+        $combinedApps = $escapedApps -join '|'
+        $appCombinedPattern = "^($combinedApps)"
+        $allInstalled.Where({
+            -not $_.NonRemovable -and
+            ($_.Name -match $appCombinedPattern -or ($_.PackageFamilyName -and $_.PackageFamilyName -match $appCombinedPattern))
+        })
+    } else { $null }
+
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
         $appPattern = "^$([regex]::Escape($app))"
-        # .Where() avoids pipeline overhead; match against Name (PackageId) or PackageFamilyName
-        $installed = if ($allInstalled) {
-            $allInstalled.Where({
-                -not $_.NonRemovable -and
-                ($_.Name -match $appPattern -or ($_.PackageFamilyName -and $_.PackageFamilyName -match $appPattern))
+        # Match against candidateInstalled to avoid scanning full installed package array repeatedly
+        $installed = if ($candidateInstalled) {
+            $candidateInstalled.Where({
+                $_.Name -match $appPattern -or ($_.PackageFamilyName -and $_.PackageFamilyName -match $appPattern)
             })
         } else { $null }
 
