@@ -1188,7 +1188,7 @@ if ($KeepOneDrive) {
                 Log "  [WOULD UNINSTALL]: OneDrive via $oneDriveUninstaller /uninstall"
             } else {
                 Log "  UNINSTALLING: OneDrive..."
-                Start-Process -FilePath $oneDriveUninstaller -ArgumentList "/uninstall" -Wait -NoNewWindow -ErrorAction SilentlyContinue
+                Start-Process -FilePath "$oneDriveUninstaller" -ArgumentList "/uninstall" -Wait -NoNewWindow -ErrorAction SilentlyContinue
                 Log "  UNINSTALLED: OneDrive binary removed"
             }
         } else {
