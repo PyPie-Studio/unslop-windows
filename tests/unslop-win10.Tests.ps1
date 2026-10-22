@@ -525,6 +525,19 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not enable task LockedTask"
         }
 
+        It 'Set-TaskState handles SYSTEM token restricted task exception gracefully in Debloat Mode' {
+            $global:FailCount = 0
+            Mock -CommandName Get-ScheduledTask -MockWith {
+                [PSCustomObject]@{ TaskName = "SystemTask"; TaskPath = "\"; SecurityDescriptor = "(A;;FRFX;;;BA)" }
+            }
+            Mock -CommandName Disable-ScheduledTask -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-TaskState -path "\" -name "SystemTask" -Undo:$false -DryRun:$false
+
+            $global:FailCount | Should -Be 0 -Because "SYSTEM token restricted tasks should be skipped without incrementing FailCount"
+            $script:log[-1] | Should -Match "SKIP: SystemTask requires SYSTEM token"
+        }
+
         It 'Set-TaskState handles SYSTEM token restricted task exception gracefully in Undo Mode' {
             $global:FailCount = 0
             Mock -CommandName Get-ScheduledTask -MockWith {
