@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.5] - 2026-10-23
+
+### Performance
+
+- **Optimized Xbox Package Array Allocation**: Grouped standalone Xbox and gaming AppX package additions into an array literal (`$bloatApps += @(...)`) across `unslop-win11.ps1` and `unslop-win10.ps1`, eliminating redundant array reallocations and improving package list compilation.
+
+### Added
+
+- **Startup Entry Unit Test Suite (`Get-MatchedStartupEntries`)**: Added dedicated unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying startup entry discovery by Name, Value, null path safety, intrinsic property exclusion (`PSPath`, `PSParentPath`, `PSChildName`, `PSDrive`, `PSProvider`), and regex prefix boundary handling (`PSPathToMyApp`, `MyPSProviderApp`).
+- **Startup Entry Zero-Match Test Coverage**: Added tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying zero mutating registry calls when startup queries return empty collections.
+- **ConsentStore Path Creation & Failure Tests**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` validating positive path creation via `New-Item` and negative exception trapping for ConsentStore capability modifications.
+- **Service Termination Exception Suppression Tests**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying that `Stop-Service` exceptions do not abort or fail service state transitions in debloat or restore modes.
+- **Registry Key Creation Failure Honesty Tests**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying failure counter increments and logging when `New-Item` throws registry creation exceptions in debloat and restore modes.
+- **Symmetrical Registry Deletion Error Handling**: Added unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` validating that `Remove-ItemProperty` skips missing properties cleanly while trapping and logging unexpected exceptions (e.g., `UnauthorizedAccessException`).
+- **SYSTEM Token SDDL Parity (Windows 10)**: Added SDDL parsing and access-denied exception handling tests in `tests/unslop-win10.Tests.ps1` for SYSTEM-token restricted scheduled tasks, achieving 100% test parity with Windows 11.
+- **UCPD Kernel Driver RunOnce Staging Tests (Windows 11)**: Added unit tests in `tests/unslop-win11.Tests.ps1` validating RunOnce staging and failure handling when User Choice Protection Driver (UCPD) prevents direct registry mutations.
+
+---
+
 ## [1.4.4] - 2026-10-16
 
 ### Fixed
@@ -606,6 +625,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.4.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.4...v1.4.5
+[1.4.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.0...v1.4.1

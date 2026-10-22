@@ -56,6 +56,7 @@ Describe 'unslop-windows (Win10): Engine Architecture & Dot-Sourcing' -Tag 'Unit
             'Set-TaskState',
             'Set-RegDwordSafe',
             'Set-ConsentCapability',
+            'Get-MatchedStartupEntries',
             'Remove-StartupEntry'
         )
 
@@ -261,6 +262,34 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $global:FailCount | Should -Be 0
         }
 
+        It 'Undo Mode (removeOnUndo = $true): Gracefully skips when exception message contains "does not exist" without incrementing FailCount' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.Exception]::new("Property NonExistent does not exist at path HKLM:\SOFTWARE\Policies\Test")
+            }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
+
+            $global:FailCount | Should -Be 0
+            $script:log[-1] | Should -Match "SKIP: NonExistent not present in HKLM:\\SOFTWARE\\Policies\\Test"
+        }
+
+        It 'Undo Mode (removeOnUndo = $true): Traps unexpected Remove-ItemProperty exception, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "LockedProperty" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
+
+            $global:FailCount | Should -Be 1
+            $script:log[-1] | Should -Match "FAILED: Could not remove LockedProperty from HKLM:\\SOFTWARE\\Policies\\Test"
+        }
+
         It 'Dry-Run Mode: Performs zero mutating registry calls' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { }
@@ -365,6 +394,25 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             }
             Should -Invoke -CommandName Disable-ScheduledTask -Times 0
         }
+
+        It 'SYSTEM-only SDDL: Skips tasks with SYSTEM-only security descriptors on Access Denied without incrementing FailCount' {
+            $mockProtectedTask = [PSCustomObject]@{
+                TaskName           = "ModelCachingLimit"
+                TaskPath           = "\Microsoft\Windows\WindowsAI\ClickToDo\"
+                SecurityDescriptor = "D:P(A;;GA;;;SY)(A;;FRFX;;;BA)"
+            }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockProtectedTask }
+            Mock -CommandName Disable-ScheduledTask -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+            Mock -CommandName Enable-ScheduledTask -MockWith { }
+
+            $initialFails = $global:FailCount
+            Set-TaskState -path "\Microsoft\Windows\WindowsAI\ClickToDo\" -name "ModelCachingLimit"
+
+            $global:FailCount | Should -Be $initialFails
+            ($script:log | Where-Object { $_ -match "SKIP: ModelCachingLimit requires SYSTEM token" }).Count | Should -BeGreaterThan 0
+        }
     }
 
     Context 'Set-ConsentCapability' {
@@ -409,6 +457,115 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
                 $Name -eq "Value" -and
                 $Value -eq "Allow"
             }
+        }
+    }
+
+    Context 'Get-MatchedStartupEntries' {
+        It 'Returns empty array when registry key path does not exist or Get-ItemProperty returns null' {
+            Mock -CommandName Get-ItemProperty -MockWith { $null }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\NonExistent" -pattern "OneDrive"
+
+            @($result).Count | Should -Be 0
+        }
+
+        It 'Matches startup entry by property Name' {
+            $mockProps = [PSCustomObject]@{
+                OneDrive = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+                EpicGames = "C:\Games\Epic.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "OneDrive"
+
+            @($result).Count | Should -Be 1
+            $result[0].Name | Should -Be "OneDrive"
+            $result[0].Value | Should -Be "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+        }
+
+        It 'Matches startup entry by property Value when Name does not match pattern' {
+            $mockProps = [PSCustomObject]@{
+                AppLauncher = "C:\Users\User\AppData\Local\Microsoft\OneDrive\OneDrive.exe"
+                OtherApp = "C:\Tools\tool.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "OneDrive"
+
+            @($result).Count | Should -Be 1
+            $result[0].Name | Should -Be "AppLauncher"
+            $result[0].Value | Should -Match "OneDrive"
+        }
+
+        It 'Filters out intrinsic PowerShell provider properties' {
+            $mockProps = [PSCustomObject]@{
+                PSPath = "Microsoft.PowerShell.Core\Registry::HKCU\Run"
+                PSParentPath = "Microsoft.PowerShell.Core\Registry::HKCU"
+                PSChildName = "Run"
+                PSDrive = "HKCU"
+                PSProvider = "Microsoft.PowerShell.Core\Registry"
+                ValidApp = "C:\Tools\PowerShellLauncher.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "PowerShell"
+
+            @($result).Count | Should -Be 1
+            $result[0].Name | Should -Be "ValidApp"
+        }
+
+        It 'Filters exact intrinsic PowerShell properties while preserving entries like PSPathToMyApp and MyPSProviderApp' {
+            $mockProps = [PSCustomObject]@{
+                PSPath          = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+                PSParentPath    = "HKCU:\Software\Microsoft\Windows\CurrentVersion"
+                PSChildName     = "Run"
+                PSDrive         = "HKCU"
+                PSProvider      = "Registry"
+                PSPathToMyApp   = "C:\Program Files\MyApp\app.exe"
+                MyPSProviderApp = "C:\Program Files\MyApp\provider.exe"
+                TestStartupApp  = "C:\Program Files\TestApp\app.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $matched = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "PSPath|MyPSProviderApp|TestStartupApp"
+
+            $matchedNames = $matched | ForEach-Object { $_.Name }
+            $matchedNames | Should -Contain "PSPathToMyApp"
+            $matchedNames | Should -Contain "MyPSProviderApp"
+            $matchedNames | Should -Contain "TestStartupApp"
+            $matchedNames | Should -Not -Contain "PSPath"
+            $matchedNames | Should -Not -Contain "PSParentPath"
+            $matchedNames | Should -Not -Contain "PSChildName"
+            $matchedNames | Should -Not -Contain "PSDrive"
+            $matchedNames | Should -Not -Contain "PSProvider"
+            $matched.Count | Should -Be 3
+        }
+
+        It 'Returns empty collection when no entries match the pattern' {
+            $mockProps = [PSCustomObject]@{
+                AppA = "C:\a.exe"
+                AppB = "C:\b.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "NonExistentPattern"
+
+            @($result).Count | Should -Be 0
+        }
+
+        It 'Matches multiple entries when pattern matches multiple property Names or Values' {
+            $mockProps = [PSCustomObject]@{
+                Teams1 = "C:\Teams.exe"
+                Teams2 = "C:\AppData\Teams.exe"
+                Discord = "C:\Discord.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "Teams"
+
+            @($result).Count | Should -Be 2
+            $result[0].Name | Should -Be "Teams1"
+            $result[1].Name | Should -Be "Teams2"
         }
     }
 
@@ -493,6 +650,30 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not set TestKey"
         }
 
+        It 'Set-RegDwordSafe traps New-Item creation exceptions in debloat mode, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Failed to create registry path") }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\NonExistent" -name "TestKey" -debloatValue 1 -undoValue 0 -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must be incremented on New-Item catch"
+            $script:log[-1] | Should -Match "FAILED: Could not set TestKey in HKLM:\\SOFTWARE\\NonExistent"
+        }
+
+        It 'Set-RegDwordSafe traps New-Item creation exceptions in undo mode, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Failed to create registry path") }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\NonExistent" -name "TestKey" -debloatValue 1 -undoValue 0 -Undo -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must be incremented on New-Item catch in undo mode"
+            $script:log[-1] | Should -Match "FAILED: Could not restore TestKey in HKLM:\\SOFTWARE\\NonExistent"
+        }
+
         It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Get-Service -MockWith {
@@ -572,6 +753,19 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
 
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on task enable exception in undo mode"
             $script:log[-1] | Should -Match "FAILED: Could not enable task LockedTask"
+        }
+
+        It 'Set-TaskState handles SYSTEM token restricted task exception gracefully in Debloat Mode' {
+            $global:FailCount = 0
+            Mock -CommandName Get-ScheduledTask -MockWith {
+                [PSCustomObject]@{ TaskName = "SystemTask"; TaskPath = "\"; SecurityDescriptor = "(A;;FRFX;;;BA)" }
+            }
+            Mock -CommandName Disable-ScheduledTask -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-TaskState -path "\" -name "SystemTask" -Undo:$false -DryRun:$false
+
+            $global:FailCount | Should -Be 0 -Because "SYSTEM token restricted tasks should be skipped without incrementing FailCount"
+            $script:log[-1] | Should -Match "SKIP: SystemTask requires SYSTEM token"
         }
 
         It 'Set-TaskState handles SYSTEM token restricted task exception gracefully in Undo Mode' {
