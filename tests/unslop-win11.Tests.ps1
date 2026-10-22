@@ -277,6 +277,26 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Should -Invoke -CommandName Remove-ItemProperty -Times 0
             Should -Invoke -CommandName New-Item -Times 0
         }
+
+        It 'Debloat Mode: Stages policy in RunOnce when UCPD driver is active and direct write is unauthorized' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-Service -MockWith { [PSCustomObject]@{ Status = "Running" } } -ParameterFilter { $Name -eq "UCPD" }
+            Mock -CommandName Set-ItemProperty -MockWith {
+                if ($Path -match "Dsh") {
+                    throw [System.UnauthorizedAccessException]::new("unauthorized operation")
+                }
+            }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1
+
+            $global:FailCount | Should -Be 0
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "RunOnce" -and $Name -eq "unslop_AllowNewsAndInterests"
+            }
+            ($script:log | Where-Object { $_ -match "STAGED: AllowNewsAndInterests in HKLM:\\SOFTWARE\\Policies\\Microsoft\\Dsh" }).Count | Should -BeGreaterThan 0
+        }
     }
 
     Context 'Set-SvcState' {
@@ -472,6 +492,25 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
 
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-RegDwordSafe traps RunOnce staging exceptions when UCPD is active, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-Service -MockWith { [PSCustomObject]@{ Status = "Running" } } -ParameterFilter { $Name -eq "UCPD" }
+            Mock -CommandName Set-ItemProperty -MockWith {
+                if ($Path -match "Dsh") {
+                    throw [System.UnauthorizedAccessException]::new("unauthorized operation")
+                } else {
+                    throw "RunOnce access denied"
+                }
+            }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Microsoft\Dsh" -name "AllowNewsAndInterests" -debloatValue 0 -undoValue 1
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not stage AllowNewsAndInterests in RunOnce - RunOnce access denied" }).Count | Should -BeGreaterThan 0
         }
 
         It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
