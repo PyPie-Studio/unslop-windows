@@ -56,6 +56,7 @@ Describe 'unslop-windows (Win10): Engine Architecture & Dot-Sourcing' -Tag 'Unit
             'Set-TaskState',
             'Set-RegDwordSafe',
             'Set-ConsentCapability',
+            'Get-MatchedStartupEntries',
             'Remove-StartupEntry'
         )
 
@@ -375,6 +376,88 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
                 $Name -eq "Value" -and
                 $Value -eq "Allow"
             }
+        }
+    }
+
+    Context 'Get-MatchedStartupEntries' {
+        It 'Returns empty array when registry key path does not exist or Get-ItemProperty returns null' {
+            Mock -CommandName Get-ItemProperty -MockWith { $null }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\NonExistent" -pattern "OneDrive"
+
+            @($result).Count | Should -Be 0
+        }
+
+        It 'Matches startup entry by property Name' {
+            $mockProps = [PSCustomObject]@{
+                OneDrive = "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+                EpicGames = "C:\Games\Epic.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "OneDrive"
+
+            @($result).Count | Should -Be 1
+            $result[0].Name | Should -Be "OneDrive"
+            $result[0].Value | Should -Be "C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+        }
+
+        It 'Matches startup entry by property Value when Name does not match pattern' {
+            $mockProps = [PSCustomObject]@{
+                AppLauncher = "C:\Users\User\AppData\Local\Microsoft\OneDrive\OneDrive.exe"
+                OtherApp = "C:\Tools\tool.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "OneDrive"
+
+            @($result).Count | Should -Be 1
+            $result[0].Name | Should -Be "AppLauncher"
+            $result[0].Value | Should -Match "OneDrive"
+        }
+
+        It 'Filters out intrinsic PowerShell provider properties' {
+            $mockProps = [PSCustomObject]@{
+                PSPath = "Microsoft.PowerShell.Core\Registry::HKCU\Run"
+                PSParentPath = "Microsoft.PowerShell.Core\Registry::HKCU"
+                PSChildName = "Run"
+                PSDrive = "HKCU"
+                PSProvider = "Microsoft.PowerShell.Core\Registry"
+                ValidApp = "C:\Tools\PowerShellLauncher.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "PowerShell"
+
+            @($result).Count | Should -Be 1
+            $result[0].Name | Should -Be "ValidApp"
+        }
+
+        It 'Returns empty collection when no entries match the pattern' {
+            $mockProps = [PSCustomObject]@{
+                AppA = "C:\a.exe"
+                AppB = "C:\b.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "NonExistentPattern"
+
+            @($result).Count | Should -Be 0
+        }
+
+        It 'Matches multiple entries when pattern matches multiple property Names or Values' {
+            $mockProps = [PSCustomObject]@{
+                Teams1 = "C:\Teams.exe"
+                Teams2 = "C:\AppData\Teams.exe"
+                Discord = "C:\Discord.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $result = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "Teams"
+
+            @($result).Count | Should -Be 2
+            $result[0].Name | Should -Be "Teams1"
+            $result[1].Name | Should -Be "Teams2"
         }
     }
 
