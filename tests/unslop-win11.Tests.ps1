@@ -488,6 +488,22 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not disable service TestSvc" }).Count | Should -BeGreaterThan 0
         }
 
+        It 'Set-SvcState suppresses Stop-Service exception in debloat mode and continues to disable service' {
+            $mockSvc = [PSCustomObject]@{ Status = "Running" }
+            Mock -CommandName Get-Service -MockWith { $mockSvc }
+            Mock -CommandName Stop-Service -MockWith { throw "Cannot stop service" }
+            Mock -CommandName Set-Service -MockWith { }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-SvcState -name "TestSvc" -desc "Test service"
+
+            Should -Invoke -CommandName Stop-Service -Times 1
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "TestSvc" -and $StartupType -eq "Disabled" }
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "DISABLED: TestSvc \(Test service\)" }).Count | Should -BeGreaterThan 0
+        }
+
         It 'Set-SvcState traps exceptions in undo mode when Set-Service fails, increments FailCount and emits FAILED log' {
             $mockSvc = [PSCustomObject]@{ Status = "Stopped" }
             Mock -CommandName Get-Service -MockWith { $mockSvc }
