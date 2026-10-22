@@ -368,6 +368,23 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
     }
 
     Context 'Set-ConsentCapability' {
+        It 'Debloat Mode: Creates consent path with New-Item when path does not exist' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$false -DryRun:$false
+
+            Should -Invoke -CommandName New-Item -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\location$"
+            }
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\location$" -and
+                $Name -eq "Value" -and
+                $Value -eq "Deny"
+            }
+        }
+
         It 'Debloat Mode: Sets capability consent to Deny' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { }
@@ -576,6 +593,30 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
 
             $global:FailCount | Should -Be 1 -Because "Failure counter must increment on consent capability restore exception"
+            $script:log[-1] | Should -Match "FAILED: Could not restore consent location"
+        }
+
+        It 'Set-ConsentCapability traps New-Item creation exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$false -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on consent capability New-Item exception"
+            $script:log[-1] | Should -Match "FAILED: Could not block consent location"
+        }
+
+        It 'Set-ConsentCapability (Undo) traps New-Item creation exceptions, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied") }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must increment on consent capability New-Item exception in Undo mode"
             $script:log[-1] | Should -Match "FAILED: Could not restore consent location"
         }
 
