@@ -1288,21 +1288,29 @@ if ($IsUndo) {
                     Log "  [WOULD REMOVE APP]: $($pkg.Name)"
                     $removedInstalled++
                 } else {
-                    try {
-                        if ($isAdmin) {
-                            try {
-                                Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
-                            } catch {
-                                Remove-AppxPackage -Package $pkg.PackageFullName -ErrorAction Stop
-                            }
-                        } else {
-                            Remove-AppxPackage -Package $pkg.PackageFullName -ErrorAction Stop
+                    $paramSets = if ($isAdmin) {
+                        @(@{ Package = $pkg.PackageFullName; AllUsers = $true; ErrorAction = "Stop" },
+                          @{ Package = $pkg.PackageFullName; ErrorAction = "Stop" })
+                    } else {
+                        @(@{ Package = $pkg.PackageFullName; ErrorAction = "Stop" })
+                    }
+                    $removed = $false
+                    $lastError = $null
+                    foreach ($p in $paramSets) {
+                        try {
+                            Remove-AppxPackage @p
+                            $removed = $true
+                            break
+                        } catch {
+                            $lastError = $_
                         }
+                    }
+                    if ($removed) {
                         Log "  REMOVED APP: $($pkg.Name)"
                         $removedInstalled++
-                    } catch {
+                    } else {
                         $global:FailCount++
-                        Log "  FAILED: Could not remove $($pkg.Name) - $($_.Exception.Message)"
+                        Log "  FAILED: Could not remove $($pkg.Name) - $($lastError.Exception.Message)"
                     }
                 }
             }
