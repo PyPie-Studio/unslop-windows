@@ -464,6 +464,21 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Should -Invoke -CommandName Set-ItemProperty -Times 0
             Should -Invoke -CommandName Remove-ItemProperty -Times 0
         }
+
+        It 'Edge Case: No matched entries in Get-MatchedStartupEntries results in zero mutating calls' {
+            Mock -CommandName Get-ItemProperty -MockWith { $null }
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+            Mock -CommandName New-Item -MockWith { }
+
+            Remove-StartupEntry -pattern "NonExistentApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run")
+            Remove-StartupEntry -pattern "NonExistentApp" -runKeys @("HKCU:\Software\Microsoft\Windows\CurrentVersion\Run") -Undo
+
+            Should -Invoke -CommandName Set-ItemProperty -Times 0
+            Should -Invoke -CommandName Remove-ItemProperty -Times 0
+            Should -Invoke -CommandName New-Item -Times 0
+        }
     }
 
     Context 'Failure Honesty & Negative Error Trapping' {
