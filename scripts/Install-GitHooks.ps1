@@ -70,6 +70,7 @@ try {
 
     # 0. Optional: Install local test prerequisites
     if ($InstallPrerequisites) {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Write-Host "Checking and installing required testing modules..." -ForegroundColor Yellow
 
         $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
