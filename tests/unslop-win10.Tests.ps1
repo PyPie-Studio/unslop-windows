@@ -444,6 +444,30 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not set TestKey"
         }
 
+        It 'Set-RegDwordSafe traps New-Item creation exceptions in debloat mode, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Failed to create registry path") }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\NonExistent" -name "TestKey" -debloatValue 1 -undoValue 0 -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must be incremented on New-Item catch"
+            $script:log[-1] | Should -Match "FAILED: Could not set TestKey in HKLM:\\SOFTWARE\\NonExistent"
+        }
+
+        It 'Set-RegDwordSafe traps New-Item creation exceptions in undo mode, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Failed to create registry path") }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\NonExistent" -name "TestKey" -debloatValue 1 -undoValue 0 -Undo -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must be incremented on New-Item catch in undo mode"
+            $script:log[-1] | Should -Match "FAILED: Could not restore TestKey in HKLM:\\SOFTWARE\\NonExistent"
+        }
+
         It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Get-Service -MockWith {

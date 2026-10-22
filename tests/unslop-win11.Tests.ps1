@@ -474,6 +474,30 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
         }
 
+        It 'Set-RegDwordSafe traps New-Item creation exceptions in debloat mode, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Failed to create registry path" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\NonExistent" -name "TestVal" -debloatValue 1 -undoValue 0
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\NonExistent" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-RegDwordSafe traps New-Item creation exceptions in undo mode, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Failed to create registry path" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\NonExistent" -name "TestVal" -debloatValue 1 -undoValue 0 -Undo
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore TestVal in HKLM:\\SOFTWARE\\Policies\\NonExistent" }).Count | Should -BeGreaterThan 0
+        }
+
         It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $mockSvc = [PSCustomObject]@{ Status = "Running" }
             Mock -CommandName Get-Service -MockWith { $mockSvc }
