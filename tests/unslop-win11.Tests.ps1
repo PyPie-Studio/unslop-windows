@@ -580,9 +580,33 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not block consent location" }).Count | Should -BeGreaterThan 0
         }
 
+        It 'Set-ConsentCapability traps New-Item exceptions, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Access to registry is denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$false -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not block consent location" }).Count | Should -BeGreaterThan 0
+        }
+
         It 'Set-ConsentCapability (Undo) traps exceptions, increments FailCount and emits FAILED log' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore consent location" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-ConsentCapability (Undo) traps New-Item exceptions, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Access to registry is denied" }
             $global:FailCount = 0
             $script:log.Clear()
 
