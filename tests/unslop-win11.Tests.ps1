@@ -295,6 +295,25 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "DiagTrack" -and $StartupType -eq "Disabled" }
         }
 
+        It 'Debloat Mode: Suppresses Stop-Service exceptions and successfully disables startup' {
+            $mockRunningService = [PSCustomObject]@{
+                Name   = "DiagTrack"
+                Status = "Running"
+            }
+            Mock -CommandName Get-Service -MockWith { $mockRunningService }
+            Mock -CommandName Stop-Service -MockWith { throw "Service cannot be stopped in its current state" }
+            Mock -CommandName Set-Service -MockWith { }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-SvcState "DiagTrack" "Diagnostics Tracking"
+
+            Should -Invoke -CommandName Stop-Service -Times 1 -ParameterFilter { $Name -eq "DiagTrack" }
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "DiagTrack" -and $StartupType -eq "Disabled" }
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "DISABLED: DiagTrack \(Diagnostics Tracking\)" }).Count | Should -Be 1
+        }
+
         It 'Undo Mode: Re-enables service with specified StartupType and starts it' {
             $mockStoppedService = [PSCustomObject]@{
                 Name   = "DiagTrack"
