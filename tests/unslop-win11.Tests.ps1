@@ -1136,14 +1136,11 @@ Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit'
         }, $true)
 
         $osTagAssignment | Should -Not -BeNullOrEmpty -Because "`$osTag must be assigned"
-        
         $assignmentText = $osTagAssignment.Extent.Text
-        
         $expectedTags = @('26H1', '26H2', '25H2', '24H2', '23H2', '22H2', '21H2')
         foreach ($tag in $expectedTags) {
             $assignmentText | Should -Match "`"$tag`"" -Because "Version tag $tag must be present"
         }
-        
         $idx28000 = $assignmentText.IndexOf('28000')
         $idx26300 = $assignmentText.IndexOf('26300')
         $idx26200 = $assignmentText.IndexOf('26200')
@@ -1154,7 +1151,6 @@ Describe 'unslop-windows: Build Version Tagging & $osTag Invariants' -Tag 'Unit'
         $idx26300 | Should -BeLessThan $idx26200 -Because "Build 26300 must be checked before 26200"
 
         $buildNumbers = [regex]::Matches($assignmentText, '(?<=\$build -ge )\d+') | ForEach-Object { [int]$_.Value }
-        
         $expectedBuilds = @(28000, 26300, 26200, 26100, 22631, 22621, 22000)
         $buildNumbers.Count | Should -Be $expectedBuilds.Count
         for ($i = 0; $i -lt $expectedBuilds.Count; $i++) {
