@@ -175,7 +175,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
                         try { Start-Service -Name $name -ErrorAction Stop } catch {
-                            $null = $_
+                            Write-Verbose "Best-effort service start failed for ${name}: $_"
                             # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
                         }
                     }
@@ -192,7 +192,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                 try {
                     if ($s.Status -eq "Running") {
                         try { Stop-Service -Name $name -Force -ErrorAction Stop } catch {
-                            $null = $_
+                            Write-Verbose "Best-effort service stop failed for ${name}: $_"
                             # Best-effort service stop; safe to ignore so Set-Service can still disable startup type
                         }
                     }
@@ -1607,7 +1607,7 @@ if (-not $IsDryRun) {
                         }
                     } catch {
                         # Host does not support raw console keys
-                        $null = $_
+                        Write-Verbose "RawUI KeyAvailable check unsupported by host: $_"
                     }
                 }
                 if ($keyHit) { break }

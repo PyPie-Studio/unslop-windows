@@ -179,7 +179,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
                         try { Start-Service -Name $name -ErrorAction Stop } catch {
-                            $null = $_
+                            Write-Verbose "Best-effort service start failed for ${name}: $_"
                             # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
                         }
                     }
@@ -196,7 +196,7 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                 try {
                     if ($s.Status -eq "Running") {
                         try { Stop-Service -Name $name -Force -ErrorAction Stop } catch {
-                            $null = $_
+                            Write-Verbose "Best-effort service stop failed for ${name}: $_"
                             # Best-effort service stop; safe to ignore so Set-Service can still disable startup type
                         }
                     }
@@ -282,7 +282,7 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
                         Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" -Name "unslop_$name" -Force -ErrorAction SilentlyContinue
                     }
                 } catch {
-                    $null = $_
+                    Write-Verbose "Could not clean RunOnce entry unslop_${name}: $_"
                     # Best-effort cleanup of staged RunOnce entry on undo; safe to ignore if property absent or registry locked
                 }
             }
@@ -1824,7 +1824,7 @@ if (-not $IsDryRun) {
                         }
                     } catch {
                         # Host does not support raw console keys
-                        $null = $_
+                        Write-Verbose "RawUI KeyAvailable check unsupported by host: $_"
                     }
                 }
                 if ($keyHit) { break }
