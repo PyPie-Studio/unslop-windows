@@ -22,6 +22,7 @@ jobs:
       - name: Ensure Required Modules Available (Pester 6 & PSScriptAnalyzer)
         shell: pwsh
         run: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
           if (-not $pester) {
             Write-Host "Installing Pester 6..."
