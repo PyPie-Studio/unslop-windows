@@ -249,7 +249,7 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Should -Invoke -CommandName Set-ItemProperty -Times 0
         }
 
-        It 'Undo Mode (removeOnUndo = $true): Gracefully skips if property does not exist without incrementing FailCount' {
+        It 'Undo Mode (removeOnUndo = $true): Gracefully skips if property does not exist (PSArgumentException) without incrementing FailCount' {
             $global:FailCount = 0
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Remove-ItemProperty -MockWith {
@@ -259,6 +259,20 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
 
             $global:FailCount | Should -Be 0
+        }
+
+        It 'Undo Mode (removeOnUndo = $true): Gracefully skips when exception message contains "does not exist" without incrementing FailCount' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.Exception]::new("Property NonExistent does not exist at path HKLM:\SOFTWARE\Policies\Test")
+            }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
+
+            $global:FailCount | Should -Be 0
+            $script:log[-1] | Should -Match "SKIP: NonExistent not present in HKLM:\\SOFTWARE\\Policies\\Test"
         }
 
         It 'Dry-Run Mode: Performs zero mutating registry calls' {
