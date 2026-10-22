@@ -56,6 +56,7 @@ Describe 'unslop-windows (Win10): Engine Architecture & Dot-Sourcing' -Tag 'Unit
             'Set-TaskState',
             'Set-RegDwordSafe',
             'Set-ConsentCapability',
+            'Get-MatchedStartupEntries',
             'Remove-StartupEntry'
         )
 
@@ -375,6 +376,42 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
                 $Name -eq "Value" -and
                 $Value -eq "Allow"
             }
+        }
+    }
+
+    Context 'Get-MatchedStartupEntries' {
+        It 'Filters exact intrinsic PowerShell properties while preserving entries like PSPathToMyApp and MyPSProviderApp' {
+            $mockProps = [PSCustomObject]@{
+                PSPath          = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+                PSParentPath    = "HKCU:\Software\Microsoft\Windows\CurrentVersion"
+                PSChildName     = "Run"
+                PSDrive         = "HKCU"
+                PSProvider      = "Registry"
+                PSPathToMyApp   = "C:\Program Files\MyApp\app.exe"
+                MyPSProviderApp = "C:\Program Files\MyApp\provider.exe"
+                TestStartupApp  = "C:\Program Files\TestApp\app.exe"
+            }
+            Mock -CommandName Get-ItemProperty -MockWith { $mockProps }
+
+            $matched = Get-MatchedStartupEntries -keyPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -pattern "PSPath|MyPSProviderApp|TestStartupApp"
+
+            $matchedNames = $matched | ForEach-Object { $_.Name }
+            $matchedNames | Should -Contain "PSPathToMyApp"
+            $matchedNames | Should -Contain "MyPSProviderApp"
+            $matchedNames | Should -Contain "TestStartupApp"
+            $matchedNames | Should -Not -Contain "PSPath"
+            $matchedNames | Should -Not -Contain "PSParentPath"
+            $matchedNames | Should -Not -Contain "PSChildName"
+            $matchedNames | Should -Not -Contain "PSDrive"
+            $matchedNames | Should -Not -Contain "PSProvider"
+            $matched.Count | Should -Be 3
+        }
+
+        It 'Returns empty array when Get-ItemProperty returns null' {
+            Mock -CommandName Get-ItemProperty -MockWith { $null }
+
+            $matched = Get-MatchedStartupEntries -keyPath "HKCU:\Software\NonExistentKey" -pattern ".*"
+            $matched.Count | Should -Be 0
         }
     }
 
