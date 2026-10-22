@@ -251,14 +251,30 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
 
         It 'Undo Mode (removeOnUndo = $true): Gracefully skips if property does not exist without incrementing FailCount' {
             $global:FailCount = 0
+            $script:log.Clear()
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Remove-ItemProperty -MockWith {
-                throw [System.Management.Automation.PSArgumentException]::new("Property NonExistent does not exist at path HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Test.")
+                throw [System.Management.Automation.ItemNotFoundException]::new("Property NonExistent does not exist at path HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Test.")
             }
 
             Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
 
             $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "SKIP: NonExistent not present in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Undo Mode (removeOnUndo = $true): Traps unexpected Remove-ItemProperty exception, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "LockedProperty" -debloatValue 1 -undoValue 0 -removeOnUndo $true -Undo
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not remove LockedProperty from HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
         }
 
         It 'Dry-Run Mode: Performs zero mutating registry calls' {
