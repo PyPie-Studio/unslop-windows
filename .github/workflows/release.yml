@@ -23,14 +23,33 @@ jobs:
         shell: pwsh
         run: |
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted -ErrorAction SilentlyContinue
           $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
           if (-not $pester) {
             Write-Host "Installing Pester 6..."
-            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
+            for ($i=1; $i -le 3; $i++) {
+              try {
+                Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0 -ErrorAction Stop
+                break
+              } catch {
+                if ($i -eq 3) { throw $_ }
+                Write-Host "Retry $i failed: $($_.Exception.Message). Retrying in 5s..."
+                Start-Sleep -Seconds 5
+              }
+            }
           }
           if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
             Write-Host "Installing PSScriptAnalyzer..."
-            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+            for ($i=1; $i -le 3; $i++) {
+              try {
+                Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
+                break
+              } catch {
+                if ($i -eq 3) { throw $_ }
+                Write-Host "Retry $i failed: $($_.Exception.Message). Retrying in 5s..."
+                Start-Sleep -Seconds 5
+              }
+            }
           }
 
       - name: Run 7-Pillar Master Quality Gate (Win11)
