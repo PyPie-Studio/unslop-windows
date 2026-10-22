@@ -978,12 +978,14 @@ if ($excludedBloatApps.Count -gt 0) {
 }
 
 if (-not $KeepXbox) {
-    $bloatApps += "Microsoft.GamingApp"
-    $bloatApps += "Microsoft.GamingServices"
-    $bloatApps += "Microsoft.XboxApp"
-    $bloatApps += "Microsoft.XboxGamingOverlay"
-    $bloatApps += "Microsoft.XboxGameOverlay"
-    $bloatApps += "Microsoft.XboxSpeechToTextOverlay"
+    $bloatApps += @(
+        "Microsoft.GamingApp"
+        "Microsoft.GamingServices"
+        "Microsoft.XboxApp"
+        "Microsoft.XboxGamingOverlay"
+        "Microsoft.XboxGameOverlay"
+        "Microsoft.XboxSpeechToTextOverlay"
+    )
 } else {
     Log "  KEEP: Gaming & Xbox services retained (-KeepXbox enabled)"
 }
