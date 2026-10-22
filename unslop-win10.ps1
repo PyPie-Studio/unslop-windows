@@ -174,10 +174,8 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
                     if ($undoStartupType -ne "Manual") {
                         Start-Service -Name $name -ErrorAction Stop
                     } else {
-                        try { Start-Service -Name $name -ErrorAction Stop } catch {
-                            $null = $_
-                            # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
-                        }
+                        # Best-effort start for Manual startup type; safe to ignore if service cannot start immediately
+                        Start-Service -Name $name -ErrorAction SilentlyContinue
                     }
                     Log "  RESTORED: $name (Startup: $undoStartupType)" -DryRun:$DryRun
                 } catch {
