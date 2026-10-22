@@ -75,7 +75,7 @@ try {
         $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
         if (-not $pester) {
             Write-Host "  Installing Pester 6+ (Scope: CurrentUser)..." -ForegroundColor Cyan
-            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
+            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0 -AllowPrerelease
             Write-Host "  Pester 6+ installed successfully." -ForegroundColor Green
         } else {
             Write-Host "  Pester $($pester.Version) is already installed." -ForegroundColor Green
