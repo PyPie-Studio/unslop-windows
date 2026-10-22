@@ -444,6 +444,32 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             $script:log[-1] | Should -Match "FAILED: Could not set TestKey"
         }
 
+        It 'Set-RegDwordSafe traps New-Item creation exceptions when path is missing, increments FailCount and emits FAILED log (Debloat Mode)' {
+            $global:FailCount = 0
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied creating key") }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\AccessDenied" -name "TestKey" -debloatValue 1 -undoValue 0 -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must be incremented on New-Item catch"
+            $script:log[-1] | Should -Match "FAILED: Could not set TestKey in HKLM:\\SOFTWARE\\AccessDenied - Access is denied creating key"
+            Should -Invoke -CommandName Set-ItemProperty -Times 0 -Because "Set-ItemProperty should not be called if New-Item fails"
+        }
+
+        It 'Set-RegDwordSafe traps New-Item creation exceptions when path is missing, increments FailCount and emits FAILED log (Undo Mode)' {
+            $global:FailCount = 0
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw [System.UnauthorizedAccessException]::new("Access is denied creating key") }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\AccessDenied" -name "TestKey" -debloatValue 1 -undoValue 0 -Undo:$true -DryRun:$false
+
+            $global:FailCount | Should -Be 1 -Because "Failure counter must be incremented on New-Item catch in undo mode"
+            $script:log[-1] | Should -Match "FAILED: Could not restore TestKey in HKLM:\\SOFTWARE\\AccessDenied - Access is denied creating key"
+            Should -Invoke -CommandName Set-ItemProperty -Times 0 -Because "Set-ItemProperty should not be called if New-Item fails"
+        }
+
         It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             Mock -CommandName Get-Service -MockWith {

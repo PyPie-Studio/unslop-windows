@@ -474,6 +474,34 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
         }
 
+        It 'Set-RegDwordSafe traps New-Item creation exceptions when path is missing, increments FailCount and emits FAILED log (Debloat Mode)' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Access is denied creating key" }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "TestVal" -debloatValue 1 -undoValue 0
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set TestVal in HKLM:\\SOFTWARE\\Policies\\Test - Access is denied creating key" }).Count | Should -BeGreaterThan 0
+            Should -Invoke -CommandName Set-ItemProperty -Times 0
+        }
+
+        It 'Set-RegDwordSafe traps New-Item creation exceptions when path is missing, increments FailCount and emits FAILED log (Undo Mode)' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Access is denied creating key" }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegDwordSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "TestVal" -debloatValue 1 -undoValue 0 -Undo
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not restore TestVal in HKLM:\\SOFTWARE\\Policies\\Test - Access is denied creating key" }).Count | Should -BeGreaterThan 0
+            Should -Invoke -CommandName Set-ItemProperty -Times 0
+        }
+
         It 'Set-SvcState traps exceptions in debloat mode, increments FailCount and emits FAILED log' {
             $mockSvc = [PSCustomObject]@{ Status = "Running" }
             Mock -CommandName Get-Service -MockWith { $mockSvc }
