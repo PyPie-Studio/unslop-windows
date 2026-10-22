@@ -295,7 +295,7 @@ if (-not $Fast) {
                     Write-Host "  FAILED: Pester 6.x+ is required in CI / Strict mode but is not installed (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor Red
                 } else {
                     Write-Host "  SKIPPED: Pester 6.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
-                    Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 6.0.0)" -ForegroundColor DarkGray
+                    Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -AllowPrerelease -MinimumVersion 6.0.0)" -ForegroundColor DarkGray
                 }
             }
         } else {

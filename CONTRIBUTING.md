@@ -82,7 +82,7 @@ If you prefer to manage PowerShell modules manually, install them in your user p
 
 ```powershell
 # Install Pester 6+ and PSScriptAnalyzer
-Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
+Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -AllowPrerelease -MinimumVersion 6.0.0
 Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
 
 # Activate repository Git hooks
