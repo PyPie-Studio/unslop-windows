@@ -1308,6 +1308,8 @@ Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachin
 $edgePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 Set-RegDwordSafe -path $edgePolicy -name "HubsSidebarEnabled" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $edgePolicy -name "AllowCopilot"        -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $edgePolicy -name "StartupBoostEnabled"  -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $edgePolicy -name "BackgroundModeEnabled" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Log ""
 
 # ============================================================

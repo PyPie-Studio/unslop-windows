@@ -127,6 +127,16 @@ Describe 'unslop.bat: Security & Privilege Escalation Defenses' -Tag 'Security',
         $custom11 | Should -Match '-KeepPCManager' -Because ":custom_WIN11 must whitelist -KeepPCManager"
         $custom10 | Should -Match '-KeepPCManager' -Because ":custom_WIN10 must whitelist -KeepPCManager"
     }
+
+    It 'Omits -KeepClock from Windows 11 custom interactive whitelist (SEC-06)' {
+        $custom11 = [regex]::Match($script:batContent, '(?s):custom_WIN11\b.*?:custom_run').Value
+        $custom11 | Should -Not -Match '-KeepClock' -Because ":custom_WIN11 must not whitelist -KeepClock on Windows 11"
+    }
+
+    It 'Preserves toggle state and supports reset in interactive menus' {
+        $script:batContent | Should -Match ':toggles_reset_WIN11'
+        $script:batContent | Should -Match ':toggles_reset_WIN10'
+    }
 }
 
 Describe 'unslop.bat: CLI Parameter Execution & Safety Enforcement' -Tag 'Batch', 'Execution' {
@@ -140,6 +150,22 @@ Describe 'unslop.bat: CLI Parameter Execution & Safety Enforcement' -Tag 'Batch'
         $out = & cmd.exe /c "call `"$($script:batPath)`" -Win11 -Win10" 2>&1
         $LASTEXITCODE | Should -Be 1
         ($out | Out-String) | Should -Match '\[ERROR\] Cannot specify both -Win11 and -Win10 simultaneously\.'
+    }
+
+    It 'Rejects -KeepClock when Windows 11 mode is targeted' {
+        $out = & cmd.exe /c "call `"$($script:batPath)`" -Win11 -KeepClock" 2>&1
+        $LASTEXITCODE | Should -Be 1
+        ($out | Out-String) | Should -Match '\[ERROR\] Switch "-KeepClock" is not supported on Windows 11'
+    }
+
+    It 'Rejects -ClassicContextMenu and -LeftTaskbar when Windows 10 mode is targeted' {
+        $out1 = & cmd.exe /c "call `"$($script:batPath)`" -Win10 -ClassicContextMenu" 2>&1
+        $LASTEXITCODE | Should -Be 1
+        ($out1 | Out-String) | Should -Match '\[ERROR\] Switch "-ClassicContextMenu" is not supported on Windows 10\.'
+
+        $out2 = & cmd.exe /c "call `"$($script:batPath)`" -Win10 -LeftTaskbar" 2>&1
+        $LASTEXITCODE | Should -Be 1
+        ($out2 | Out-String) | Should -Match '\[ERROR\] Switch "-LeftTaskbar" is not supported on Windows 10\.'
     }
 
     It 'Fails with exit code 1 when required companion scripts are missing' {

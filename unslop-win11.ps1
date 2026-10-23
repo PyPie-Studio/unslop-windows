@@ -1507,6 +1507,8 @@ Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachin
 $edgePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
 Set-RegDwordSafe -path $edgePolicy -name "HubsSidebarEnabled" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Set-RegDwordSafe -path $edgePolicy -name "AllowCopilot"        -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $edgePolicy -name "StartupBoostEnabled"  -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path $edgePolicy -name "BackgroundModeEnabled" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 Log ""
 
 # ============================================================
@@ -1702,7 +1704,7 @@ if ($IsUndo) {
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
     Log "Activity & Resume:     Activity feed, Cross-Device Resume and CDP policies restored"
-    Log "Store & Delivery:       Store update and Delivery Optimization policies reverted"
+    Log "Store & Delivery:      Store update and Delivery Optimization policies reverted"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
     Log "Explorer & Taskbar:    Widgets, Chat and File Extensions restored to Windows default"
@@ -1762,7 +1764,7 @@ if ($IsUndo) {
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
     Log "Activity & Resume:     Activity feed, Cross-Device Resume (MDM/CDP) and Cloud Clipboard disabled"
-    Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
+    Log "Store & Delivery:      Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
     Log "ConsentStore:          13 capabilities blocked (Location, Diagnostics, Contacts, Tasks, Notifications, AI models)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, Taskbar Widgets & Chat removed"
@@ -1777,9 +1779,8 @@ Log "PRESERVED (Never Touched):"
 Log "  Microphone & Webcam (Fully accessible for Discord, OBS, Teams)"
 Log "  Windows Terminal, Microsoft Store, Winget (DesktopAppInstaller)"
 Log "  Calculator, Photos, Paint, Snipping Tool (ScreenSketch)"
-Log "  AMDNoiseSuppression (Discord mic)"
 Log "  Edge rendering engine (startup behavior only suppressed; WebView2 preserved)"
-Log "  VS Code, Firefox, Docker, Ollama auto-updates"
+Log "  VS Code, Firefox, Docker auto-updates"
 Log ""
 if ($IsDryRun) {
     Log "DRY-RUN AUDIT COMPLETE: No restart needed (inspection only, zero changes applied)."

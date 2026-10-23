@@ -1607,6 +1607,11 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match 'AllowCopilot' -Because "Edge Copilot must be disabled via policy"
     }
 
+    It 'Suppresses Chromium Edge startup boost and background tasks policies symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'StartupBoostEnabled' -Because "Edge startup boost must be disabled via policy"
+        $script:ast.Extent.Text | Should -Match 'BackgroundModeEnabled' -Because "Edge background mode must be disabled via policy"
+    }
+
     It 'Manages Xbox Live services symmetrically when -KeepXbox is not enabled' {
         $script:ast.Extent.Text | Should -Match '"XblAuthManager"' -Because "XblAuthManager service must be managed"
         $script:ast.Extent.Text | Should -Match '"XblGameSave"' -Because "XblGameSave service must be managed"

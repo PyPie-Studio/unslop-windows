@@ -112,7 +112,7 @@ function Get-SystemMetrics {
     }
 
     [PSCustomObject]@{
-        Timestamp          = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        Timestamp          = (Get-Date).ToString("yyyy-MM-dd hh:mm:ss tt")
         OSVersion          = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue).DisplayVersion
         OSBuild            = [System.Environment]::OSVersion.Version.ToString()
         TotalRAM_GB        = [math]::Round($totalRamBytes / 1GB, 2)
@@ -188,8 +188,8 @@ if ($isCompare) {
             "",
             "Comparative audit report measuring baseline system footprint versus post-hardening optimization.",
             "",
-            "- **Benchmark Date:** $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))",
-            "- **OS Version:** Windows 11 $($s2.OSVersion) (Build $($s2.OSBuild))",
+            "- **Benchmark Date:** $((Get-Date).ToString('yyyy-MM-dd hh:mm:ss tt'))",
+            "- **OS Version:** $((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue).ProductName) $($s2.OSVersion) (Build $($s2.OSBuild))",
             "- **Baseline Snapshot:** ``$path1`` ($($s1.Timestamp))",
             "- **Debloated Snapshot:** ``$path2`` ($($s2.Timestamp))",
             "",
@@ -242,7 +242,9 @@ $metrics = Get-SystemMetrics
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  unslop-windows: System State Auditor" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "Time: $($metrics.Timestamp) | Windows 11 $($metrics.OSVersion) (Build $($metrics.OSBuild))`n" -ForegroundColor DarkGray
+$hostOsProduct = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue).ProductName
+if (-not $hostOsProduct) { $hostOsProduct = "Windows" }
+Write-Host "Time: $($metrics.Timestamp) | $hostOsProduct $($metrics.OSVersion) (Build $($metrics.OSBuild))`n" -ForegroundColor DarkGray
 
 Write-Host "[Memory & Commit Charge]" -ForegroundColor Yellow
 Write-Host "  Total RAM:    $($metrics.TotalRAM_GB) GB"

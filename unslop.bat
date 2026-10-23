@@ -93,6 +93,29 @@ if not "%~1"=="" (
         exit /b 1
     )
 
+    :: Enforce OS-exclusive parameter constraints
+    for %%A in (%*) do (
+        if "!OS_MODE!"=="WIN11" (
+            if /i "%%~A"=="-KeepClock" (
+                echo.
+                echo [ERROR] Switch "-KeepClock" is not supported on Windows 11 [Windows Clock is permanently preserved].
+                exit /b 1
+            )
+        )
+        if "!OS_MODE!"=="WIN10" (
+            if /i "%%~A"=="-ClassicContextMenu" (
+                echo.
+                echo [ERROR] Switch "-ClassicContextMenu" is not supported on Windows 10.
+                exit /b 1
+            )
+            if /i "%%~A"=="-LeftTaskbar" (
+                echo.
+                echo [ERROR] Switch "-LeftTaskbar" is not supported on Windows 10.
+                exit /b 1
+            )
+        )
+    )
+
     :: Check for OS mismatch in CLI mode
     if "!OS_MODE!"=="WIN10" if "!HOST_OS!"=="WIN11" if "!HAS_WIN10!"=="1" echo [WARNING] OS Mismatch: Running on Windows 11 [Build !HOST_BUILD!], but Windows 10 mode [-Win10] was specified.
     if "!OS_MODE!"=="WIN11" if "!HOST_OS!"=="WIN10" if "!HAS_WIN11!"=="1" echo [WARNING] OS Mismatch: Running on Windows 10 [Build !HOST_BUILD!], but Windows 11 mode [-Win11] was specified.
@@ -172,7 +195,11 @@ echo   [2] Windows 10 (22H2 / 21H2 / 20H2 / Enterprise LTSC / Builds 10240-19045
 echo   [0] Exit
 echo.
 echo ============================================================
-set /p "os_choice=Select an option [0-2]: "
+set "os_choice="
+set /p "os_choice=Select an option [0-2] (default: Auto-detected): "
+if "!os_choice!"=="" (
+    if "!HOST_OS!"=="WIN10" ( set "os_choice=2" ) else ( set "os_choice=1" )
+)
 
 if "%os_choice%"=="0" exit /b
 if "%os_choice%"=="1" (
@@ -214,6 +241,7 @@ echo     Proceeding will automatically enable -SkipBuildCheck.
 echo.
 echo ============================================================
 echo.
+set "mismatch_confirm="
 set /p "mismatch_confirm=Are you sure you want to proceed with Windows 10? [y/N]: "
 if /i "!mismatch_confirm!"=="y" (
     set "TARGET_SCRIPT=unslop-win10.ps1"
@@ -242,6 +270,7 @@ echo     Proceeding will automatically enable -SkipBuildCheck.
 echo.
 echo ============================================================
 echo.
+set "mismatch_confirm="
 set /p "mismatch_confirm=Are you sure you want to proceed with Windows 11? [y/N]: "
 if /i "!mismatch_confirm!"=="y" (
     set "TARGET_SCRIPT=unslop-win11.ps1"
@@ -272,13 +301,14 @@ echo   [8] Back to OS Selection
 echo   [0] Exit
 echo.
 echo ============================================================
+set "choice="
 set /p "choice=Select an option [0-8]: "
 
 if "%choice%"=="0" exit /b
 if "%choice%"=="1" set "ARGS=" & goto :run
 if "%choice%"=="2" set "ARGS=-KeepXbox" & goto :run
 if "%choice%"=="3" set "ARGS=-KeepOneDrive -KeepTodos" & goto :run
-if "%choice%"=="4" goto :toggles_WIN11
+if "%choice%"=="4" goto :toggles_menu_WIN11
 if "%choice%"=="5" set "ARGS=-DryRun" & goto :run_dry
 if "%choice%"=="6" set "ARGS=-Undo" & goto :run
 if "%choice%"=="7" goto :custom_WIN11
@@ -309,13 +339,14 @@ echo   [8] Back to OS Selection
 echo   [0] Exit
 echo.
 echo ============================================================
+set "choice="
 set /p "choice=Select an option [0-8]: "
 
 if "%choice%"=="0" exit /b
 if "%choice%"=="1" set "ARGS=" & goto :run
 if "%choice%"=="2" set "ARGS=-KeepXbox" & goto :run
 if "%choice%"=="3" set "ARGS=-KeepOneDrive -KeepTodos" & goto :run
-if "%choice%"=="4" goto :toggles_WIN10
+if "%choice%"=="4" goto :toggles_menu_WIN10
 if "%choice%"=="5" set "ARGS=-DryRun" & goto :run_dry
 if "%choice%"=="6" set "ARGS=-Undo" & goto :run
 if "%choice%"=="7" goto :custom_WIN10
@@ -328,15 +359,23 @@ goto :menu_WIN10
 :: ------------------------------------------------------------
 :: WIN 11 TOGGLES
 :: ------------------------------------------------------------
-:toggles_WIN11
+:toggles_reset_WIN11
 set "TOGGLE_XBOX=0"
 set "TOGGLE_ONEDRIVE=0"
 set "TOGGLE_TODOS=0"
 set "TOGGLE_CLASSIC=0"
 set "TOGGLE_PCMANAGER=0"
 set "TOGGLE_DRYRUN=0"
+goto :toggles_menu_WIN11
 
+:toggles_WIN11
 :toggles_menu_WIN11
+if not defined TOGGLE_XBOX set "TOGGLE_XBOX=0"
+if not defined TOGGLE_ONEDRIVE set "TOGGLE_ONEDRIVE=0"
+if not defined TOGGLE_TODOS set "TOGGLE_TODOS=0"
+if not defined TOGGLE_CLASSIC set "TOGGLE_CLASSIC=0"
+if not defined TOGGLE_PCMANAGER set "TOGGLE_PCMANAGER=0"
+if not defined TOGGLE_DRYRUN set "TOGGLE_DRYRUN=0"
 cls
 set "ACTIVE_FLAGS="
 if "!TOGGLE_XBOX!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepXbox"
@@ -368,10 +407,11 @@ echo   [R] Run with selected configuration
 echo   [C] Clear / Reset all toggles
 echo   [B] Back to Main Menu
 echo ============================================================
+set "tchoice="
 set /p "tchoice=Select an option to toggle or [R] to run: "
 
 if /i "!tchoice!"=="b" goto :menu_WIN11
-if /i "!tchoice!"=="c" goto :toggles_WIN11
+if /i "!tchoice!"=="c" goto :toggles_reset_WIN11
 if /i "!tchoice!"=="1" (
     if "!TOGGLE_XBOX!"=="1" ( set "TOGGLE_XBOX=0" ) else ( set "TOGGLE_XBOX=1" )
     goto :toggles_menu_WIN11
@@ -405,14 +445,21 @@ goto :toggles_menu_WIN11
 :: ------------------------------------------------------------
 :: WIN 10 TOGGLES
 :: ------------------------------------------------------------
-:toggles_WIN10
+:toggles_reset_WIN10
 set "TOGGLE_XBOX=0"
 set "TOGGLE_ONEDRIVE=0"
 set "TOGGLE_TODOS=0"
 set "TOGGLE_PCMANAGER=0"
 set "TOGGLE_DRYRUN=0"
+goto :toggles_menu_WIN10
 
+:toggles_WIN10
 :toggles_menu_WIN10
+if not defined TOGGLE_XBOX set "TOGGLE_XBOX=0"
+if not defined TOGGLE_ONEDRIVE set "TOGGLE_ONEDRIVE=0"
+if not defined TOGGLE_TODOS set "TOGGLE_TODOS=0"
+if not defined TOGGLE_PCMANAGER set "TOGGLE_PCMANAGER=0"
+if not defined TOGGLE_DRYRUN set "TOGGLE_DRYRUN=0"
 cls
 set "ACTIVE_FLAGS="
 if "!TOGGLE_XBOX!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepXbox"
@@ -442,10 +489,11 @@ echo   [R] Run with selected configuration
 echo   [C] Clear / Reset all toggles
 echo   [B] Back to Main Menu
 echo ============================================================
+set "tchoice="
 set /p "tchoice=Select an option to toggle or [R] to run: "
 
 if /i "!tchoice!"=="b" goto :menu_WIN10
-if /i "!tchoice!"=="c" goto :toggles_WIN10
+if /i "!tchoice!"=="c" goto :toggles_reset_WIN10
 if /i "!tchoice!"=="1" (
     if "!TOGGLE_XBOX!"=="1" ( set "TOGGLE_XBOX=0" ) else ( set "TOGGLE_XBOX=1" )
     goto :toggles_menu_WIN10
@@ -489,6 +537,7 @@ echo           -KeepSpotify -KeepTeams
 echo           -KeepPCManager -KeepStoreAutoUpdate
 echo           -KeepTodos
 echo.
+set "ARGS="
 set /p "ARGS=Enter parameter flags: "
 if "!ARGS!"=="" goto :menu_WIN11
 
@@ -496,7 +545,7 @@ if "!ARGS!"=="" goto :menu_WIN11
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -505,7 +554,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN11
@@ -525,6 +574,7 @@ echo           -KeepSpotify -KeepTeams
 echo           -KeepPCManager -KeepStoreAutoUpdate
 echo           -KeepTodos
 echo.
+set "ARGS="
 set /p "ARGS=Enter parameter flags: "
 if "!ARGS!"=="" goto :menu_WIN10
 
