@@ -1,4 +1,4 @@
-﻿# unslop-windows Architecture Decision Records (ADRs)
+# unslop-windows Architecture Decision Records (ADRs)
 
 This document logs significant architectural, security and quality decisions for **unslop-windows**.
 
@@ -583,3 +583,47 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   4. *Ruleset Alignment:* Updated `PSScriptAnalyzerSettings.psd1` with explicit architectural exclusions (`PSAvoidUsingWriteHost` for CLI UI, `PSUseShouldProcessForStateChangingFunctions` for internal `-DryRun` functions, `PSAvoidOverwritingBuiltInCmdlets` and `PSReviewUnusedParameter` for cross-platform test stubs and Pester mocks, and `PSUseSingularNouns` for internal diagnostic utilities like `Get-SystemMetrics`).
   5. *Code Defect Remediation:* Fixed all legitimate code issues: renamed `$matches` to `$matchedEntries`, populated empty catch blocks with `$null = $_`, replaced non-ASCII em-dash with standard ASCII hyphen, and eliminated unused parameter/variable assignments.
 - **Consequences:** Enforces zero warnings and zero errors across the entire codebase. Both local master gate runs, git pre-push hooks, CI runners, and the VS Code Problems pane operate against the identical configuration and guarantee that no code with static analysis warnings can ever be committed or pushed.
+
+---
+
+## ADR-036: Unit Test Decoupling, cmd.exe Exit Code Propagation, and Zero-Advisory Safe-Tier Invariant Enforcement (2026-10-23)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Pester CLI Integration Test Bottleneck & Terminal Freeze:* In `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`, 10 CLI integration tests spawned external `pwsh.exe` subprocesses executing full system scans under `-DryRun`. On Windows hosts, querying all system services, scheduled tasks, and provisioned AppX packages takes ~20–25s per run, causing Pester execution to take ~225s. Compounding this, `Test-MasterGate.ps1` captured stdout synchronously into `$pesterOut = & $psExec ... 2>&1`, freezing git pre-push hooks and developer terminals with a dead cursor for nearly 4 minutes.
+  2. *cmd.exe /c Exit Code Swallowing:* When batch files terminate error paths with `exit /b 1`, invoking `cmd.exe /c ".\unslop.bat ..."` returns exit code 0 to the parent PowerShell process unless prefixed with `call`. Step [7/7] of `Test-MasterGate.ps1` was previously capturing false-positive passes even if `unslop.bat` failed on unrecognized parameters.
+  3. *AST Invariant Bypass via $isApprovedException:* `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` contained an AST audit asserting zero raw mutating cmdlets outside approved helper functions. However, `$isApprovedException` was hardcoded to mask naked `Remove-ItemProperty -ErrorAction SilentlyContinue` (legacy WU driver cleanup) and `Set-ItemProperty` (classic context menu), violating Rule 8 ("No Silent Placebo Logging") and Rule 10 ("Universal Mutating AST Audit").
+  4. *Breach of the "Zero-Advisory Invariant":* Foundational safe-tier rules in `AGENTS.md` (DISM/WinSxS inviolability, reboot lifecycle abort shortcuts `A`/`R`/`Ctrl+C`, and offline-first zero script fetching) lacked automated unit or AST test enforcement.
+- **Decision:**
+  1. *Decouple Unit Tests from CLI Subprocesses:* Configured Step [4/7] in `scripts/Test-MasterGate.ps1` to filter `-Tag 'Unit'` by default, slashing Pester runtime from ~225s to 6.8s. Added `-IncludeIntegration` parameter switch to opt into full CLI scans on demand or in nightly CI workflows.
+  2. *Real-Time Output Streaming:* Removed synchronous stdout buffering, enabling direct host console streaming.
+  3. *Propagate Batch Exit Codes with `call`:* Updated Step [7/7] to execute `cmd.exe /c "call .\unslop.bat $targetBatArgs"`, ensuring non-zero exit codes propagate cleanly. Hardened `unslop.bat` dynamic OS detection and `OS_MODE` defaulting in CLI mode.
+  4. *Approved Helper Routines & Purge of $isApprovedException:* Implemented `Remove-RegValueSafe` and `Set-RegStringSafe` with defensive `try/catch` and `$global:FailCount++` accounting in `unslop-win11.ps1` and `unslop-win10.ps1`. Refactored legacy WU driver cleanup and classic context menu to route through these helpers, and permanently removed `$isApprovedException` from both AST test suites.
+  5. *Automated Safe-Tier Invariant Enforcement:* Added automated AST parity tests for DISM & WinSxS inviolability (Guardrail 1), offline-first architecture (VULN-03 / Guardrail 9), and reboot lifecycle parameter contracts (Guardrail 5).
+  6. *Measure-SystemState Isolation:* Tagged single snapshot subprocess execution in `tests/Measure-SystemState.Tests.ps1` with `-Tag 'Integration', 'CLI'`, isolating live host CIM/AppX queries from pure unit test runs.
+- **Consequences:** Reduces local quality gate Pester execution time by ~33x (from ~225s to 6.8s), eliminates terminal freezes during pre-push hooks, guarantees truthful batch exit code propagation, enforces zero naked mutations across the codebase with 100% AST compliance, and satisfies the "Zero-Advisory Invariant" across all Safe-Tier engineering guardrails.
+
+---
+
+## ADR-037: Local Privilege Escalation Elimination, Isolated Staging Execution, Reparse Point Defense, and Batch Elevation Hardening (2026-10-23)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Local Privilege Escalation in Startup Entry Archiving (SEC-01):* `Remove-StartupEntry` hardcoded backup destination to `HKCU:\Software\unslop-windows\StartupBackup` for all target run keys. Machine-wide run keys (`HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`) were archived into user-writable `HKCU`. On `-Undo`, an elevated administrator session restored arbitrary keys found in `HKCU` back into machine-wide `HKLM`, allowing unprivileged local users to plant elevated persistence.
+  2. *TOCTOU Race Condition & DLL Search-Order Hijacking in User-Space Binary Execution (SEC-02):* Elevated OneDrive de-provisioning verified and executed `OneDriveSetup.exe` directly within `%LOCALAPPDATA%\Microsoft\OneDrive\`. A low-privilege actor could exploit the time-of-check to time-of-use window via file locking/swapping or drop malicious companion DLLs in the user-writable application folder that `OneDriveSetup.exe` pre-loads upon elevated launch.
+  3. *Reparse Point Traversal in Start Menu Manifest & Asset Purge (SEC-03):* Section 4 purged IrisService programmable tile cloud manifests and assets (`ProgrammableTilesAssets`) without verifying whether directory attributes contained `[System.IO.FileAttributes]::ReparsePoint`. A junction planted in `%LOCALAPPDATA%\Packages\...` could redirect deletion of arbitrary system files under an elevated context.
+  4. *Batch Elevation Quoting Command Breakout (SEC-04):* `unslop.bat` elevated via PowerShell string interpolation `powershell.exe -Command "Start-Process -FilePath '%~f0' ..."`. Folder paths containing single quotes/apostrophes (e.g. `C:\Users\O'Connor\...`) broke string delimiters and triggered syntax errors or potential command injection.
+  5. *Whitelist Inconsistency (SEC-05):* While `-KeepPCManager` was whitelisted for CLI arguments in `unslop.bat`, the interactive custom menu routines (`:custom_WIN11` and `:custom_WIN10`) omitted `-KeepPCManager` from their verification loops.
+  6. *Placebo Logging in Subprocess Execution (SEC-06):* Subprocess calls to OneDrive uninstallation suppressed errors with `-ErrorAction SilentlyContinue` and immediately logged success text without inspecting process execution or exit codes.
+  7. *Parent Reparse Point Hijack Defense (SEC-08):* Log initialization inspected `$logDir` for reparse points, but did not check if the immediate parent folder was a junction pointing to sensitive directories.
+- **Decision:**
+  1. *Dynamic Hive Privilege Separation (SEC-01):* Split `Remove-StartupEntry` backup storage by hive: machine-wide `HKLM` keys backup strictly to `HKLM:\SOFTWARE\unslop-windows\StartupBackup` (admin-only ACL), while user `HKCU` keys backup to `HKCU:\Software\unslop-windows\StartupBackup`.
+  2. *Isolated Administrative Binary Staging (SEC-02):* When system directories lack `OneDriveSetup.exe`, stage user-space binaries to a unique, admin-isolated folder in `$env:ProgramData\unslop-windows\staging_*`. Perform Authenticode signature verification (`Get-AuthenticodeSignature`, matching `^CN=Microsoft Corporation,`) exclusively on the staged copy, execute from the isolated directory, and purge the staging folder in a `finally` cleanup block.
+  3. *Reparse Point Traversal Guard on Assets & Manifests (SEC-03):* Inspect `[System.IO.FileAttributes]::ReparsePoint` on `ProgrammableTilesAssets` and `88000963`. If a junction is detected, delete the reparse point link directly (`.Delete()`) without traversing children.
+  4. *Environment Variable Quoting in Elevation Wrapper (SEC-04):* Store `%~f0` into environment variable `UNSLOP_SELF` and pass `$env:UNSLOP_SELF` to PowerShell `Start-Process`, immune to apostrophes and single quotes.
+  5. *Synchronize Custom Menu Whitelists (SEC-05):* Add `-KeepPCManager` to interactive flag loops and allowed parameter lists in `unslop.bat`.
+  6. *Truthful Process Execution & Exit Code Auditing (SEC-06):* Execute `Start-Process` with `-PassThru -ErrorAction Stop` inside `try/catch`. Check exit codes, log warnings on non-zero returns, and increment `$global:FailCount++` upon failure.
+  7. *Parent Directory Reparse Point Verification (SEC-08):* Check both `$logDir` and its parent `Split-Path -Parent $logDir` for `ReparsePoint`. If either is a junction, redirect logs to machine-wide `$env:ProgramData\unslop-windows\logs`.
+  8. *Automated Security Invariant AST Testing (SEC-07):* Enforce automated Pester AST parity tests across `tests/unslop-win11.Tests.ps1`, `tests/unslop-win10.Tests.ps1`, and `tests/unslop.bat.Tests.ps1` for SEC-01 through SEC-06 and SEC-08.
+  9. *12-Hour AM/PM Time Format Standard:* Standardized `Log` function timestamps across Windows 11 and Windows 10 engines to `hh:mm:ss tt` format per User Directive 4.
+- **Consequences:** Completely closes 2 high-severity LPE vulnerabilities and 2 medium-severity file-deletion/injection vectors, ensures 100% truthful error logging, enforces robust defense against TOCTOU and DLL hijacking attacks, aligns parameter whitelists, and locks all architectural security invariants under permanent automated unit test coverage.

@@ -6,6 +6,7 @@
         "graphify-out/**",
         "logs/**",
         "node_modules/**",
-        "test-results/**"
+        "test-results/**",
+        "videos/**"
     ]
 }

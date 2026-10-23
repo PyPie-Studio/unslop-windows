@@ -21,7 +21,7 @@ if "!MISSING!"=="1" (
     echo   release package before running unslop.bat.
     echo ============================================================
     echo.
-    pause
+    if "%~1"=="" pause
     exit /b 1
 )
 
@@ -53,8 +53,15 @@ if !HOST_BUILD! geq 22000 (
 :: If arguments are passed via command-line, bypass menu
 :: ------------------------------------------------------------
 if not "%~1"=="" (
-    set "TARGET_SCRIPT=unslop-win11.ps1"
-    set "OS_MODE=WIN11"
+    if "!HOST_OS!"=="WIN10" (
+        set "TARGET_SCRIPT=unslop-win10.ps1"
+        set "OS_MODE=WIN10"
+    ) else (
+        set "TARGET_SCRIPT=unslop-win11.ps1"
+        set "OS_MODE=WIN11"
+    )
+    set "HAS_WIN10=0"
+    set "HAS_WIN11=0"
 
     :: Validate arguments against strict switch whitelist
     for %%A in (%*) do (
@@ -69,18 +76,26 @@ if not "%~1"=="" (
             exit /b 1
         )
         if /i "%%~A"=="-Win10" (
+            set "HAS_WIN10=1"
             set "TARGET_SCRIPT=unslop-win10.ps1"
             set "OS_MODE=WIN10"
         )
         if /i "%%~A"=="-Win11" (
+            set "HAS_WIN11=1"
             set "TARGET_SCRIPT=unslop-win11.ps1"
             set "OS_MODE=WIN11"
         )
     )
 
+    if "!HAS_WIN10!"=="1" if "!HAS_WIN11!"=="1" (
+        echo.
+        echo [ERROR] Cannot specify both -Win11 and -Win10 simultaneously.
+        exit /b 1
+    )
+
     :: Check for OS mismatch in CLI mode
-    if "!OS_MODE!"=="WIN10" if "!HOST_OS!"=="WIN11" echo [WARNING] OS Mismatch: Running on Windows 11 [Build !HOST_BUILD!], but Windows 10 mode [-Win10] was specified.
-    if "!OS_MODE!"=="WIN11" if "!HOST_OS!"=="WIN10" echo [WARNING] OS Mismatch: Running on Windows 10 [Build !HOST_BUILD!], but Windows 11 mode [-Win11] was specified.
+    if "!OS_MODE!"=="WIN10" if "!HOST_OS!"=="WIN11" if "!HAS_WIN10!"=="1" echo [WARNING] OS Mismatch: Running on Windows 11 [Build !HOST_BUILD!], but Windows 10 mode [-Win10] was specified.
+    if "!OS_MODE!"=="WIN11" if "!HOST_OS!"=="WIN10" if "!HAS_WIN11!"=="1" echo [WARNING] OS Mismatch: Running on Windows 10 [Build !HOST_BUILD!], but Windows 11 mode [-Win11] was specified.
 
     :: Check if invoked from interactive menu
     set "IS_FROM_MENU=0"
@@ -113,7 +128,8 @@ if not "%~1"=="" (
     net session >nul 2>&1
     if !errorlevel! neq 0 (
         echo Requesting Administrator privileges...
-        powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '%*' -Verb RunAs"
+        set "UNSLOP_SELF=%~f0"
+        powershell.exe -NoProfile -Command "Start-Process -FilePath $env:UNSLOP_SELF -ArgumentList '%*' -Verb RunAs"
         if !errorlevel! neq 0 (
             echo [ERROR] UAC elevation was cancelled or denied.
             exit /b 1
@@ -141,7 +157,7 @@ if not "%~1"=="" (
 set "OVERRIDE_BUILD_CHECK=0"
 cls
 echo ============================================================
-echo   unslop-windows (v1.4.5) - PyPie Studio
+echo   unslop-windows (v1.5.0) - PyPie Studio
 echo   Universal Windows Unslopper, Debloater ^& Privacy Hardener
 echo ============================================================
 echo.
@@ -241,7 +257,7 @@ goto :os_select
 :menu_WIN11
 cls
 echo ============================================================
-echo   unslop-windows (v1.4.5) - PyPie Studio
+echo   unslop-windows (v1.5.0) - PyPie Studio
 echo   Universal Windows 11 (26H2 / 26H1 / 25H2 / 24H2 / 23H2 / 22H2 / 21H2) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -278,7 +294,7 @@ goto :menu_WIN11
 :menu_WIN10
 cls
 echo ============================================================
-echo   unslop-windows (v1.4.5) - PyPie Studio
+echo   unslop-windows (v1.5.0) - PyPie Studio
 echo   Universal Windows 10 (22H2 / 21H2 / Enterprise LTSC / Builds 10240-19045) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -470,7 +486,8 @@ echo Examples: -KeepSysMain -KeepSearch
 echo           -KeepPhoneLink -KeepMail
 echo           -LeftTaskbar -ExcludeWUDrivers
 echo           -KeepSpotify -KeepTeams
-echo           -KeepStoreAutoUpdate -KeepTodos
+echo           -KeepPCManager -KeepStoreAutoUpdate
+echo           -KeepTodos
 echo.
 set /p "ARGS=Enter parameter flags: "
 if "!ARGS!"=="" goto :menu_WIN11
@@ -479,7 +496,7 @@ if "!ARGS!"=="" goto :menu_WIN11
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -488,7 +505,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN11
@@ -505,7 +522,8 @@ echo Examples: -KeepSysMain -KeepSearch
 echo           -KeepPhoneLink -KeepMail
 echo           -KeepClock -ExcludeWUDrivers
 echo           -KeepSpotify -KeepTeams
-echo           -KeepStoreAutoUpdate -KeepTodos
+echo           -KeepPCManager -KeepStoreAutoUpdate
+echo           -KeepTodos
 echo.
 set /p "ARGS=Enter parameter flags: "
 if "!ARGS!"=="" goto :menu_WIN10
@@ -514,7 +532,7 @@ if "!ARGS!"=="" goto :menu_WIN10
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepStoreAutoUpdate -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -523,7 +541,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepStoreAutoUpdate, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN10
@@ -579,7 +597,8 @@ if !errorlevel! neq 0 (
             set "UAC_ARGS=-Win11 -FromMenu"
         )
     )
-    powershell.exe -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '!UAC_ARGS!' -Verb RunAs"
+    set "UNSLOP_SELF=%~f0"
+    powershell.exe -NoProfile -Command "Start-Process -FilePath $env:UNSLOP_SELF -ArgumentList '!UAC_ARGS!' -Verb RunAs"
     if !errorlevel! neq 0 (
         echo.
         echo [ERROR] UAC elevation was cancelled or denied.

@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-10-23
+
+### Security
+
+- **Eliminated Startup Persistence Local Privilege Escalation (SEC-01 / ADR-037)**: Dynamic hive separation in `Remove-StartupEntry` ensures machine-wide startup keys (`HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`) are archived strictly into admin-only `HKLM:\SOFTWARE\unslop-windows\StartupBackup`. Prevents low-privilege users from writing persistence into user `HKCU` that would be restored into `HKLM` on administrative `-Undo`.
+- **Admin-Isolated Binary Staging & TOCTOU Defense (SEC-02 / ADR-037)**: Isolated user-space `OneDriveSetup.exe` into an admin-protected folder (`$env:ProgramData\unslop-windows\staging_*`) before executing Authenticode cryptographic verification (`Get-AuthenticodeSignature`, matching `^CN=Microsoft Corporation,`) and execution, neutralizing Time-of-Check to Time-of-Use file swapping and DLL search-order preloading.
+- **Start Menu Junction Traversal Defense (SEC-03 / ADR-037)**: Hardened IrisService Start Menu manifest and asset removal (`ProgrammableTilesAssets`, `88000963`) by inspecting `[System.IO.FileAttributes]::ReparsePoint`. Safely unbinds and deletes the junction link directly (`.Delete()`) without traversing children.
+- **Batch Elevation Quoting Command Breakout Hardening (SEC-04 / ADR-037)**: Elevated execution in `unslop.bat` now routes through environment variable `UNSLOP_SELF` (`powershell.exe ... Start-Process -FilePath $env:UNSLOP_SELF ...`), eliminating single-quote command breakout in paths containing apostrophes (e.g. `C:\Users\O'Connor`).
+- **Parent Directory Reparse Point Audit on Log Initialization (SEC-08 / ADR-037)**: Log saving routines in `unslop-win11.ps1` and `unslop-win10.ps1` inspect both the log folder and its parent directory for `ReparsePoint`. If either is a junction, logs are redirected to machine-wide `$env:ProgramData\unslop-windows\logs`.
+
+### Performance
+
+- **Decoupled Pester Unit Testing & Accelerated Gate (ADR-036)**: Decoupled fast unit tests from slow CLI subprocess execution in `scripts/Test-MasterGate.ps1`, filtering `-Tag 'Unit'` by default during Step [4/7]. Slashes unit test phase runtime from ~225s down to **6.8s** (~33x speedup). Added `-IncludeIntegration` switch to run full CLI subprocess tests on demand or in nightly CI workflows.
+- **Real-Time Output Streaming (ADR-036)**: Removed synchronous stdout buffering in `scripts/Test-MasterGate.ps1`, enabling real-time terminal progress streaming and eliminating the silent 4-minute frozen terminal symptom during gate runs and Git pre-push hooks.
+
+### Fixed
+
+- **Batch Custom Menu Whitelist Synchronization (SEC-05 / ADR-037)**: Added `-KeepPCManager` to `:custom_WIN11` and `:custom_WIN10` whitelist loops and allowed flags lists in `unslop.bat`.
+- **Truthful Subprocess Execution & Failure Accounting (SEC-06 / ADR-037)**: Replaced silent suppression (`-ErrorAction SilentlyContinue`) on external uninstaller executions with `-PassThru -ErrorAction Stop` inside `try/catch`. Accurately checks exit codes and increments failure counters (`$global:FailCount++`) on failure.
+- **Standardized 12-Hour AM/PM Time Format (User Directive 4)**: Updated `Log` function timestamps across Windows 11 and Windows 10 engines from 24-hour military format (`HH:mm:ss`) to 12-hour AM/PM format (`hh:mm:ss tt`).
+- **Release Archive Packaging Dependency Boundary (ADR-023)**: Trimmed un-runnable `tests` from `Compress-Archive` in `.github/workflows/release.yml`, ensuring release archives are strictly self-contained and do not fail due to missing `scripts/` runtime dependencies.
+- **Master Quality Gate Scanner Regex Hardening**: Hardened path filtering in `scripts/Test-MasterGate.ps1` (AST verification, PSScriptAnalyzer, and merge conflict scanning) to exclude untracked development directories (`graphify-out`, `test-results`, `node_modules`, `.agents`), eliminating false-positive conflict marker detection.
+- **Markdown Linting Configuration Parity**: Added `videos/` to `.markdownlintignore` and `.vscode/settings.json`, resolving 26 local markdown linting errors on Hyperframes video assets.
+- **Batch Launcher Exit Code Propagation (ADR-036)**: Prefixed `call` to `unslop.bat` invocation in `scripts/Test-MasterGate.ps1` Step [7/7] (`cmd.exe /c "call .\unslop.bat $targetBatArgs"`). Guarantees that batch failures (`exit /b 1`) propagate truthfully to PowerShell instead of returning false exit code `0`.
+- **Dynamic Batch Launcher OS Routing (ADR-036)**: Hardened `unslop.bat` to dynamically assign `OS_MODE` and `TARGET_SCRIPT` based on detected host OS (`!HOST_OS!`), preventing blank `OS_MODE` and `goto :menu_` syntax errors in CLI execution mode.
+- **Purged `$isApprovedException` (ADR-036)**: Refactored raw mutating registry calls (`Remove-ItemProperty -ErrorAction SilentlyContinue` and `Set-ItemProperty`) in `unslop-win11.ps1` and `unslop-win10.ps1` into safe helper routines (`Remove-RegValueSafe`, `Set-RegStringSafe`). Permanently deleted `$isApprovedException` from `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`.
+- **Measure-SystemState Test Isolation (ADR-036)**: Tagged live snapshot subprocess execution in `tests/Measure-SystemState.Tests.ps1` with `-Tag 'Integration', 'CLI'`, preventing live host CIM and AppX querying during in-process unit test runs.
+
+### Added
+
+- **Automated Security Invariant Unit & AST Parity Tests (SEC-07 / ADR-037)**: Added automated test coverage across `tests/unslop-win11.Tests.ps1`, `tests/unslop-win10.Tests.ps1`, and `tests/unslop.bat.Tests.ps1` enforcing SEC-01 through SEC-06, SEC-08, and third-party scope boundaries (ADR-026).
+- **Master Quality Gate Unit Test Suite (`tests/Test-MasterGate.Tests.ps1`)**: Added a comprehensive Pester 6+ test suite validating `scripts/Test-MasterGate.ps1` AST structure, CmdletBinding parameters, mutual exclusivity contracts (`-Win10` and `-Win11`), exclusion regex rules, test registration parity, and CRLF / merge conflict scanner logic.
+- **Safe-Tier Invariant 1 (DISM & WinSxS Inviolability / ADR-036)**: Added automated AST parity unit tests across `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying zero invocations of `dism.exe` or tampering with `C:\Windows\WinSxS` in both string constants and expandable string expressions.
+- **Safe-Tier Invariant 9 (Offline-First Architecture / VULN-03 / ADR-036)**: Added automated AST parity unit tests verifying zero occurrences of network download cmdlets (`Invoke-WebRequest`, `Invoke-RestMethod`, `curl`, `curl.exe`, `wget`, `wget.exe`, `bitsadmin`, `Start-BitsTransfer`).
+- **Safe-Tier Invariant 5 (Reboot Lifecycle & Abort Safety Contracts / ADR-036)**: Added automated AST parity unit tests verifying declaration of `-NoRestart` and `-ForceRestart` parameters and proper propagation of reboot exit code `100`.
+- **Core Engine Helper Functions (`Remove-RegValueSafe`, `Set-RegStringSafe` / ADR-036)**: Implemented approved helper functions in `unslop-win11.ps1` and `unslop-win10.ps1` with defensive `try/catch` error handling and truthful failure accounting (`$global:FailCount++`).
+- **Batch Launcher Whitelist Completeness**: Added `-KeepPCManager` to whitelist verification in `tests/unslop.bat.Tests.ps1`.
+
+### Changed
+
+- **Workspace & Root Directory Hygiene**: Removed redundant duplicate root `SKILLS.md` in favor of canonical `.agents/SKILLS.md`, purged leaked root `coverage.xml`, and removed obsolete legacy Pester 4 rule `testResults.xml` from `.gitignore`.
+
+---
+
 ## [1.4.5] - 2026-10-23
 
 ### Performance
@@ -625,6 +669,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.5.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.2...v1.4.3

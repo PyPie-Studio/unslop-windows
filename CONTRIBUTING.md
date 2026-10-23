@@ -58,7 +58,7 @@ The following components must remain functional and un-targeted:
 ### 8. Automated Test Enforcement
 
 * **Automated Test Enforcement:** No policy, privacy rule or safety constraint may exist solely as markdown prose. Every new constraint or debloat module added MUST include a corresponding automated unit test in `tests/unslop-win11.Tests.ps1` (or `tests/unslop-win10.Tests.ps1`) or AST assertion in `scripts/Test-MasterGate.ps1`. Untested rules are treated as aspirations, not invariants.
-* **Universal Mutating AST Audit:** Naked calls to mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) outside approved bidirectional helpers (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) will fail the AST quality gate.
+* **Universal Mutating AST Audit:** Naked calls to mutating cmdlets (`Set-ItemProperty`, `Remove-ItemProperty`, `Disable-ScheduledTask`, `Enable-ScheduledTask`, `Set-Service`, `Stop-Service`, `Start-Service`) outside approved bidirectional helpers (`Set-RegDwordSafe`, `Remove-RegValueSafe`, `Set-RegStringSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) will fail the AST quality gate.
 
 ---
 

@@ -317,7 +317,7 @@ Describe 'Measure-SystemState: CLI Execution & Benchmark Workflows' -Tag 'Integr
         }
     }
 
-    Context 'Single Snapshot Mode (-Snapshot)' {
+    Context 'Single Snapshot Mode (-Snapshot)' -Tag 'Integration', 'CLI' {
         It 'Saves current live metrics snapshot to specified snapshot JSON path' {
             $snapOut = Join-Path $script:tempDir "live_snap.json"
             $null = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Snapshot $snapOut 2>&1

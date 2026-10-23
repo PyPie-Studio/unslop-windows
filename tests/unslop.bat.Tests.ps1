@@ -46,7 +46,7 @@ Describe 'unslop.bat: Static Integrity & Syntax Invariants' -Tag 'Unit', 'Batch'
         $expectedSwitches = @(
             '-Undo', '-Restore', '-DryRun', '-WhatIf', '-KeepXbox', '-KeepOneDrive',
             '-KeepTodos', '-KeepSysMain', '-KeepSearch', '-KeepPhoneLink', '-KeepMail',
-            '-KeepClock', '-KeepSpotify', '-KeepTeams', '-KeepStoreAutoUpdate',
+            '-KeepClock', '-KeepSpotify', '-KeepTeams', '-KeepPCManager', '-KeepStoreAutoUpdate',
             '-ClassicContextMenu', '-LeftTaskbar', '-ExcludeWUDrivers',
             '-KeepDefenderDefaults', '-NoRestart', '-ForceRestart', '-RunDirect',
             '-FromMenu', '-Win11', '-Win10', '-SkipBuildCheck'
@@ -111,5 +111,50 @@ Describe 'unslop.bat: Interactive Menu Structure' -Tag 'Unit', 'Batch' {
 
     It 'Handles reboot exit code 100 gracefully without pausing' {
         $script:batContent | Should -Match 'if !errorlevel! equ 100 exit /b 0'
+    }
+}
+
+Describe 'unslop.bat: Security & Privilege Escalation Defenses' -Tag 'Security', 'Batch' {
+    It 'Enforces environment variable quoting on UAC elevation to eliminate single-quote injection (SEC-04)' {
+        $script:batContent | Should -Match 'set "UNSLOP_SELF=%~f0"'
+        $script:batContent | Should -Match 'Start-Process -FilePath \$env:UNSLOP_SELF'
+    }
+
+    It 'Synchronizes -KeepPCManager across custom interactive menu whitelists (SEC-05)' {
+        $custom11 = [regex]::Match($script:batContent, '(?s):custom_WIN11\b.*?:custom_run').Value
+        $custom10 = [regex]::Match($script:batContent, '(?s):custom_WIN10\b.*?:custom_run').Value
+
+        $custom11 | Should -Match '-KeepPCManager' -Because ":custom_WIN11 must whitelist -KeepPCManager"
+        $custom10 | Should -Match '-KeepPCManager' -Because ":custom_WIN10 must whitelist -KeepPCManager"
+    }
+}
+
+Describe 'unslop.bat: CLI Parameter Execution & Safety Enforcement' -Tag 'Batch', 'Execution' {
+    It 'Rejects illegal switches with exit code 1 and error output' {
+        $out = & cmd.exe /c "call `"$($script:batPath)`" -IllegalSwitch" 2>&1
+        $LASTEXITCODE | Should -Be 1
+        ($out | Out-String) | Should -Match '\[ERROR\] Unrecognized or illegal parameter switch: "-IllegalSwitch"'
+    }
+
+    It 'Rejects simultaneous -Win11 and -Win10 switches with exit code 1' {
+        $out = & cmd.exe /c "call `"$($script:batPath)`" -Win11 -Win10" 2>&1
+        $LASTEXITCODE | Should -Be 1
+        ($out | Out-String) | Should -Match '\[ERROR\] Cannot specify both -Win11 and -Win10 simultaneously\.'
+    }
+
+    It 'Fails with exit code 1 when required companion scripts are missing' {
+        $tempDir = Join-Path $env:TEMP ("unslop_bat_test_" + [System.Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+        try {
+            $tempBat = Join-Path $tempDir "unslop.bat"
+            Copy-Item -Path $script:batPath -Destination $tempBat
+            $out = & cmd.exe /c "call `"$tempBat`" -DryRun" 2>&1
+            $LASTEXITCODE | Should -Be 1
+            ($out | Out-String) | Should -Match '\[ERROR\] MISSING REQUIRED SCRIPTS'
+        } finally {
+            if (Test-Path $tempDir) {
+                Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 }

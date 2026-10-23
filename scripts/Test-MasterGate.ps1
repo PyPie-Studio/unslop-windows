@@ -21,6 +21,9 @@
 .PARAMETER SkipUnitTests
     Bypasses Pester unit tests if Pester 6 is not installed locally.
 
+.PARAMETER IncludeIntegration
+    Includes slow CLI subprocess and integration tests in the Pester run (default executes -Tag 'Unit' only).
+
 .PARAMETER TestResultsPath
     Optional file path to export Pester unit test results in NUnit XML format.
 
@@ -30,6 +33,7 @@
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Fast
+    powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -IncludeIntegration
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck
 #>
 [CmdletBinding()]
@@ -37,6 +41,7 @@ param(
     [switch]$Fast,
     [switch]$SkipAnalyzer,
     [switch]$SkipUnitTests,
+    [switch]$IncludeIntegration,
     [switch]$Strict,
     [switch]$Win11,
     [switch]$Win10,
@@ -56,10 +61,13 @@ if ($env:GITHUB_ACTIONS -eq 'true' -or $env:CI -eq 'true') {
 }
 
 # Resolve matching PowerShell executable for subprocess execution based on current host runtime
-$psExec = if ($PSVersionTable.PSEdition -eq 'Desktop' -or -not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
-    "powershell.exe"
-} else {
+$hasPwsh = [bool](Get-Command pwsh -ErrorAction SilentlyContinue)
+$psExec = if ($PSVersionTable.PSEdition -ne 'Desktop' -and $hasPwsh) {
     "pwsh"
+} elseif ($hasPwsh -and -not (Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 })) {
+    "pwsh"
+} else {
+    "powershell.exe"
 }
 
 if ($Win11 -and $Win10) {
@@ -85,7 +93,7 @@ Write-Host "============================================================" -Foreg
 # ------------------------------------------------------------
 Write-Host "`n[1/$totalSteps] AST syntax & parser verification..." -ForegroundColor Yellow
 $scriptFiles = Get-ChildItem -Path $root -Include *.ps1, *.psm1, *.psd1 -Recurse -File |
-    Where-Object { $_.FullName -notmatch '\\(logs|\.git|videos)\\' }
+    Where-Object { $_.FullName -notmatch '\\(logs|\.git|videos|graphify-out|test-results|\.agents|node_modules)\\' }
 
 $syntaxErrorsFound = 0
 foreach ($file in $scriptFiles) {
@@ -125,7 +133,7 @@ if (-not $SkipAnalyzer) {
                 $analyzerParams['Settings'] = $analyzerSettings
             }
             $analyzerResults = Invoke-ScriptAnalyzer @analyzerParams |
-                Where-Object { $_.ScriptPath -notmatch '\\(logs|\.git|videos)\\' }
+                Where-Object { $_.ScriptPath -notmatch '\\(logs|\.git|videos|graphify-out|test-results|\.agents|node_modules)\\' }
 
             $errors = @($analyzerResults | Where-Object { $_.Severity -eq 'Error' })
             $warnings = @($analyzerResults | Where-Object { $_.Severity -eq 'Warning' })
@@ -181,7 +189,7 @@ if (Test-Path $unslopBat) {
 
 # Check for merge conflict markers across text files
 $textFiles = Get-ChildItem -Path $root -Include *.ps1, *.bat, *.md, *.yml -Recurse -File |
-    Where-Object { $_.FullName -notmatch '\\(logs|\.git|videos)\\' }
+    Where-Object { $_.FullName -notmatch '\\(logs|\.git|videos|graphify-out|test-results|\.agents|node_modules)\\' }
 
 $conflictMarkers = @(
     foreach ($tf in $textFiles) {
@@ -218,10 +226,18 @@ if (-not $Fast) {
 
         $measureTestScript = Join-Path $root "tests\Measure-SystemState.Tests.ps1"
         if (Test-Path $measureTestScript) { $testScripts += $measureTestScript }
+        $gateTestScript = Join-Path $root "tests\Test-MasterGate.Tests.ps1"
+        if (Test-Path $gateTestScript) { $testScripts += $gateTestScript }
 
         if ($testScripts.Count -gt 0) {
-            $pesterModule = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
-            if ($pesterModule -and $pesterModule.Version.Major -ge 6) {
+            $pesterVer = if ($psExec -eq "pwsh" -and $PSVersionTable.PSEdition -eq 'Desktop') {
+                & pwsh -NoProfile -Command "(Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1).Version.ToString()"
+            } else {
+                $m = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
+                if ($m) { $m.Version.ToString() } else { "" }
+            }
+            $pesterMajor = if ($pesterVer -match '^(\d+)') { [int]$matches[1] } else { 0 }
+            if ($pesterMajor -ge 6) {
                 Push-Location $root
                 try {
                     $targetXml = ""
@@ -251,12 +267,15 @@ if (-not $Fast) {
                         $covFile = Join-Path $root $targetEngine
                     }
                     $pesterBlock = {
-                        param($testPath, $xmlOut, $covOut, $covTarget)
+                        param($testPath, $xmlOut, $covOut, $covTarget, [bool]$incIntegration)
                         Import-Module Pester -MinimumVersion 6.0.0
                         $cfg = New-PesterConfiguration
                         $cfg.Run.Path = $testPath -split ";"
                         $cfg.Output.Verbosity = 'Detailed'
                         $cfg.Run.PassThru = $true
+                        if (-not $incIntegration) {
+                            $cfg.Filter.Tag = @('Unit')
+                        }
                         if ($xmlOut) {
                             $cfg.TestResult.Enabled = $true
                             $cfg.TestResult.OutputFormat = 'NUnitXml'
@@ -276,12 +295,11 @@ if (-not $Fast) {
                         if ($res.FailedCount -gt 0) { exit 1 }
                     }
                     $testPathStr = $testScripts -join ";"
-                    $pesterOut = & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testPathStr, $targetXml, $targetCovXml, $covFile 2>&1
+                    & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testPathStr, $targetXml, $targetCovXml, $covFile, ([bool]$IncludeIntegration)
                     $pesterExit = $LASTEXITCODE
                     if ($pesterExit -ne 0) {
                         $fail = $true
                         Write-Host "  FAILED: Pester unit tests failed with exit code $pesterExit" -ForegroundColor Red
-                        Write-Host ($pesterOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
                     } else {
                         Write-Host "  PASSED: All Pester unit tests passed clean (0 failures)." -ForegroundColor Green
                     }
@@ -292,9 +310,9 @@ if (-not $Fast) {
             } else {
                 if ($Strict) {
                     $fail = $true
-                    Write-Host "  FAILED: Pester 6.x+ is required in CI / Strict mode but is not installed (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor Red
+                    Write-Host "  FAILED: Pester 6.x+ is required in CI / Strict mode but is not installed (found: $(if ($pesterVer) { $pesterVer } else { 'none' }))." -ForegroundColor Red
                 } else {
-                    Write-Host "  SKIPPED: Pester 6.x+ is not installed locally (found: $(if ($pesterModule) { $pesterModule.Version } else { 'none' }))." -ForegroundColor DarkGray
+                    Write-Host "  SKIPPED: Pester 6.x+ is not installed locally (found: $(if ($pesterVer) { $pesterVer } else { 'none' }))." -ForegroundColor DarkGray
                     Write-Host "  (To install: Install-Module Pester -Scope CurrentUser -SkipPublisherCheck -Force -MinimumVersion 6.0.0)" -ForegroundColor DarkGray
                 }
             }
@@ -359,7 +377,7 @@ if (-not $Fast) {
     Write-Host "`n[7/$totalSteps] Batch launcher CLI parameter passthrough audit..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $batOut = & cmd.exe /c ".\unslop.bat $targetBatArgs" 2>&1
+        $batOut = & cmd.exe /c "call .\unslop.bat $targetBatArgs" 2>&1
         $batExit = $LASTEXITCODE
         if ($batExit -ne 0 -or ($batOut -match 'unexpected at this time|syntax of the command is incorrect')) {
             $fail = $true

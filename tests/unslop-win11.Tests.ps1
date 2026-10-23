@@ -55,6 +55,8 @@ Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit
             'Set-SvcState',
             'Set-TaskState',
             'Set-RegDwordSafe',
+            'Remove-RegValueSafe',
+            'Set-RegStringSafe',
             'Set-ConsentCapability',
             'Get-MatchedStartupEntries',
             'Remove-StartupEntry'
@@ -78,6 +80,9 @@ Describe 'unslop-windows (Win11): Engine Architecture & Dot-Sourcing' -Tag 'Unit
 }
 
 Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
+    BeforeEach {
+        Mock -CommandName Write-Host -MockWith { }
+    }
     Context 'Log' {
         BeforeEach {
             $script:log.Clear()
@@ -89,9 +94,9 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Log "Test log message"
 
             $script:log.Count | Should -Be 1
-            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] Test log message$'
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2} (?:AM|PM)\] Test log message$'
             Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
-                $Object -match '^\[\d{2}:\d{2}:\d{2}\] Test log message$'
+                $Object -match '^\[\d{2}:\d{2}:\d{2} (?:AM|PM)\] Test log message$'
             }
         }
 
@@ -101,9 +106,9 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Log "Test dry run message" -DryRun
 
             $script:log.Count | Should -Be 1
-            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Test dry run message$'
+            $script:log[0] | Should -Match '^\[\d{2}:\d{2}:\d{2} (?:AM|PM)\] \[DRY-RUN\] Test dry run message$'
             Should -Invoke -CommandName Write-Host -Times 1 -ParameterFilter {
-                $Object -match '^\[\d{2}:\d{2}:\d{2}\] \[DRY-RUN\] Test dry run message$'
+                $Object -match '^\[\d{2}:\d{2}:\d{2} (?:AM|PM)\] \[DRY-RUN\] Test dry run message$'
             }
         }
 
@@ -328,6 +333,112 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
         }
     }
 
+    Context 'Remove-RegValueSafe' {
+        It 'Removes target registry property when present and logs REMOVED' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { [PSCustomObject]@{ LegacyVal = 1 } }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "LegacyVal"
+
+            Should -Invoke -CommandName Remove-ItemProperty -Times 1 -ParameterFilter {
+                $Path -eq "HKLM:\SOFTWARE\Policies\Test" -and $Name -eq "LegacyVal"
+            }
+        }
+
+        It 'Dry-Run Mode: Performs zero mutating registry calls' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { [PSCustomObject]@{ LegacyVal = 1 } }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "LegacyVal" -DryRun
+
+            Should -Invoke -CommandName Remove-ItemProperty -Times 0
+        }
+
+        It 'Gracefully skips non-existent property without incrementing FailCount' {
+            $global:FailCount = 0
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { $null }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent"
+
+            $global:FailCount | Should -Be 0
+            Should -Invoke -CommandName Remove-ItemProperty -Times 0
+        }
+
+        It 'Gracefully skips when path does not exist' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName Get-ItemProperty -MockWith { }
+            Mock -CommandName Remove-ItemProperty -MockWith { }
+
+            Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\NonExistentPath" -name "TestVal"
+
+            Should -Invoke -CommandName Get-ItemProperty -Times 0
+            Should -Invoke -CommandName Remove-ItemProperty -Times 0
+        }
+
+        It 'Traps unexpected Remove-ItemProperty exception, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { [PSCustomObject]@{ LockedVal = 1 } }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+
+            Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "LockedVal"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not remove LockedVal from HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
+        }
+    }
+
+    Context 'Set-RegStringSafe' {
+        It 'Creates key if missing and sets string registry property' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-RegStringSafe -path "HKCU:\Software\Classes\CLSID\Test" -name "(default)" -value "TestString"
+
+            Should -Invoke -CommandName New-Item -Times 1 -ParameterFilter {
+                $Path -eq "HKCU:\Software\Classes\CLSID\Test"
+            }
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -eq "HKCU:\Software\Classes\CLSID\Test" -and
+                $Name -eq "(default)" -and
+                $Value -eq "TestString"
+            }
+        }
+
+        It 'Dry-Run Mode: Performs zero mutating registry calls' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-RegStringSafe -path "HKCU:\Software\Classes\CLSID\Test" -name "(default)" -value "TestString" -DryRun
+
+            Should -Invoke -CommandName New-Item -Times 0
+            Should -Invoke -CommandName Set-ItemProperty -Times 0
+        }
+
+        It 'Traps unexpected Set-ItemProperty exception, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+
+            Set-RegStringSafe -path "HKCU:\Software\Classes\CLSID\Test" -name "(default)" -value "TestString"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set \(default\) in HKCU:\\Software\\Classes\\CLSID\\Test" }).Count | Should -BeGreaterThan 0
+        }
+    }
+
     Context 'Set-SvcState' {
         It 'Debloat Mode: Stops running service and disables startup' {
             $mockRunningService = [PSCustomObject]@{
@@ -390,6 +501,24 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             Should -Invoke -CommandName Set-Service -Times 0
             Should -Invoke -CommandName Start-Service -Times 0
         }
+
+        It 'Dry-Run Mode: Performs zero mutating service calls' {
+            $mockRunningService = [PSCustomObject]@{
+                Name   = "DiagTrack"
+                Status = "Running"
+            }
+            Mock -CommandName Get-Service -MockWith { $mockRunningService }
+            Mock -CommandName Stop-Service -MockWith { }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { }
+
+            Set-SvcState "DiagTrack" "Diagnostics Tracking" -DryRun
+            Set-SvcState "DiagTrack" "Diagnostics Tracking" -Undo -DryRun
+
+            Should -Invoke -CommandName Stop-Service -Times 0
+            Should -Invoke -CommandName Set-Service -Times 0
+            Should -Invoke -CommandName Start-Service -Times 0
+        }
     }
 
     Context 'Set-TaskState' {
@@ -445,6 +574,22 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             $global:FailCount | Should -Be $initialFails
             ($script:log | Where-Object { $_ -match "SKIP: ModelCachingLimit requires SYSTEM token" }).Count | Should -BeGreaterThan 0
         }
+
+        It 'Dry-Run Mode: Performs zero mutating task calls' {
+            $mockTask = [PSCustomObject]@{
+                TaskName = "Consolidator"
+                TaskPath = "\Microsoft\Windows\Customer Experience Improvement Program\"
+            }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
+            Mock -CommandName Disable-ScheduledTask -MockWith { }
+            Mock -CommandName Enable-ScheduledTask -MockWith { }
+
+            Set-TaskState "\Microsoft\Windows\Customer Experience Improvement Program\" "Consolidator" -DryRun
+            Set-TaskState "\Microsoft\Windows\Customer Experience Improvement Program\" "Consolidator" -Undo -DryRun
+
+            Should -Invoke -CommandName Disable-ScheduledTask -Times 0
+            Should -Invoke -CommandName Enable-ScheduledTask -Times 0
+        }
     }
 
     Context 'Set-ConsentCapability' {
@@ -489,6 +634,18 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
                 $Name -eq "Value" -and
                 $Value -eq "Allow"
             }
+        }
+
+        It 'Dry-Run Mode: Performs zero mutating consent calls' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-ConsentCapability "location" "Location tracking" "Deny" "Allow" -DryRun
+            Set-ConsentCapability "location" "Location tracking" "Deny" "Allow" -Undo -DryRun
+
+            Should -Invoke -CommandName New-Item -Times 0
+            Should -Invoke -CommandName Set-ItemProperty -Times 0
         }
     }
 
@@ -998,6 +1155,50 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.MicrosoftPCManager").Length | Should -Be 0
         ($output -match "\[WOULD DISABLE\]: PCManager Service Store").Length | Should -Be 0
     }
+
+    It '-KeepTodos retains Microsoft To-Do and excludes it from removal list' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepTodos 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Microsoft To Do retained \(-KeepTodos enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.Todos").Length | Should -Be 0
+    }
+
+    It '-KeepSpotify retains Spotify and excludes it from removal list' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepSpotify 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Spotify application retained \(-KeepSpotify enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DE-PROVISION\]:.*SpotifyAB\.SpotifyMusic").Length | Should -Be 0
+    }
+
+    It '-KeepStoreAutoUpdate retains Microsoft Store automatic app updates' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepStoreAutoUpdate 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Microsoft Store automatic updates retained \(-KeepStoreAutoUpdate enabled\)").Length | Should -BeGreaterThan 0
+    }
+
+    It '-ClassicContextMenu applies classic Windows 10 context menu registry key' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -ClassicContextMenu 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "\[WOULD SET REG\]:.*86ca1aa0-34aa-4e8b-a509-50c905bae2a2").Length | Should -BeGreaterThan 0
+    }
+
+    It '-LeftTaskbar aligns taskbar to left' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -LeftTaskbar 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "\[WOULD SET REG\]:.*TaskbarAl").Length | Should -BeGreaterThan 0
+    }
+
+    It '-NoRestart suppresses reboot prompts and executes clean exit' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -NoRestart 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length | Should -BeGreaterThan 0
+    }
+
+    It '-ForceRestart accepts parameter switch cleanly in DryRun mode' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -ForceRestart 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length | Should -BeGreaterThan 0
+    }
 }
 
 Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -Tag 'Unit', 'Static', 'Symmetry' {
@@ -1048,7 +1249,7 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
     }
 
     It 'Zero raw mutating cmdlets (registry, tasks, services) exist outside approved helper functions' {
-        $approvedRegHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry')
+        $approvedRegHelpers = @('Set-RegDwordSafe', 'Set-ConsentCapability', 'Remove-StartupEntry', 'Set-RegStringSafe', 'Remove-RegValueSafe')
         $mutatingRegCmdlets = @('Set-ItemProperty', 'New-ItemProperty', 'Remove-ItemProperty')
         $mutatingTaskCmdlets = @('Disable-ScheduledTask', 'Enable-ScheduledTask')
         $mutatingSvcCmdlets = @('Set-Service', 'Stop-Service', 'Start-Service')
@@ -1070,8 +1271,7 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
                         $parent = $parent.Parent
                     }
                     if (-not $inApprovedFunc) {
-                        $isApprovedException = ($node.Extent.Text -match 'classicMenuPath') -or ($node.Extent.Text -match 'ExcludeWUDriversInQualityUpdate')
-                        return (-not $isApprovedException)
+                        return $true
                     }
                 }
                 if ($mutatingTaskCmdlets -contains $name) {
@@ -1147,6 +1347,8 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
 
         $funcNames = $functions | ForEach-Object { $_.Name }
         $funcNames | Should -Contain 'Set-RegDwordSafe'
+        $funcNames | Should -Contain 'Remove-RegValueSafe'
+        $funcNames | Should -Contain 'Set-RegStringSafe'
         $funcNames | Should -Contain 'Set-SvcState'
         $funcNames | Should -Contain 'Set-TaskState'
         $funcNames | Should -Contain 'Set-ConsentCapability'
@@ -1157,6 +1359,16 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
                 $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-RegDwordSafe must evaluate `$Undo"
                 $fn.Extent.Text | Should -Match 'Set-ItemProperty.*\$undoValue' -Because "Set-RegDwordSafe must support restoring undoValue"
                 $fn.Extent.Text | Should -Match 'Remove-ItemProperty' -Because "Set-RegDwordSafe must support removeOnUndo"
+            }
+            if ($fn.Name -eq 'Remove-RegValueSafe') {
+                $fn.Extent.Text | Should -Match 'Remove-ItemProperty' -Because "Remove-RegValueSafe must call Remove-ItemProperty"
+                $fn.Extent.Text | Should -Match 'if\s*\(\$DryRun\)' -Because "Remove-RegValueSafe must check DryRun"
+                $fn.Extent.Text | Should -Match '\$global:FailCount\+\+' -Because "Remove-RegValueSafe must increment FailCount on unhandled errors"
+            }
+            if ($fn.Name -eq 'Set-RegStringSafe') {
+                $fn.Extent.Text | Should -Match 'Set-ItemProperty' -Because "Set-RegStringSafe must call Set-ItemProperty"
+                $fn.Extent.Text | Should -Match 'if\s*\(\$DryRun\)' -Because "Set-RegStringSafe must check DryRun"
+                $fn.Extent.Text | Should -Match '\$global:FailCount\+\+' -Because "Set-RegStringSafe must increment FailCount on unhandled errors"
             }
             if ($fn.Name -eq 'Set-SvcState') {
                 $fn.Extent.Text | Should -Match 'if\s*\(\$Undo\)' -Because "Set-SvcState must evaluate `$Undo"
@@ -1277,8 +1489,21 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
             'MicrosoftWindows.UndockedDevKit'
         )
 
+        $bloatAssignment = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $node.Left.Extent.Text -eq '$bloatApps'
+        }, $true) | Select-Object -First 1
+
+        $bloatAssignment | Should -Not -BeNullOrEmpty -Because "Script must define `$bloatApps array"
+
+        $stringLiterals = $bloatAssignment.Right.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.StringConstantExpressionAst]
+        }, $true) | ForEach-Object { $_.Value }
+
         foreach ($pkg in $nonRemovables) {
-            $script:ast.Extent.Text | Should -Not -Match "`"$([regex]::Escape($pkg))`"" -Because "$pkg is a NonRemovable or untouchable system component and must not be in bloatApps"
+            $stringLiterals | Should -Not -Contain $pkg -Because "$pkg is a NonRemovable or untouchable system component and must not be in `$bloatApps"
         }
     }
 
@@ -1287,11 +1512,22 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
     }
 
     It 'Disables Widgets via official GPO AllowNewsAndInterests policy rather than UCPD-blocked TaskbarDa' {
-        $script:ast.Extent.Text | Should -Match 'AllowNewsAndInterests' -Because "Widgets must be disabled via HKLM Dsh policy to prevent UCPD UnauthorizedAccessException"
+        $dshCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.Extent.Text -match 'AllowNewsAndInterests'
+        }, $true)
+        $dshCalls.Count | Should -BeGreaterThan 0 -Because "Widgets must be disabled via HKLM Dsh policy to prevent UCPD UnauthorizedAccessException"
     }
 
     It 'Does not include SYSTEM-only SdbinstMergeDbTask in debloat tasks' {
-        $script:ast.Extent.Text | Should -Not -Match 'SdbinstMergeDbTask' -Because "SdbinstMergeDbTask is ACL-restricted to SYSTEM and is non-telemetry"
+        $taskCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-TaskState' -and
+            $node.Extent.Text -match 'SdbinstMergeDbTask'
+        }, $true)
+        $taskCalls.Count | Should -Be 0 -Because "SdbinstMergeDbTask is ACL-restricted to SYSTEM and must not be called with Set-TaskState"
     }
 
     It 'Manages UCPD service and UCPD velocity scheduled task symmetrically' {
@@ -1390,6 +1626,98 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
             $fpElem = $call.CommandElements | Where-Object { $_.Extent.Text -match '\$oneDriveUninstaller' }
             if ($fpElem) {
                 $fpElem.Extent.Text | Should -Match '"\$oneDriveUninstaller"' -Because "Start-Process -FilePath must be double-quoted to prevent unquoted argument vulnerabilities"
+            }
+        }
+    }
+
+    It 'Enforces DISM and WinSxS component store inviolability (Zero destructive DISM or WinSxS tampering)' {
+        $destructiveDism = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            ($node.GetCommandName() -match '^(dism|dism\.exe)$' -or $node.Extent.Text -match 'cleanup-image|startcomponentcleanup|resetbase')
+        }, $true)
+        $destructiveDism.Count | Should -Be 0 -Because "Destructive DISM cleanups break Cumulative Updates and are strictly forbidden"
+
+        $winsxsTampering = $script:ast.FindAll({
+            param($node)
+            ($node -is [System.Management.Automation.Language.StringConstantExpressionAst] -or
+             $node -is [System.Management.Automation.Language.ExpandableStringExpressionAst]) -and
+            $node.Extent.Text -match 'WinSxS'
+        }, $true)
+        $winsxsTampering.Count | Should -Be 0 -Because "Direct WinSxS file or store tampering is strictly forbidden"
+    }
+
+    It 'Enforces offline-first architecture (Zero network cmdlets or ad-hoc script fetching)' {
+        $networkCmdlets = @('Invoke-WebRequest', 'Invoke-RestMethod', 'curl', 'curl.exe', 'wget', 'wget.exe', 'Start-BitsTransfer', 'bitsadmin', 'bitsadmin.exe')
+        $networkCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $networkCmdlets -contains $node.GetCommandName()
+        }, $true)
+        $networkCalls.Count | Should -Be 0 -Because "unslop-windows must be 100% offline-first and never fetch scripts or executables over the network"
+    }
+
+    It 'Declares -NoRestart and -ForceRestart parameters and handles reboot exit code 100' {
+        $paramBlock = $script:ast.ParamBlock
+        $paramBlock | Should -Not -BeNullOrEmpty -Because "Script must define param block"
+        $paramNames = $paramBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath }
+        $paramNames | Should -Contain 'NoRestart' -Because "Script must declare -NoRestart parameter"
+        $paramNames | Should -Contain 'ForceRestart' -Because "Script must declare -ForceRestart parameter"
+
+        $exit100Nodes = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.ExitStatementAst] -and
+            $node.Pipeline.Extent.Text -eq '100'
+        }, $true)
+        $exit100Nodes.Count | Should -BeGreaterThan 0 -Because "Script must exit with code 100 when restart is scheduled to signal batch wrapper"
+    }
+
+    It 'Enforces privilege separation in Remove-StartupEntry (SEC-01)' {
+        $removeFunc = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -eq 'Remove-StartupEntry'
+        }, $true) | Select-Object -First 1
+
+        $removeFunc | Should -Not -BeNullOrEmpty
+        $removeFunc.Extent.Text | Should -Match 'HKLM:\\SOFTWARE\\unslop-windows\\StartupBackup'
+        $removeFunc.Extent.Text | Should -Match 'HKCU:\\Software\\unslop-windows\\StartupBackup'
+        $removeFunc.Extent.Text | Should -Match '\$isHklm\s*=\s*\(\$runKey\s+-match\s+''\^HKLM''\)'
+    }
+
+    It 'Isolates user-space OneDrive setup into admin staging directory before Authenticode verification (SEC-02)' {
+        $script:ast.Extent.Text | Should -Match 'staging_.*GetRandomFileName'
+        $script:ast.Extent.Text | Should -Match 'CN=Microsoft Corporation,'
+    }
+
+    It 'Inspects ReparsePoint on Start Menu ProgrammableTilesAssets and manifest before deletion (SEC-03)' {
+        $progAssetsBlock = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.IfStatementAst] -and
+            $node.Extent.Text -match 'ProgrammableTilesAssets'
+        }, $true)
+
+        $progAssetsBlock.Count | Should -BeGreaterThan 0
+        $progAssetsBlock[0].Extent.Text | Should -Match 'ReparsePoint'
+        $progAssetsBlock[0].Extent.Text | Should -Match '\.Delete\(\)'
+    }
+
+    It 'Inspects parent directory for ReparsePoint during log initialization (SEC-08)' {
+        $script:ast.Extent.Text | Should -Match 'Split-Path -Parent \$logDir'
+        $script:ast.Extent.Text | Should -Match '\$env:ProgramData.*unslop-windows\\logs'
+    }
+
+    It 'Enforces third-party scope boundary in startup entries (ADR-026)' {
+        $forbiddenApps = @('Discord', 'Steam', 'Spotify', 'Chrome', 'EpicGames', 'Battle\.net')
+        $startupCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Remove-StartupEntry'
+        }, $true)
+
+        foreach ($call in $startupCalls) {
+            foreach ($app in $forbiddenApps) {
+                $call.Extent.Text | Should -Not -Match "\b$app\b" -Because "Remove-StartupEntry must never target third-party application '$app'"
             }
         }
     }

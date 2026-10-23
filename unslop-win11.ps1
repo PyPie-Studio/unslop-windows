@@ -1,4 +1,4 @@
-# unslop-windows: Windows 11 Debloater (v1.4.5)
+# unslop-windows: Windows 11 Debloater (v1.5.0)
 # Targets Windows 11 26H2 (Build 26300+), 26H1 (Build 28000+), 25H2 (Build 26200+), 24H2 (Build 26100+), 23H2 (Build 22631), 22H2 (Build 22621) and 21H2 (Build 22000)
 # No core system files touched, all changes reversible with -Undo
 # Run as Administrator after fresh install or major Windows feature update
@@ -133,13 +133,13 @@ $global:FailCount = 0
 # ------------------------------------------------------------
 # CORE ENGINE HELPER FUNCTIONS (ADR-022 Architectural Invariant)
 # Note: Helper functions (Log, Set-SvcState, Set-TaskState, Set-RegDwordSafe,
-# Set-ConsentCapability, Remove-StartupEntry) are intentionally duplicated
+# Remove-RegValueSafe, Set-RegStringSafe, Set-ConsentCapability, Remove-StartupEntry) are intentionally duplicated
 # across unslop-win10.ps1 and unslop-win11.ps1 to guarantee single-file
 # standalone execution, zero external module dependencies, and dot-sourcing test isolation.
 # ------------------------------------------------------------
 
 function Log($msg, [switch]$DryRun = $IsDryRun, [string]$Color = "") {
-    $ts = Get-Date -Format "HH:mm:ss"
+    $ts = Get-Date -Format "hh:mm:ss tt"
     $prefix = if ($DryRun) { "[DRY-RUN] " } else { "" }
     $entry = "[$ts] $prefix$msg"
     [void]$script:log.Add($entry)
@@ -331,6 +331,44 @@ function Set-RegDwordSafe($path, $name, $debloatValue, $undoValue, $removeOnUndo
     }
 }
 
+function Remove-RegValueSafe($path, $name, [switch]$DryRun = $IsDryRun) {
+    if (Test-Path $path) {
+        $prop = Get-ItemProperty -Path $path -Name $name -ErrorAction SilentlyContinue
+        if ($prop) {
+            if ($DryRun) {
+                Log "  [WOULD REMOVE REG]: $path\$name" -DryRun:$DryRun
+            } else {
+                try {
+                    Remove-ItemProperty -Path $path -Name $name -Force -ErrorAction Stop
+                    Log "  REMOVED: $name from $path" -DryRun:$DryRun
+                } catch {
+                    if ($_.Exception.Message -match "does not exist" -or $_.FullyQualifiedErrorId -match "PSArgumentException.*RemoveItemPropertyCommand") {
+                        Log "  SKIP: $name not present in $path" -DryRun:$DryRun
+                    } else {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove $name from $path - $($_.Exception.Message)" -DryRun:$DryRun
+                    }
+                }
+            }
+        }
+    }
+}
+
+function Set-RegStringSafe($path, $name, $value, [switch]$DryRun = $IsDryRun) {
+    if ($DryRun) {
+        Log "  [WOULD SET REG]: $path\$name = '$value'" -DryRun:$DryRun
+    } else {
+        try {
+            if (-not (Test-Path $path)) { New-Item -Path $path -Force -ErrorAction Stop | Out-Null }
+            Set-ItemProperty -Path $path -Name $name -Value $value -ErrorAction Stop
+            Log "  SET: $name = '$value' in $path" -DryRun:$DryRun
+        } catch {
+            $global:FailCount++
+            Log "  FAILED: Could not set $name in $path - $($_.Exception.Message)" -DryRun:$DryRun
+        }
+    }
+}
+
 function Set-ConsentCapability($capability, $desc = "", $debloatValue = "Deny", $undoValue = "Allow", [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
     $locPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\$capability"
     if ($Undo) {
@@ -373,8 +411,13 @@ function Get-MatchedStartupEntries($keyPath, $pattern) {
 }
 
 function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
-    $backupBase = "HKCU:\Software\unslop-windows\StartupBackup"
     foreach ($runKey in $runKeys) {
+        $isHklm = ($runKey -match '^HKLM')
+        $backupBase = if ($isHklm) {
+            "HKLM:\SOFTWARE\unslop-windows\StartupBackup"
+        } else {
+            "HKCU:\Software\unslop-windows\StartupBackup"
+        }
         $keySub = ($runKey -replace ':', '' -replace '[\\/]', '_')
         $backupPath = "$backupBase\$keySub"
 
@@ -466,7 +509,7 @@ $osTag = if ($build -ge 28000) { "26H1" } elseif ($build -ge 26300) { "26H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.4.5: Windows 11 $modeStr ==="
+Log "=== unslop-windows v1.5.0: Windows 11 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -689,32 +732,62 @@ $startMenuLocalState = "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuEx
 if (Test-Path $startMenuLocalState) {
     $manifest88 = Join-Path $startMenuLocalState "88000963"
     if (Test-Path $manifest88) {
-        if (-not $DryRun -and -not $Undo) {
-            try {
-                Remove-Item -Path $manifest88 -Force -ErrorAction Stop
-                Log "  REMOVED: Programmable tiles cloud manifest ($manifest88)"
-            } catch {
-                $global:FailCount++
-                Log "  FAILED: Could not remove $manifest88 - $($_.Exception.Message)" "Red"
+        $manItem = Get-Item -Path $manifest88 -ErrorAction SilentlyContinue
+        if ($manItem -and ($manItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+            if (-not $DryRun -and -not $Undo) {
+                try {
+                    $manItem.Delete()
+                    Log "  REMOVED: Programmable tiles cloud manifest junction link (reparse point safely unbound)"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not remove junction $manifest88 - $($_.Exception.Message)" "Red"
+                }
+            } else {
+                Log "  [PREVIEW] Would remove programmable tiles cloud manifest junction ($manifest88)" "Cyan"
             }
         } else {
-            Log "  [PREVIEW] Would remove programmable tiles cloud manifest ($manifest88)" "Cyan"
+            if (-not $DryRun -and -not $Undo) {
+                try {
+                    Remove-Item -Path $manifest88 -Force -ErrorAction Stop
+                    Log "  REMOVED: Programmable tiles cloud manifest ($manifest88)"
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not remove $manifest88 - $($_.Exception.Message)" "Red"
+                }
+            } else {
+                Log "  [PREVIEW] Would remove programmable tiles cloud manifest ($manifest88)" "Cyan"
+            }
         }
     }
     $progAssets = Join-Path $startMenuLocalState "ProgrammableTilesAssets"
     if (Test-Path $progAssets) {
-        $assetFiles = Get-ChildItem -Path $progAssets -File -ErrorAction SilentlyContinue
-        foreach ($file in $assetFiles) {
+        $progItem = Get-Item -Path $progAssets -ErrorAction SilentlyContinue
+        if ($progItem -and ($progItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
             if (-not $DryRun -and -not $Undo) {
                 try {
-                    Remove-Item -Path $file.FullName -Force -ErrorAction Stop
-                    Log "  REMOVED: Programmable tile asset ($($file.Name))"
+                    $progItem.Delete()
+                    Log "  REMOVED: Programmable tiles assets junction link (reparse point safely unbound)"
                 } catch {
                     $global:FailCount++
-                    Log "  FAILED: Could not remove $($file.FullName) - $($_.Exception.Message)" "Red"
+                    Log "  FAILED: Could not remove junction $progAssets - $($_.Exception.Message)" "Red"
                 }
             } else {
-                Log "  [PREVIEW] Would remove programmable tile asset ($($file.Name))" "Cyan"
+                Log "  [PREVIEW] Would remove programmable tiles assets junction ($progAssets)" "Cyan"
+            }
+        } else {
+            $assetFiles = Get-ChildItem -Path $progAssets -File -ErrorAction SilentlyContinue
+            foreach ($file in $assetFiles) {
+                if (-not $DryRun -and -not $Undo) {
+                    try {
+                        Remove-Item -Path $file.FullName -Force -ErrorAction Stop
+                        Log "  REMOVED: Programmable tile asset ($($file.Name))"
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove $($file.FullName) - $($_.Exception.Message)" "Red"
+                    }
+                } else {
+                    Log "  [PREVIEW] Would remove programmable tile asset ($($file.Name))" "Cyan"
+                }
             }
         }
     }
@@ -827,12 +900,7 @@ if ($ExcludeWUDrivers) {
     if (Test-Path $wuPolicy) {
         $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
         if ($wuProp) {
-            if ($IsDryRun) {
-                Log "  [WOULD RESTORE]: Driver updates (remove legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
-            } else {
-                Remove-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -Force -ErrorAction SilentlyContinue
-                Log "  RESTORED: Driver updates enabled (cleared legacy ExcludeWUDriversInQualityUpdate)" -DryRun:$DryRun
-            }
+            Remove-RegValueSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate"
         } else {
             Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
         }
@@ -879,18 +947,7 @@ if ($ClassicContextMenu) {
             }
         }
     } else {
-        if ($IsDryRun) {
-            Log "  [WOULD SET]: Classic Windows 10 context menu (-ClassicContextMenu enabled)"
-        } else {
-            try {
-                if (-not (Test-Path $classicMenuPath)) { New-Item -Path $classicMenuPath -Force -ErrorAction Stop | Out-Null }
-                Set-ItemProperty -Path $classicMenuPath -Name "(default)" -Value "" -ErrorAction Stop
-                Log "  APPLIED: Classic full context menu enabled"
-            } catch {
-                $global:FailCount++
-                Log "  FAILED: Could not apply classic context menu - $($_.Exception.Message)"
-            }
-        }
+        Set-RegStringSafe -path $classicMenuPath -name "(default)" -value ""
     }
 } else {
     if ($IsUndo -and (Test-Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}")) {
@@ -1362,15 +1419,25 @@ if ($KeepOneDrive) {
             "$env:SYSTEMROOT\System32\OneDriveSetup.exe"
         ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
+        $stagingDir = $null
         if (-not $oneDriveUninstaller) {
             $userSetup = "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDriveSetup.exe"
             if (Test-Path $userSetup) {
-                # Enforce cryptographic Authenticode verification before executing user-writable binary as admin
-                $sig = Get-AuthenticodeSignature -FilePath $userSetup -ErrorAction SilentlyContinue
-                if ($sig -and $sig.Status -eq "Valid" -and $sig.SignerCertificate.Subject -match "CN=Microsoft Corporation") {
-                    $oneDriveUninstaller = $userSetup
-                } else {
-                    Log "  [SECURITY WARNING]: Skipping unverified OneDriveSetup.exe in AppData (signature invalid or untrusted)"
+                # Staged execution guard: isolate user binary to admin-only directory to eliminate TOCTOU and DLL hijacking
+                $stagingDir = Join-Path $env:ProgramData "unslop-windows\staging_$([System.IO.Path]::GetRandomFileName())"
+                try {
+                    New-Item -Path $stagingDir -ItemType Directory -Force | Out-Null
+                    $stagedBinary = Join-Path $stagingDir "OneDriveSetup.exe"
+                    Copy-Item -Path $userSetup -Destination $stagedBinary -Force
+
+                    $sig = Get-AuthenticodeSignature -FilePath $stagedBinary -ErrorAction SilentlyContinue
+                    if ($sig -and $sig.Status -eq "Valid" -and $sig.SignerCertificate.Subject -match '^CN=Microsoft Corporation,') {
+                        $oneDriveUninstaller = $stagedBinary
+                    } else {
+                        Log "  [SECURITY WARNING]: Skipping unverified OneDriveSetup.exe in AppData (signature invalid or untrusted)"
+                    }
+                } catch {
+                    Log "  [SECURITY WARNING]: Could not stage OneDriveSetup.exe for secure verification - $($_.Exception.Message)"
                 }
             }
         }
@@ -1380,11 +1447,25 @@ if ($KeepOneDrive) {
                 Log "  [WOULD UNINSTALL]: OneDrive via $oneDriveUninstaller /uninstall"
             } else {
                 Log "  UNINSTALLING: OneDrive..."
-                Start-Process -FilePath "$oneDriveUninstaller" -ArgumentList "/uninstall" -Wait -NoNewWindow -ErrorAction SilentlyContinue
-                Log "  UNINSTALLED: OneDrive binary removed"
+                try {
+                    $uninstProc = Start-Process -FilePath "$oneDriveUninstaller" -ArgumentList "/uninstall" -Wait -NoNewWindow -PassThru -ErrorAction Stop
+                    if ($null -ne $uninstProc -and $null -ne $uninstProc.ExitCode -and $uninstProc.ExitCode -ne 0) {
+                        Log "  [WARNING]: OneDrive uninstaller exited with code $($uninstProc.ExitCode)"
+                    } else {
+                        Log "  UNINSTALLED: OneDrive binary removed"
+                    }
+                } catch {
+                    $global:FailCount++
+                    Log "  FAILED: Could not execute OneDrive uninstaller - $($_.Exception.Message)"
+                }
             }
         } else {
             Log "  SKIP: OneDriveSetup.exe not found (already uninstalled)"
+        }
+
+        # Clean up staging directory if used
+        if ($stagingDir -and (Test-Path $stagingDir)) {
+            Remove-Item -Path $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
         # 3. Unpin OneDrive from File Explorer sidebar
@@ -1716,17 +1797,29 @@ $logDir = if ($PSScriptRoot -and (Test-Path $PSScriptRoot)) {
     Join-Path $env:LOCALAPPDATA "unslop-windows\logs"
 }
 
-if (-not (Test-Path $logDir)) {
-    New-Item -Path $logDir -ItemType Directory -Force | Out-Null
-} else {
-    # Guard against symlink / reparse point hijacking in shared or user paths
+# Guard against symlink / reparse point hijacking in shared or user paths (including parent directories)
+$isReparse = $false
+if (Test-Path $logDir) {
     $dirItem = Get-Item -Path $logDir -ErrorAction SilentlyContinue
     if ($dirItem -and ($dirItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-        # Reparse point detected: divert to an isolated unique directory
-        $uniqueFolder = "logs_" + [System.IO.Path]::GetRandomFileName()
-        $logDir = Join-Path $env:LOCALAPPDATA "unslop-windows\$uniqueFolder"
+        $isReparse = $true
+    }
+}
+$parentDir = Split-Path -Parent $logDir
+if (Test-Path $parentDir) {
+    $parentItem = Get-Item -Path $parentDir -ErrorAction SilentlyContinue
+    if ($parentItem -and ($parentItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        $isReparse = $true
+    }
+}
+if ($isReparse) {
+    # Reparse point detected: divert to an isolated directory under machine-wide ProgramData
+    $logDir = Join-Path $env:ProgramData "unslop-windows\logs"
+    if (-not (Test-Path $logDir)) {
         New-Item -Path $logDir -ItemType Directory -Force | Out-Null
     }
+} elseif (-not (Test-Path $logDir)) {
+    New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 }
 
 $prefixName = if ($IsUndo) { "restore" } else { "unslop" }
