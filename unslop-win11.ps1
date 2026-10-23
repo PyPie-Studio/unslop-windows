@@ -213,8 +213,8 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
     }
 }
 
-function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
-    $t = Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue
+function Set-TaskState($path, $name, $TaskObject = $null, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
+    $t = if ($null -ne $TaskObject) { $TaskObject } else { Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue }
     if ($t) {
         if ($Undo) {
             if ($DryRun) {
