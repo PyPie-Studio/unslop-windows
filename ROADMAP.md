@@ -32,7 +32,7 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 - [x] 25H2/26H2 ConsentStore permissions (screen text scraping `foregroundTextAccess`, OS AI models `systemAIModels`, borderless capture `graphicsCaptureWithoutBorder`, notification listener `userNotificationListener`).
 - [x] Flighting FeatureConfig telemetry task tree suppression (`\Microsoft\Windows\Flighting\FeatureConfig\*`).
 - [ ] **OneSettings Flighting DNS Hardening:** Block background telemetry endpoints downloaded via OneSettings config payloads.
-- [ ] **Edge Sidebar Policy:** Enforce GPO policies blocking Edge copilot sidebar integration without breaking WebView2.
+- [x] **Edge Sidebar & Background Policy:** Enforce GPO policies blocking Edge Copilot sidebar integration, startup boost and resident background workers without breaking WebView2.
 - [ ] **Cumulative Update Invariant Verification:** Automated testing against novel 25H2/26H2 monthly CU rollouts to ensure zero `0x800f0922` update rollbacks.
 
 ---

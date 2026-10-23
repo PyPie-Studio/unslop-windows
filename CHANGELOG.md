@@ -19,11 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
+- **Chromium Edge Startup Boost & Background Tasks Neutralization (ADR-038)**: Deployed official machine-wide Group Policies (`StartupBoostEnabled = 0`, `BackgroundModeEnabled = 0`, with symmetrical `-Undo` removal) under `HKLM:\SOFTWARE\Policies\Microsoft\Edge` in Section 14 across `unslop-win11.ps1` and `unslop-win10.ps1`. Prevents modern Chromium Edge (`msedge.exe`) pre-loaders at startup and eliminates persistent background worker processes upon browser exit, reclaiming 150–300 MB of idle RAM.
 - **Decoupled Pester Unit Testing & Accelerated Gate (ADR-036)**: Decoupled fast unit tests from slow CLI subprocess execution in `scripts/Test-MasterGate.ps1`, filtering `-Tag 'Unit'` by default during Step [4/7]. Slashes unit test phase runtime from ~225s down to **6.8s** (~33x speedup). Added `-IncludeIntegration` switch to run full CLI subprocess tests on demand or in nightly CI workflows.
 - **Real-Time Output Streaming (ADR-036)**: Removed synchronous stdout buffering in `scripts/Test-MasterGate.ps1`, enabling real-time terminal progress streaming and eliminating the silent 4-minute frozen terminal symptom during gate runs and Git pre-push hooks.
 
 ### Fixed
 
+- **Windows 11 Custom Whitelist Fatal Parameter Crash (ADR-038)**: Removed `-KeepClock` from `:custom_WIN11` parameter whitelist and allowed flags display in `unslop.bat`, eliminating fatal `NamedParameterNotFound` terminating crashes when custom CLI flags are entered on Windows 11.
+- **Cross-OS Parameter Routing Validation (ADR-038)**: Implemented strict OS-exclusive switch validation in the root CLI argument loop of `unslop.bat`, rejecting `-KeepClock` on Windows 11 targets and rejecting `-ClassicContextMenu` / `-LeftTaskbar` on Windows 10 targets with clear error output prior to PowerShell execution.
+- **Batch Block Parser Dangling Block Bug**: Replaced unescaped parentheses with brackets `[...]` inside parenthesized block echo statements in `unslop.bat`, preventing premature block termination and `. was unexpected at this time` parser aborts.
+- **Interactive Menu Variable Retention / Ghost Input (ADR-038)**: Preceded all user prompts (`choice`, `ARGS`, `tchoice`, `mismatch_confirm`, `os_choice`) across `unslop.bat` with explicit variable resets, preventing accidental execution of prior inputs when pressing Enter.
+- **Interactive Toggle State Amnesia (ADR-038)**: Decoupled toggle state initialization from menu rendering in `unslop.bat` (`:toggles_reset_WIN11` / `:toggles_reset_WIN10`), preserving user toggle preferences across menu navigations in Option `[4]` while retaining `[C]` for manual reset.
+- **Diagnostic State Auditor OS Hardcoding (ADR-038)**: Replaced hardcoded `"Windows 11"` strings in `scripts/Measure-SystemState.ps1` console output and Markdown benchmark exports with dynamic OS product name queries from `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProductName`.
+- **Summary Banner Spacing & Hardware Residue Alignment (ADR-038 / ADR-026)**: Corrected 1-character column drift on `Store & Delivery:      ` (aligned to column 23) in `unslop-win11.ps1` completion banners, and removed non-OS workstation comments (`AMDNoiseSuppression`, `Ollama`) to adhere strictly to project scope boundaries.
 - **Batch Custom Menu Whitelist Synchronization (SEC-05 / ADR-037)**: Added `-KeepPCManager` to `:custom_WIN11` and `:custom_WIN10` whitelist loops and allowed flags lists in `unslop.bat`.
 - **Truthful Subprocess Execution & Failure Accounting (SEC-06 / ADR-037)**: Replaced silent suppression (`-ErrorAction SilentlyContinue`) on external uninstaller executions with `-PassThru -ErrorAction Stop` inside `try/catch`. Accurately checks exit codes and increments failure counters (`$global:FailCount++`) on failure.
 - **Standardized 12-Hour AM/PM Time Format (User Directive 4)**: Updated `Log` function timestamps across Windows 11 and Windows 10 engines from 24-hour military format (`HH:mm:ss`) to 12-hour AM/PM format (`hh:mm:ss tt`).
@@ -37,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Smart Auto-Default OS Selection (ADR-038)**: Pressing Enter at `:os_select` in `unslop.bat` now automatically proceeds with the detected host OS (`1` for Windows 11, `2` for Windows 10) instead of throwing an invalid selection error.
+- **Cross-OS Parameter & Whitelist Test Coverage (ADR-038)**: Added automated test cases in `tests/unslop.bat.Tests.ps1` verifying `-KeepClock` exclusion from `:custom_WIN11` and testing cross-OS CLI argument rejection.
+- **Chromium Edge Startup Boost & Background Policy Tests (ADR-038)**: Added automated AST parity and symmetry unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying management of `StartupBoostEnabled` and `BackgroundModeEnabled`.
+- **Diagnostic Benchmark 12-Hour AM/PM Time Format Standard (ADR-038)**: Standardized snapshot timestamps and markdown benchmark headers in `scripts/Measure-SystemState.ps1` to `yyyy-MM-dd hh:mm:ss tt` per User Directive 4.
 - **Automated Security Invariant Unit & AST Parity Tests (SEC-07 / ADR-037)**: Added automated test coverage across `tests/unslop-win11.Tests.ps1`, `tests/unslop-win10.Tests.ps1`, and `tests/unslop.bat.Tests.ps1` enforcing SEC-01 through SEC-06, SEC-08, and third-party scope boundaries (ADR-026).
 - **Master Quality Gate Unit Test Suite (`tests/Test-MasterGate.Tests.ps1`)**: Added a comprehensive Pester 6+ test suite validating `scripts/Test-MasterGate.ps1` AST structure, CmdletBinding parameters, mutual exclusivity contracts (`-Win10` and `-Win11`), exclusion regex rules, test registration parity, and CRLF / merge conflict scanner logic.
 - **Safe-Tier Invariant 1 (DISM & WinSxS Inviolability / ADR-036)**: Added automated AST parity unit tests across `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying zero invocations of `dism.exe` or tampering with `C:\Windows\WinSxS` in both string constants and expandable string expressions.
