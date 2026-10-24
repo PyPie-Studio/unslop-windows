@@ -57,10 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Core Engine Helper Functions (`Remove-RegValueSafe`, `Set-RegStringSafe` / ADR-036)**: Implemented approved helper functions in `unslop-win11.ps1` and `unslop-win10.ps1` with defensive `try/catch` error handling and truthful failure accounting (`$global:FailCount++`).
 - **Batch Launcher Whitelist Completeness**: Added `-KeepPCManager` to whitelist verification in `tests/unslop.bat.Tests.ps1`.
 
-### Changed
-
-- **Workspace & Root Directory Hygiene**: Removed redundant duplicate root `SKILLS.md` in favor of canonical `.agents/SKILLS.md`, purged leaked root `coverage.xml`, and removed obsolete legacy Pester 4 rule `testResults.xml` from `.gitignore`.
-
 ---
 
 ## [1.4.5] - 2026-10-23

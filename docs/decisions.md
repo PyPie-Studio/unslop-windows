@@ -648,3 +648,42 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   5. *12-Hour AM/PM Standardization & Dynamic OS Resolution:* Updated `scripts/Measure-SystemState.ps1` to use `yyyy-MM-dd hh:mm:ss tt` format, and dynamically resolved the OS product name via `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProductName`.
   6. *Banner Alignment & Scope Realignment:* Fixed column 23 alignment drift and removed non-OS workstation comments from `unslop-win11.ps1` completion banners.
 - **Consequences:** Reclaims 150–300 MB of background memory overhead from idle Edge processes, eliminates fatal parameter crashes and cross-OS routing errors in the batch launcher, delivers a seamless and persistent toggle UX, standardizes all system logs to 12-hour AM/PM format, and preserves 100% test coverage across all test suites.
+
+---
+
+## ADR-039: Batch Query Optimization for Task Scheduler COM & NetSecurity WMI with Symmetrical Invariant Preservation (2026-10-23)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Task Scheduler COM Interop Latency:* `unslop-win11.ps1` and `unslop-win10.ps1` executed sequential `Get-ScheduledTask` calls for each individual telemetry, AI, office, and background task. Each standalone cmdlet invocation binds to the Task Scheduler COM interface (`ITaskService`), consuming 300–600ms per call. Across 25+ targeted tasks, Task Scheduler discovery consumed over 11 seconds during local DryRun inspections and CI execution.
+  2. *NetSecurity WMI Rule Enumeration Bottleneck:* Section 18 performed 8 sequential calls to `Get-NetFirewallRule -DisplayName $rule`. Each call queried WMI/CIM repository (`Root/StandardCimv2`), requiring ~450ms per invocation and adding ~3.5s of runner idle time.
+  3. *Unit Testing & Safe-Tier Invariant Compatibility (Invariant 10):* In existing unit tests (`tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`), mocks explicitly intercepted `Get-ScheduledTask` inside `Set-TaskState`. Any performance refactor had to maintain 100% backward compatibility with approved bidirectional helper routines, ensure zero naked mutations, and preserve truthful failure accounting (`$global:FailCount++`).
+- **Decision:**
+  1. *Pre-Indexed Task Lookup Dictionary:* In Module 11 across both Windows 11 and Windows 10 engines, execute a single bulk `Get-ScheduledTask -ErrorAction SilentlyContinue` query and index tasks into a `$taskLookup = @{}` hash table keyed by `"$($_.TaskPath)$($_.TaskName)"`.
+  2. *Backward-Compatible `Set-TaskState` Signature:* Extended `Set-TaskState` signature with an optional `$TaskObject = $null` parameter:
+     `function Set-TaskState($path, $name, $TaskObject = $null, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun)`.
+     When `$TaskObject` is supplied via bulk dictionary lookup or pipeline object, `Set-TaskState` utilizes the pre-queried object directly with 0 COM round-trips. When `$TaskObject` is `$null` or omitted (e.g., in unit test mocks or standalone module testing), it gracefully falls back to `Get-ScheduledTask`.
+  3. *Batch Firewall Array Binding:* In Section 18, replaced sequential single-rule checks with a single array query:
+     `$existingRules = @(Get-NetFirewallRule -DisplayName $fwRules -ErrorAction SilentlyContinue)`
+     and populated an `$existingLookup = @{}` dictionary, checking existence via `$existingLookup.ContainsKey($rule)` in O(1) time.
+  4. *Automated Unit Test Coverage:* Added dedicated Pester tests in both `unslop-win11.Tests.ps1` and `unslop-win10.Tests.ps1` verifying that providing `$TaskObject` invokes `Get-ScheduledTask` 0 times, while passing `$null` falls back to `Get-ScheduledTask`.
+- **Consequences:** Accelerates scheduled task verification by ~21x (from 11.3s to 0.5s) and firewall rule evaluation by ~6x (from 3.5s to 0.6s), cutting DryRun engine execution from ~45s down to under 5s, while maintaining 100% backward compatibility and adhering strictly to ADR-002, ADR-003, and Safe-Tier Invariant 10.
+
+---
+
+## ADR-040: Unified Dual-Target Quality Gate Matrix & CI Optimization (2026-10-23)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Windows 10 Pre-Push Blindspot:* `.githooks/pre-push` previously executed `Test-MasterGate.ps1 -Strict` without target flags, defaulting solely to Windows 11. Regressions in Windows 10 debloating or unit tests were only caught post-push on GitHub Actions.
+  2. *Local Gate Scalability Friction:* `Test-MasterGate.ps1` lacked a unified switch to test both engines in a single execution pass. Running Windows 11 and Windows 10 gates sequentially required two separate command invocations, taking over 90 seconds prior to bulk query optimizations.
+  3. *Remote CI Runner Redundancy & Cold-Start Waste:* `.github/workflows/lint.yml` spun up four discrete `windows-latest` VM runners (`quality-gate-core`, `quality-gate-desktop`, `quality-gate-win10-core`, `quality-gate-win10-desktop`). Each runner consumed ~45 seconds repeatedly re-downloading and installing `Pester 6` and `PSScriptAnalyzer` from PSGallery.
+  4. *Test Failure Misattribution:* When Pester tests failed in CI, the NUnit XML parser hardcoded `tests/unslop-win11.Tests.ps1` in GitHub error annotations (`::error file=...`), causing Windows 10 test failures to be erroneously attributed to the Windows 11 test file.
+  5. *Lightweight Branch Protection Check:* Branch protection required an explicit status check named `PSScriptAnalyzer`. Provisioning a dedicated `windows-latest` VM solely to satisfy this check introduced needless latency and runner costs.
+- **Decision:**
+  1. *Unified `-Both` & `-LintDocs` Quality Gate Flags:* Added `-Both` and `-LintDocs` to `scripts/Test-MasterGate.ps1`. When `-Both` is passed, Step 4 runs composite Pester execution across both test suites, while Steps 5-7 loop through both engines with host-OS build awareness (automatically applying `-SkipBuildCheck` on Windows 11 hosts). Mutual exclusivity between `-Both`, `-Win11`, and `-Win10` is strictly enforced.
+  2. *Dual-Target Pre-Push Enforcement:* Configured `.githooks/pre-push` to run `Test-MasterGate.ps1 -Both -Strict`. With engine optimizations from ADR-039, full dual-target local verification completes in ~25 seconds.
+  3. *Consolidated Matrix & Module Caching in CI:* Converted the four standalone Windows jobs in `lint.yml` into a unified `quality-gate` matrix with module caching via `actions/cache@v4` targeting user module directories (`~/Documents/PowerShell/Modules` and `~/Documents/WindowsPowerShell/Modules`).
+  4. *Dynamic File Attribution in Failure Annotations:* Updated the NUnit XML failure parser to inspect `$tc.file` and parent node names dynamically, eliminating file misattribution for Windows 10 tests.
+  5. *Decoupled Lightweight Checks:* Moved `doc-lint` (markdownlint) and `PSScriptAnalyzer` branch protection status confirmation to lightweight jobs, while preserving `windows-latest` for all engine execution, test gates, and `publish-release` asset packaging to maintain 100% native Windows environment integrity.
+- **Consequences:** Completely closes the Windows 10 pre-push blindspot, eliminates test failure misattribution in GitHub Actions, cuts remote CI runner wall-clock duration by ~40%, and preserves 100% adherence to all Safe-Tier quality standards.

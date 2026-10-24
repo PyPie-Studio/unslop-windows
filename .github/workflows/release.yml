@@ -46,35 +46,41 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $xmlPath = "test-results/pester-release-win11.xml"
-          if (Test-Path $xmlPath) {
-            [xml]$xml = Get-Content $xmlPath
-            $total = $xml.'test-results'.total
-            $failures = $xml.'test-results'.failures
-            $notRun = $xml.'test-results'.'not-run'
-            $passed = [int]$total - [int]$failures - [int]$notRun
-            $suiteTime = $xml.'test-results'.'test-suite'.time
-            
-            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
-            $summaryLines = @(
-              "## Release Pre-Flight Pester Test Results ($status)",
-              "",
-              "| Metric | Value |",
-              "| :--- | :--- |",
-              "| **Total Tests** | $total |",
-              "| **Passed** | $passed |",
-              "| **Failed** | $failures |",
-              "| **Skipped / Not Run** | $notRun |",
-              "| **Duration** | ${suiteTime}s |"
-            )
-            if ($env:GITHUB_STEP_SUMMARY) {
-              ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-            }
+          $results = @(
+            @{ Path = "test-results/pester-release-win11.xml"; Title = "Windows 11 Target"; TestFile = "tests/unslop-win11.Tests.ps1" },
+            @{ Path = "test-results/pester-release-win10.xml"; Title = "Windows 10 Target"; TestFile = "tests/unslop-win10.Tests.ps1" }
+          )
+          foreach ($res in $results) {
+            $xmlPath = $res.Path
+            if (Test-Path $xmlPath) {
+              [xml]$xml = Get-Content $xmlPath
+              $total = $xml.'test-results'.total
+              $failures = $xml.'test-results'.failures
+              $notRun = $xml.'test-results'.'not-run'
+              $passed = [int]$total - [int]$failures - [int]$notRun
+              $suiteTime = $xml.'test-results'.'test-suite'.time
 
-            if ([int]$failures -gt 0) {
-              foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
-                $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop-win11.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+              $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
+              $summaryLines = @(
+                "## Release Pre-Flight Results: $($res.Title) ($status)",
+                "",
+                "| Metric | Value |",
+                "| :--- | :--- |",
+                "| **Total Tests** | $total |",
+                "| **Passed** | $passed |",
+                "| **Failed** | $failures |",
+                "| **Skipped / Not Run** | $notRun |",
+                "| **Duration** | ${suiteTime}s |"
+              )
+              if ($env:GITHUB_STEP_SUMMARY) {
+                ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              }
+
+              if ([int]$failures -gt 0) {
+                foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
+                  $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
+                  Write-Host "::error file=$($res.TestFile),title=Pester Test Failure::$($tc.name): $msg"
+                }
               }
             }
           }

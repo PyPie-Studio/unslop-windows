@@ -41,7 +41,9 @@ Describe 'Test-MasterGate: AST & Static Structure Invariants' -Tag 'Unit', 'Mast
             'Strict',
             'Win11',
             'Win10',
+            'Both',
             'SkipBuildCheck',
+            'LintDocs',
             'TestResultsPath',
             'CodeCoveragePath'
         )
@@ -53,7 +55,7 @@ Describe 'Test-MasterGate: AST & Static Structure Invariants' -Tag 'Unit', 'Mast
 
     It 'Declares appropriate types for switch and string parameters' {
         $params = $script:ast.ParamBlock.Parameters
-        $switchParams = @('Fast', 'SkipAnalyzer', 'SkipUnitTests', 'IncludeIntegration', 'Strict', 'Win11', 'Win10', 'SkipBuildCheck')
+        $switchParams = @('Fast', 'SkipAnalyzer', 'SkipUnitTests', 'IncludeIntegration', 'Strict', 'Win11', 'Win10', 'Both', 'SkipBuildCheck', 'LintDocs')
         $stringParams = @('TestResultsPath', 'CodeCoveragePath')
 
         foreach ($p in $params) {
@@ -151,12 +153,42 @@ Describe 'Test-MasterGate: Scanner Logic Algorithms' -Tag 'Unit', 'MasterGate' {
         $hasConflict1 | Should -Be $true
         $hasConflict2 | Should -Be $true
     }
+
+    It 'Workflow integrity scanner detects dynamic shell expressions and malformed action SHAs' {
+        $badShell = 'steps:
+  - run: echo test
+    shell: ${{ matrix.shell }}'
+        $badSha = 'steps:
+  - uses: actions/checkout@12345'
+        $goodWf = 'steps:
+  - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    shell: pwsh'
+
+        ($badShell -match '(?m)^\s*shell:\s*\$\{\{') | Should -Be $true
+        ($goodWf -match '(?m)^\s*shell:\s*\$\{\{') | Should -Be $false
+
+        $badShaMatch = [regex]::Match($badSha, 'uses:\s*[\w\.\-]+/[\w\.\-]+@([a-fA-F0-9]+)')
+        $badShaMatch.Success | Should -Be $true
+        ($badShaMatch.Groups[1].Value.Length -ne 40) | Should -Be $true
+
+        $goodShaMatch = [regex]::Match($goodWf, 'uses:\s*[\w\.\-]+/[\w\.\-]+@([a-fA-F0-9]+)')
+        $goodShaMatch.Success | Should -Be $true
+        ($goodShaMatch.Groups[1].Value.Length -eq 40) | Should -Be $true
+    }
 }
 
 Describe 'Test-MasterGate: Execution & Exit Code Contracts' -Tag 'Unit', 'MasterGate' {
     It 'Enforces mutual exclusivity between -Win11 and -Win10' {
         $proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-Win11", "-Win10" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
         $proc.ExitCode | Should -Be 1
+    }
+
+    It 'Enforces mutual exclusivity when -Both is combined with -Win11 or -Win10' {
+        $proc1 = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-Both", "-Win11" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
+        $proc1.ExitCode | Should -Be 1
+
+        $proc2 = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-Both", "-Win10" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
+        $proc2.ExitCode | Should -Be 1
     }
 
     It 'Executes -Fast gate successfully with exit code 0' {

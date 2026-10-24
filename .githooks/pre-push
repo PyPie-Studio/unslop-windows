@@ -52,7 +52,7 @@ if [ "$should_run_gate" -eq 1 ]; then
 
     # Locate repo root
     REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-    "$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File "$REPO_ROOT/scripts/Test-MasterGate.ps1" -Strict
+    "$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File "$REPO_ROOT/scripts/Test-MasterGate.ps1" -Both -Strict
     GATE_STATUS=$?
 
     if [ $GATE_STATUS -ne 0 ]; then

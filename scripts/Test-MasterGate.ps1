@@ -30,9 +30,16 @@
 .PARAMETER CodeCoveragePath
     Optional file path to export Pester code coverage metrics in JaCoCo XML format.
 
+.PARAMETER Both
+    Runs local quality gate verification against both Windows 11 and Windows 10 engines.
+
+.PARAMETER LintDocs
+    Runs markdownlint-cli across all documentation files in the repository.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Fast
+    powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Both
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -IncludeIntegration
     powershell -ExecutionPolicy Bypass -File scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck
 #>
@@ -45,7 +52,9 @@ param(
     [switch]$Strict,
     [switch]$Win11,
     [switch]$Win10,
+    [switch]$Both,
     [switch]$SkipBuildCheck,
+    [switch]$LintDocs,
     [string]$TestResultsPath,
     [string]$CodeCoveragePath
 )
@@ -70,19 +79,57 @@ $psExec = if ($PSVersionTable.PSEdition -ne 'Desktop' -and $hasPwsh) {
     "powershell.exe"
 }
 
-if ($Win11 -and $Win10) {
-    Write-Host "ERROR: Cannot specify both -Win11 and -Win10 simultaneously." -ForegroundColor Red
+if (($Win11 -and $Win10) -or ($Both -and ($Win11 -or $Win10))) {
+    Write-Host "ERROR: Cannot specify conflicting platform targets simultaneously (-Win11, -Win10, -Both)." -ForegroundColor Red
     exit 1
 }
-$targetEngine = if ($Win10) { "unslop-win10.ps1" } else { "unslop-win11.ps1" }
-$targetTests  = if ($Win10) { "tests\unslop-win10.Tests.ps1" } else { "tests\unslop-win11.Tests.ps1" }
-$targetBatArgs = if ($Win10) { "-DryRun -Win10" } else { "-DryRun -Win11" }
-$engineExtraArgs = @()
-if ($SkipBuildCheck) {
-    $engineExtraArgs += "-SkipBuildCheck"
-    $targetBatArgs += " -SkipBuildCheck"
+
+$isWin11Host = [System.Environment]::OSVersion.Version.Build -ge 22000
+$targetsToTest = @()
+if ($Both) {
+    $w11ExtraArgs = if ($SkipBuildCheck -or -not $isWin11Host) { @("-SkipBuildCheck") } else { @() }
+    $w11BatArgs = if ($SkipBuildCheck -or -not $isWin11Host) { "-DryRun -Win11 -SkipBuildCheck" } else { "-DryRun -Win11" }
+    $targetsToTest += [pscustomobject]@{
+        Name = "Windows 11"
+        Engine = "unslop-win11.ps1"
+        Tests = "tests\unslop-win11.Tests.ps1"
+        ExtraArgs = $w11ExtraArgs
+        BatArgs = $w11BatArgs
+    }
+
+    $w10ExtraArgs = if ($SkipBuildCheck -or $isWin11Host) { @("-SkipBuildCheck") } else { @() }
+    $w10BatArgs = if ($SkipBuildCheck -or $isWin11Host) { "-DryRun -Win10 -SkipBuildCheck" } else { "-DryRun -Win10" }
+    $targetsToTest += [pscustomobject]@{
+        Name = "Windows 10"
+        Engine = "unslop-win10.ps1"
+        Tests = "tests\unslop-win10.Tests.ps1"
+        ExtraArgs = $w10ExtraArgs
+        BatArgs = $w10BatArgs
+    }
+    $targetPlatformTitle = "Dual Target (Win11 + Win10)"
+} elseif ($Win10) {
+    $w10ExtraArgs = if ($SkipBuildCheck -or $isWin11Host) { @("-SkipBuildCheck") } else { @() }
+    $w10BatArgs = if ($SkipBuildCheck -or $isWin11Host) { "-DryRun -Win10 -SkipBuildCheck" } else { "-DryRun -Win10" }
+    $targetsToTest += [pscustomobject]@{
+        Name = "Windows 10"
+        Engine = "unslop-win10.ps1"
+        Tests = "tests\unslop-win10.Tests.ps1"
+        ExtraArgs = $w10ExtraArgs
+        BatArgs = $w10BatArgs
+    }
+    $targetPlatformTitle = "Windows 10 Target"
+} else {
+    $w11ExtraArgs = if ($SkipBuildCheck -or -not $isWin11Host) { @("-SkipBuildCheck") } else { @() }
+    $w11BatArgs = if ($SkipBuildCheck -or -not $isWin11Host) { "-DryRun -Win11 -SkipBuildCheck" } else { "-DryRun -Win11" }
+    $targetsToTest += [pscustomobject]@{
+        Name = "Windows 11"
+        Engine = "unslop-win11.ps1"
+        Tests = "tests\unslop-win11.Tests.ps1"
+        ExtraArgs = $w11ExtraArgs
+        BatArgs = $w11BatArgs
+    }
+    $targetPlatformTitle = "Windows 11 Target"
 }
-$targetPlatformTitle = if ($Win10) { "Windows 10 Target" } else { "Windows 11 Target" }
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "  unslop-windows: Master Quality Gate ($targetPlatformTitle - $($PSVersionTable.PSEdition) Edition - PS $($PSVersionTable.PSVersion))" -ForegroundColor Cyan
@@ -207,6 +254,36 @@ if ($conflictMarkers.Count -gt 0) {
     Write-Host "  PASSED: 0 merge conflict markers detected across $($textFiles.Count) files." -ForegroundColor Green
 }
 
+# Verify GitHub Actions workflow integrity (.github/workflows/*.yml)
+$workflowFiles = Get-ChildItem -Path (Join-Path $root ".github\workflows") -Filter "*.yml" -File -ErrorAction SilentlyContinue
+$workflowFail = $false
+foreach ($wf in $workflowFiles) {
+    $wfContent = Get-Content -Path $wf.FullName -Raw -ErrorAction SilentlyContinue
+    if (-not $wfContent) { continue }
+
+    # Guard 1: Detect invalid dynamic expressions in step 'shell:' property (GitHub Actions requires static strings)
+    if ($wfContent -match '(?m)^\s*shell:\s*\$\{\{') {
+        $workflowFail = $true
+        Write-Host "  FAILED: $($wf.Name) contains dynamic expression in 'shell:' property (GitHub Actions requires static shell identifier like 'pwsh' or 'powershell')." -ForegroundColor Red
+    }
+
+    # Guard 2: Detect malformed pinned action commit SHAs (must be exactly 40 lowercase hexadecimal characters)
+    $usesMatches = [regex]::Matches($wfContent, 'uses:\s*[\w\.\-]+/[\w\.\-]+@([a-fA-F0-9]+)')
+    foreach ($um in $usesMatches) {
+        $sha = $um.Groups[1].Value
+        if ($sha.Length -ne 40) {
+            $workflowFail = $true
+            Write-Host "  FAILED: $($wf.Name) contains malformed commit SHA '@$sha' in action ref (must be 40 hex chars)." -ForegroundColor Red
+        }
+    }
+}
+
+if ($workflowFail) {
+    $lineEndingFail = $true
+    Write-Host "  FAILED: GitHub Actions workflow integrity checks failed." -ForegroundColor Red
+} else {
+    Write-Host "  PASSED: GitHub Actions workflow integrity verified (static shells and valid SHA refs)." -ForegroundColor Green
+}
 if ($lineEndingFail) { $fail = $true }
 
 # ------------------------------------------------------------
@@ -214,10 +291,13 @@ if ($lineEndingFail) { $fail = $true }
 # ------------------------------------------------------------
 if (-not $Fast) {
     if (-not $SkipUnitTests) {
-        Write-Host "`n[4/$totalSteps] Pester unit & mocking test suite ($targetTests)..." -ForegroundColor Yellow
-        $primaryTestScript = Join-Path $root $targetTests
+        $targetTestsDesc = ($targetsToTest.Tests) -join ' + '
+        Write-Host "`n[4/$totalSteps] Pester unit & mocking test suite ($targetTestsDesc)..." -ForegroundColor Yellow
         $testScripts = @()
-        if (Test-Path $primaryTestScript) { $testScripts += $primaryTestScript }
+        foreach ($tgt in $targetsToTest) {
+            $primaryTestScript = Join-Path $root $tgt.Tests
+            if (Test-Path $primaryTestScript) { $testScripts += $primaryTestScript }
+        }
 
         $batTests = Join-Path $root "tests\unslop.bat.Tests.ps1"
         if (Test-Path $batTests) { $testScripts += $batTests }
@@ -264,7 +344,7 @@ if (-not $Fast) {
                         if ($covDir -and -not (Test-Path $covDir)) {
                             New-Item -ItemType Directory -Path $covDir -Force | Out-Null
                         }
-                        $covFile = Join-Path $root $targetEngine
+                        $covFile = ($targetsToTest | ForEach-Object { Join-Path $root $_.Engine }) -join ";"
                     }
                     $pesterBlock = {
                         param($testPath, $xmlOut, $covOut, $covTarget, [bool]$incIntegration)
@@ -283,7 +363,7 @@ if (-not $Fast) {
                         }
                         if ($covOut -and $covTarget) {
                             $cfg.CodeCoverage.Enabled = $true
-                            $cfg.CodeCoverage.Path = $covTarget
+                            $cfg.CodeCoverage.Path = $covTarget -split ";"
                             $cfg.CodeCoverage.OutputFormat = 'JaCoCo'
                             $cfg.CodeCoverage.OutputPath = $covOut
                         }
@@ -317,7 +397,7 @@ if (-not $Fast) {
                 }
             }
         } else {
-            Write-Host "  SKIPPED: $targetTests not found." -ForegroundColor DarkGray
+            Write-Host "  SKIPPED: $targetTestsDesc not found." -ForegroundColor DarkGray
         }
     } else {
         Write-Host "`n[4/$totalSteps] SKIPPED: -SkipUnitTests parameter supplied." -ForegroundColor DarkGray
@@ -326,23 +406,26 @@ if (-not $Fast) {
     # ------------------------------------------------------------
     # 5. Safe non-elevated dry-run execution test
     # ------------------------------------------------------------
-    Write-Host "`n[5/$totalSteps] Safe non-elevated Dry-Run execution test ($targetEngine)..." -ForegroundColor Yellow
+    Write-Host "`n[5/$totalSteps] Safe non-elevated Dry-Run execution test..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $dryRunArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\$targetEngine", "-DryRun") + $engineExtraArgs
-        $dryRunOut = & $psExec @dryRunArgs 2>&1
-        $dryExit = $LASTEXITCODE
-        if ($dryExit -ne 0) {
-            $fail = $true
-            Write-Host "  FAILED: $targetEngine -DryRun exited with code $dryExit" -ForegroundColor Red
-            Write-Host ($dryRunOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
-        } else {
-            $summaryFound = ($dryRunOut -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length -gt 0
-            if ($summaryFound) {
-                Write-Host "  PASSED: $targetEngine -DryRun completed successfully (code 0, all modules verified)." -ForegroundColor Green
-            } else {
+        foreach ($tgt in $targetsToTest) {
+            $curEngine = $tgt.Engine
+            $dryRunArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\$curEngine", "-DryRun") + $tgt.ExtraArgs
+            $dryRunOut = & $psExec @dryRunArgs 2>&1
+            $dryExit = $LASTEXITCODE
+            if ($dryExit -ne 0) {
                 $fail = $true
-                Write-Host "  FAILED: $targetEngine -DryRun completed without expected completion banner." -ForegroundColor Red
+                Write-Host "  FAILED: $curEngine -DryRun exited with code $dryExit" -ForegroundColor Red
+                Write-Host ($dryRunOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
+            } else {
+                $summaryFound = ($dryRunOut -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length -gt 0
+                if ($summaryFound) {
+                    Write-Host "  PASSED: $curEngine -DryRun completed successfully (code 0, all modules verified)." -ForegroundColor Green
+                } else {
+                    $fail = $true
+                    Write-Host "  FAILED: $curEngine -DryRun completed without expected completion banner." -ForegroundColor Red
+                }
             }
         }
     } finally { Pop-Location }
@@ -350,23 +433,26 @@ if (-not $Fast) {
     # ------------------------------------------------------------
     # 6. Symmetrical restoration dry-run execution test
     # ------------------------------------------------------------
-    Write-Host "`n[6/$totalSteps] Symmetrical restoration Dry-Run execution test ($targetEngine)..." -ForegroundColor Yellow
+    Write-Host "`n[6/$totalSteps] Symmetrical restoration Dry-Run execution test..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $undoArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\$targetEngine", "-Undo", "-DryRun") + $engineExtraArgs
-        $undoOut = & $psExec @undoArgs 2>&1
-        $undoExit = $LASTEXITCODE
-        if ($undoExit -ne 0) {
-            $fail = $true
-            Write-Host "  FAILED: $targetEngine -Undo -DryRun exited with code $undoExit" -ForegroundColor Red
-            Write-Host ($undoOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
-        } else {
-            $undoSummaryFound = ($undoOut -match "RESTORE / UNDO COMPLETE").Length -gt 0
-            if ($undoSummaryFound) {
-                Write-Host "  PASSED: $targetEngine -Undo -DryRun completed successfully (code 0, symmetrical restore verified)." -ForegroundColor Green
-            } else {
+        foreach ($tgt in $targetsToTest) {
+            $curEngine = $tgt.Engine
+            $undoArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".\$curEngine", "-Undo", "-DryRun") + $tgt.ExtraArgs
+            $undoOut = & $psExec @undoArgs 2>&1
+            $undoExit = $LASTEXITCODE
+            if ($undoExit -ne 0) {
                 $fail = $true
-                Write-Host "  FAILED: $targetEngine -Undo -DryRun completed without expected restore banner." -ForegroundColor Red
+                Write-Host "  FAILED: $curEngine -Undo -DryRun exited with code $undoExit" -ForegroundColor Red
+                Write-Host ($undoOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
+            } else {
+                $undoSummaryFound = ($undoOut -match "RESTORE / UNDO COMPLETE").Length -gt 0
+                if ($undoSummaryFound) {
+                    Write-Host "  PASSED: $curEngine -Undo -DryRun completed successfully (code 0, symmetrical restore verified)." -ForegroundColor Green
+                } else {
+                    $fail = $true
+                    Write-Host "  FAILED: $curEngine -Undo -DryRun completed without expected restore banner." -ForegroundColor Red
+                }
             }
         }
     } finally { Pop-Location }
@@ -377,18 +463,53 @@ if (-not $Fast) {
     Write-Host "`n[7/$totalSteps] Batch launcher CLI parameter passthrough audit..." -ForegroundColor Yellow
     Push-Location $root
     try {
-        $batOut = & cmd.exe /c "call .\unslop.bat $targetBatArgs" 2>&1
-        $batExit = $LASTEXITCODE
-        if ($batExit -ne 0 -or ($batOut -match 'unexpected at this time|syntax of the command is incorrect')) {
-            $fail = $true
-            Write-Host "  FAILED: unslop.bat $targetBatArgs exited with code $batExit" -ForegroundColor Red
-            Write-Host ($batOut | Select-Object -Last 10 | Out-String) -ForegroundColor Red
-        } else {
-            Write-Host "  PASSED: unslop.bat headless execution verified in cmd.exe (code 0)." -ForegroundColor Green
+        foreach ($tgt in $targetsToTest) {
+            $curBatArgs = $tgt.BatArgs
+            $batOut = & cmd.exe /c "call .\unslop.bat $curBatArgs" 2>&1
+            $batExit = $LASTEXITCODE
+            if ($batExit -ne 0 -or ($batOut -match 'unexpected at this time|syntax of the command is incorrect')) {
+                $fail = $true
+                Write-Host "  FAILED: unslop.bat $curBatArgs exited with code $batExit" -ForegroundColor Red
+                Write-Host ($batOut | Select-Object -Last 10 | Out-String) -ForegroundColor Red
+            } else {
+                Write-Host "  PASSED: unslop.bat $curBatArgs headless execution verified in cmd.exe (code 0)." -ForegroundColor Green
+            }
         }
     } finally { Pop-Location }
 } else {
     Write-Host "`n[4-7/$totalSteps] Skipped Unit, DryRun and Batch Launcher tests (-Fast flag specified)." -ForegroundColor DarkGray
+}
+
+# ------------------------------------------------------------
+# Documentation linting (optional / triggered by -LintDocs)
+# ------------------------------------------------------------
+if ($LintDocs) {
+    Write-Host "`n[Docs] Markdown documentation linting (markdownlint-cli)..." -ForegroundColor Yellow
+    $npxCmd = Get-Command npx -ErrorAction SilentlyContinue
+    if ($npxCmd) {
+        Push-Location $root
+        try {
+            $prevEap = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            $lintOut = & cmd.exe /c "npx --yes markdownlint-cli `"**/*.md`"" 2>&1
+            $lintExit = $LASTEXITCODE
+            $ErrorActionPreference = $prevEap
+            if ($lintExit -ne 0) {
+                $fail = $true
+                Write-Host "  FAILED: markdownlint reported errors (exit code $lintExit)" -ForegroundColor Red
+                Write-Host ($lintOut | Out-String) -ForegroundColor Red
+            } else {
+                Write-Host "  PASSED: markdownlint verified all documentation clean." -ForegroundColor Green
+            }
+        } finally { Pop-Location }
+    } else {
+        if ($Strict) {
+            $fail = $true
+            Write-Host "  FAILED: npx is required for -LintDocs in Strict mode but was not found." -ForegroundColor Red
+        } else {
+            Write-Host "  SKIPPED: npx not found in PATH." -ForegroundColor DarkGray
+        }
+    }
 }
 
 $sw.Stop()

@@ -991,6 +991,14 @@ Log ""
 # 11. EXPANDED 24H2/25H2 TELEMETRY SCHEDULED TASKS
 # ============================================================
 Log "--- 11. 24H2/25H2 Telemetry Scheduled Tasks ---"
+$taskLookup = @{}
+try {
+    Get-ScheduledTask -ErrorAction SilentlyContinue | ForEach-Object {
+        $taskLookup["$($_.TaskPath)$($_.TaskName)"] = $_
+    }
+} catch {
+    $null = $_
+}
 $tasksToToggle = @(
     # 25H2 OneSettings Flighting & Dynamic Config
     "\Microsoft\Windows\Flighting\OneSettings\RefreshCache"
@@ -1033,7 +1041,14 @@ $tasksToToggle = @(
 foreach ($task in $tasksToToggle) {
     $path = $task -replace '\\[^\\]+$', '\'
     $name = $task -replace '^.*\\', ''
-    Set-TaskState -path $path -name $name
+    $key = "$path$name"
+    if ($taskLookup -and $taskLookup.ContainsKey($key)) {
+        Set-TaskState -path $path -name $name -TaskObject $taskLookup[$key]
+    } elseif ($taskLookup) {
+        Log "  SKIP: $name not found"
+    } else {
+        Set-TaskState -path $path -name $name
+    }
 }
 
 # Scan any Recall & WindowsAI tasks if present (filtering out internal tasks with SYSTEM-only ACLs)
@@ -1043,19 +1058,19 @@ $systemProtectedAITasks = @(
     "PolicyConfiguration"
 )
 Get-ScheduledTask -TaskPath "\Microsoft\Windows\Recall\*" -ErrorAction SilentlyContinue | ForEach-Object {
-    Set-TaskState -path $_.TaskPath -name $_.TaskName
+    Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
 }
 Get-ScheduledTask -TaskPath "\Microsoft\Windows\WindowsAI\*" -ErrorAction SilentlyContinue | Where-Object {
     $_.TaskName -notin $systemProtectedAITasks -and
     -not ($_.TaskPath -like "*\Settings\*" -and $_.TaskName -eq "InitialConfiguration") -and
     ($null -eq $_.SecurityDescriptor -or $_.SecurityDescriptor -notmatch '\(A;;FRFX;;;BA\)')
 } | ForEach-Object {
-    Set-TaskState -path $_.TaskPath -name $_.TaskName
+    Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
 }
 
 # 26H2 Flighting FeatureConfig telemetry & feature usage reporting tasks
 Get-ScheduledTask -TaskPath "\Microsoft\Windows\Flighting\FeatureConfig\*" -ErrorAction SilentlyContinue | ForEach-Object {
-    Set-TaskState -path $_.TaskPath -name $_.TaskName
+    Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
 }
 
 # Office telemetry tasks (8)
@@ -1070,14 +1085,21 @@ $officeTasks = @(
     "Office Startup Maintenance"
 )
 foreach ($t in $officeTasks) {
-    Set-TaskState -path "\Microsoft\Office\" -name $t
+    $key = "\Microsoft\Office\$t"
+    if ($taskLookup -and $taskLookup.ContainsKey($key)) {
+        Set-TaskState -path "\Microsoft\Office\" -name $t -TaskObject $taskLookup[$key]
+    } elseif ($taskLookup) {
+        Log "  SKIP: $t not found"
+    } else {
+        Set-TaskState -path "\Microsoft\Office\" -name $t
+    }
 }
 
 # NVIDIA auto-update tasks
 $nvTasks = Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate" -ErrorAction SilentlyContinue
 if ($nvTasks) {
     foreach ($task in $nvTasks) {
-        Set-TaskState -path $task.TaskPath -name $task.TaskName
+        Set-TaskState -path $task.TaskPath -name $task.TaskName -TaskObject $task
     }
 }
 Log ""
@@ -1398,7 +1420,7 @@ if ($KeepOneDrive) {
         }
 
         Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName
+            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
         }
         Log "  INFO: To reinstall OneDrive if uninstalled, run: winget install Microsoft.OneDrive"
     } else {
@@ -1483,7 +1505,7 @@ if ($KeepOneDrive) {
 
         # 5. Disable scheduled update tasks
         Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName
+            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
         }
 
         # 6. Remove Run registry keys
@@ -1501,7 +1523,14 @@ Remove-StartupEntry -pattern "MicrosoftEdge" -runKeys @("HKCU:\Software\Microsof
 $edgeBgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
 Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
 
-Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+$edgeKey = "\Microsoft\Windows\EdgeUpdate\EdgeUpdateTaskMachineCore"
+if ($taskLookup -and $taskLookup.ContainsKey($edgeKey)) {
+    Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore" -TaskObject $taskLookup[$edgeKey]
+} elseif ($taskLookup) {
+    Log "  SKIP: EdgeUpdateTaskMachineCore not found"
+} else {
+    Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+}
 
 # Edge Copilot & Sidebar Policy
 $edgePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
@@ -1632,9 +1661,14 @@ if ($KeepPhoneLink) {
     $fwRules = $fwRules | Where-Object { $_ -notmatch 'Connected Devices Platform' }
     Log "  KEEP: Connected Devices Platform firewall rules retained (-KeepPhoneLink enabled)"
 }
+$existingRules = @(Get-NetFirewallRule -DisplayName $fwRules -ErrorAction SilentlyContinue)
+$existingLookup = @{}
+foreach ($r in $existingRules) {
+    $existingLookup[$r.DisplayName] = $r
+}
 foreach ($rule in $fwRules) {
-    $existing = Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
-    if ($existing) {
+
+    if ($existingLookup.ContainsKey($rule)) {
         if ($IsUndo) {
             if ($IsDryRun) {
                 Log "  [WOULD ENABLE FIREWALL]: $rule"
@@ -1661,7 +1695,7 @@ foreach ($rule in $fwRules) {
             }
         }
     } else {
-        Log "  SKIP: Firewall rule '$rule' not found" -DryRun:$DryRun
+        Log "  SKIP: Firewall rule '$rule' not found"
     }
 }
 Log ""

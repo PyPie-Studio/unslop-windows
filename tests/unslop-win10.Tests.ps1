@@ -554,6 +554,36 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Should -Invoke -CommandName Disable-ScheduledTask -Times 0
             Should -Invoke -CommandName Enable-ScheduledTask -Times 0
         }
+
+        It 'Performance Optimization: Uses provided $TaskObject and bypasses Get-ScheduledTask query' {
+            $mockTask = [PSCustomObject]@{
+                TaskName = "Consolidator"
+                TaskPath = "\Microsoft\Windows\Customer Experience Improvement Program\"
+            }
+            Mock -CommandName Get-ScheduledTask -MockWith { throw "Get-ScheduledTask should not be called when TaskObject is provided" }
+            Mock -CommandName Disable-ScheduledTask -MockWith { }
+
+            Set-TaskState -path "\Microsoft\Windows\Customer Experience Improvement Program\" -name "Consolidator" -TaskObject $mockTask
+
+            Should -Invoke -CommandName Get-ScheduledTask -Times 0
+            Should -Invoke -CommandName Disable-ScheduledTask -Times 1 -ParameterFilter {
+                $TaskPath -eq "\Microsoft\Windows\Customer Experience Improvement Program\" -and $TaskName -eq "Consolidator"
+            }
+        }
+
+        It 'Fallback Behavior: Queries Get-ScheduledTask when $TaskObject is null' {
+            $mockTask = [PSCustomObject]@{
+                TaskName = "Consolidator"
+                TaskPath = "\Microsoft\Windows\Customer Experience Improvement Program\"
+            }
+            Mock -CommandName Get-ScheduledTask -MockWith { $mockTask }
+            Mock -CommandName Disable-ScheduledTask -MockWith { }
+
+            Set-TaskState -path "\Microsoft\Windows\Customer Experience Improvement Program\" -name "Consolidator" -TaskObject $null
+
+            Should -Invoke -CommandName Get-ScheduledTask -Times 1
+            Should -Invoke -CommandName Disable-ScheduledTask -Times 1
+        }
     }
 
     Context 'Set-ConsentCapability' {

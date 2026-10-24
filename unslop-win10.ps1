@@ -209,8 +209,8 @@ function Set-SvcState($name, $desc, $undoStartupType = "Automatic", [switch]$Und
     }
 }
 
-function Set-TaskState($path, $name, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
-    $t = Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue
+function Set-TaskState($path, $name, $TaskObject = $null, [switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun) {
+    $t = if ($null -ne $TaskObject) { $TaskObject } else { Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction SilentlyContinue }
     if ($t) {
         if ($Undo) {
             if ($DryRun) {
@@ -868,6 +868,14 @@ Log ""
 # 11. TELEMETRY SCHEDULED TASKS
 # ============================================================
 Log "--- 11. Telemetry Scheduled Tasks ---"
+$taskLookup = @{}
+try {
+    Get-ScheduledTask -ErrorAction SilentlyContinue | ForEach-Object {
+        $taskLookup["$($_.TaskPath)$($_.TaskName)"] = $_
+    }
+} catch {
+    $null = $_
+}
 $tasksToToggle = @(
     "\Microsoft\Windows\Application Experience\StartupAppTask"
     "\Microsoft\Windows\Application Experience\ProgramDataUpdater"
@@ -889,7 +897,14 @@ $tasksToToggle = @(
 foreach ($task in $tasksToToggle) {
     $path = $task -replace '\\[^\\]+$', '\'
     $name = $task -replace '^.*\\', ''
-    Set-TaskState -path $path -name $name
+    $key = "$path$name"
+    if ($taskLookup -and $taskLookup.ContainsKey($key)) {
+        Set-TaskState -path $path -name $name -TaskObject $taskLookup[$key]
+    } elseif ($taskLookup) {
+        Log "  SKIP: $name not found"
+    } else {
+        Set-TaskState -path $path -name $name
+    }
 }
 
 $officeTasks = @(
@@ -903,13 +918,20 @@ $officeTasks = @(
     "Office Startup Maintenance"
 )
 foreach ($t in $officeTasks) {
-    Set-TaskState -path "\Microsoft\Office\" -name $t
+    $key = "\Microsoft\Office\$t"
+    if ($taskLookup -and $taskLookup.ContainsKey($key)) {
+        Set-TaskState -path "\Microsoft\Office\" -name $t -TaskObject $taskLookup[$key]
+    } elseif ($taskLookup) {
+        Log "  SKIP: $t not found"
+    } else {
+        Set-TaskState -path "\Microsoft\Office\" -name $t
+    }
 }
 
 $nvTasks = Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate" -ErrorAction SilentlyContinue
 if ($nvTasks) {
     foreach ($task in $nvTasks) {
-        Set-TaskState -path $task.TaskPath -name $task.TaskName
+        Set-TaskState -path $task.TaskPath -name $task.TaskName -TaskObject $task
     }
 }
 Log ""
@@ -1205,7 +1227,7 @@ if ($KeepOneDrive) {
         }
 
         Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName
+            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
         }
         Log "  INFO: To reinstall OneDrive if uninstalled, run: winget install Microsoft.OneDrive"
     } else {
@@ -1285,7 +1307,7 @@ if ($KeepOneDrive) {
         Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
 
         Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName
+            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
         }
 
         Remove-StartupEntry -pattern "OneDrive" -runKeys $allRunKeys
@@ -1302,7 +1324,14 @@ Remove-StartupEntry -pattern "MicrosoftEdge" -runKeys @("HKCU:\Software\Microsof
 $edgeBgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
 Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
 
-Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+$edgeKey = "\Microsoft\Windows\EdgeUpdate\EdgeUpdateTaskMachineCore"
+if ($taskLookup -and $taskLookup.ContainsKey($edgeKey)) {
+    Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore" -TaskObject $taskLookup[$edgeKey]
+} elseif ($taskLookup) {
+    Log "  SKIP: EdgeUpdateTaskMachineCore not found"
+} else {
+    Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+}
 
 # Edge Copilot & Sidebar Policy
 $edgePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
@@ -1402,9 +1431,13 @@ if ($KeepPhoneLink) {
     $fwRules = $fwRules | Where-Object { $_ -notmatch 'Connected Devices Platform' }
     Log "  KEEP: Connected Devices Platform firewall rules retained (-KeepPhoneLink enabled)"
 }
+$existingRules = @(Get-NetFirewallRule -DisplayName $fwRules -ErrorAction SilentlyContinue)
+$existingLookup = @{}
+foreach ($r in $existingRules) {
+    $existingLookup[$r.DisplayName] = $r
+}
 foreach ($rule in $fwRules) {
-    $existing = Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue
-    if ($existing) {
+    if ($existingLookup.ContainsKey($rule)) {
         if ($IsUndo) {
             if ($IsDryRun) {
                 Log "  [WOULD ENABLE FIREWALL]: $rule"
@@ -1431,7 +1464,7 @@ foreach ($rule in $fwRules) {
             }
         }
     } else {
-        Log "  SKIP: Firewall rule '$rule' not found" -DryRun:$DryRun
+        Log "  SKIP: Firewall rule '$rule' not found"
     }
 }
 Log ""

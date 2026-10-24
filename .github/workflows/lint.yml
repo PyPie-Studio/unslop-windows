@@ -11,219 +11,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality-gate-core:
-    name: Quality Gate (PowerShell 7 Core)
+  doc-lint:
+    name: Markdown Lint Audit
     runs-on: windows-latest
     permissions:
       contents: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Ensure Required Modules Available (Pester 6 & PSScriptAnalyzer)
-        shell: pwsh
-        run: |
-          $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
-          if (-not $pester) {
-            Write-Host "Installing Pester 6 for pwsh..."
-            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
-          }
-          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
-            Write-Host "Installing PSScriptAnalyzer for pwsh..."
-            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
-          }
 
       - name: Markdown Lint Audit
         shell: pwsh
-        run: |
-          npx --yes markdownlint-cli "**/*.md"
+        run: npx --yes markdownlint-cli "**/*.md"
 
-      - name: Run 7-Pillar Master Quality Gate
-        shell: pwsh
-        run: |
-          ./scripts/Test-MasterGate.ps1 -Strict -TestResultsPath "test-results/pester-pwsh.xml" -CodeCoveragePath "test-results/coverage-pwsh.xml"
-
-      - name: Publish Test Summary to GitHub Actions
-        if: always()
-        shell: pwsh
-        run: |
-          $xmlPath = "test-results/pester-pwsh.xml"
-          $covPath = "test-results/coverage-pwsh.xml"
-          if (Test-Path $xmlPath) {
-            [xml]$xml = Get-Content $xmlPath
-            $total = $xml.'test-results'.total
-            $failures = $xml.'test-results'.failures
-            $notRun = $xml.'test-results'.'not-run'
-            $passed = [int]$total - [int]$failures - [int]$notRun
-            $suiteTime = $xml.'test-results'.'test-suite'.time
-            
-            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
-            $summaryLines = @(
-              "## Pester Unit Test Results: PowerShell 7 Core ($status)",
-              "",
-              "| Metric | Value |",
-              "| :--- | :--- |",
-              "| **Total Tests** | $total |",
-              "| **Passed** | $passed |",
-              "| **Failed** | $failures |",
-              "| **Skipped / Not Run** | $notRun |",
-              "| **Duration** | ${suiteTime}s |"
-            )
-
-            if (Test-Path $covPath) {
-              [xml]$covXml = Get-Content $covPath
-              $lineNode = $covXml.report.counter | Where-Object { $_.type -eq 'LINE' }
-              $instNode = $covXml.report.counter | Where-Object { $_.type -eq 'INSTRUCTION' }
-              $lineCov = [int]$lineNode.covered
-              $lineTotal = $lineCov + [int]$lineNode.missed
-              $linePct = if ($lineTotal -gt 0) { [math]::Round(($lineCov / $lineTotal) * 100, 1) } else { 0 }
-              $instCov = [int]$instNode.covered
-              $instTotal = $instCov + [int]$instNode.missed
-              $instPct = if ($instTotal -gt 0) { [math]::Round(($instCov / $instTotal) * 100, 1) } else { 0 }
-
-              $summaryLines += @(
-                "",
-                "### Code Coverage: unslop-win11.ps1",
-                "| Metric | Covered | Total | Coverage % |",
-                "| :--- | :--- | :--- | :--- |",
-                "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
-                "| **Instructions** | $instCov | $instTotal | ${instPct}% |"
-              )
-            }
-
-            if ($env:GITHUB_STEP_SUMMARY) {
-              ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-            }
-
-            if ([int]$failures -gt 0) {
-              foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
-                $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop-win11.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
-              }
-            }
-          }
-
-      - name: Upload Pester Test Results & Coverage Artifact
-        if: always()
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
-        with:
-          name: pester-results-pwsh
-          path: test-results/
-          if-no-files-found: ignore
-
-      - name: Run Diagnostic System State Auditor
-        shell: pwsh
-        run: |
-          ./scripts/Measure-SystemState.ps1
-
-  quality-gate-desktop:
-    name: Quality Gate (Windows PowerShell 5.1)
+  quality-gate-core:
+    name: Quality Gate (${{ matrix.name }})
     runs-on: windows-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win11
+            gate_args: ""
+            name: "Win11 Core (PS7)"
+            artifact: "pester-results-pwsh"
+            engine: "unslop-win11.ps1"
+          - target: win10
+            gate_args: "-Win10 -SkipBuildCheck"
+            name: "Win10 Core (PS7)"
+            artifact: "pester-results-win10-pwsh"
+            engine: "unslop-win10.ps1"
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Ensure Required Modules Available (Pester 6 & PSScriptAnalyzer)
-        shell: powershell
-        run: |
-          $pester = Get-Module -ListAvailable -Name Pester | Where-Object { $_.Version.Major -ge 6 } | Select-Object -First 1
-          if (-not $pester) {
-            Write-Host "Installing Pester 6 for powershell..."
-            Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck -MinimumVersion 6.0.0
-          }
-          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
-            Write-Host "Installing PSScriptAnalyzer for powershell..."
-            Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
-          }
-
-      - name: Run 7-Pillar Master Quality Gate
-        shell: powershell
-        run: |
-          ./scripts/Test-MasterGate.ps1 -Strict -TestResultsPath "test-results/pester-powershell.xml" -CodeCoveragePath "test-results/coverage-powershell.xml"
-
-      - name: Publish Test Summary to GitHub Actions
-        if: always()
-        shell: powershell
-        run: |
-          $xmlPath = "test-results/pester-powershell.xml"
-          $covPath = "test-results/coverage-powershell.xml"
-          if (Test-Path $xmlPath) {
-            [xml]$xml = Get-Content $xmlPath
-            $total = $xml.'test-results'.total
-            $failures = $xml.'test-results'.failures
-            $notRun = $xml.'test-results'.'not-run'
-            $passed = [int]$total - [int]$failures - [int]$notRun
-            $suiteTime = $xml.'test-results'.'test-suite'.time
-            
-            $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
-            $summaryLines = @(
-              "## Pester Unit Test Results: Windows PowerShell 5.1 ($status)",
-              "",
-              "| Metric | Value |",
-              "| :--- | :--- |",
-              "| **Total Tests** | $total |",
-              "| **Passed** | $passed |",
-              "| **Failed** | $failures |",
-              "| **Skipped / Not Run** | $notRun |",
-              "| **Duration** | ${suiteTime}s |"
-            )
-
-            if (Test-Path $covPath) {
-              [xml]$covXml = Get-Content $covPath
-              $lineNode = $covXml.report.counter | Where-Object { $_.type -eq 'LINE' }
-              $instNode = $covXml.report.counter | Where-Object { $_.type -eq 'INSTRUCTION' }
-              $lineCov = [int]$lineNode.covered
-              $lineTotal = $lineCov + [int]$lineNode.missed
-              $linePct = if ($lineTotal -gt 0) { [math]::Round(($lineCov / $lineTotal) * 100, 1) } else { 0 }
-              $instCov = [int]$instNode.covered
-              $instTotal = $instCov + [int]$instNode.missed
-              $instPct = if ($instTotal -gt 0) { [math]::Round(($instCov / $instTotal) * 100, 1) } else { 0 }
-
-              $summaryLines += @(
-                "",
-                "### Code Coverage: unslop-win11.ps1",
-                "| Metric | Covered | Total | Coverage % |",
-                "| :--- | :--- | :--- | :--- |",
-                "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
-                "| **Instructions** | $instCov | $instTotal | ${instPct}% |"
-              )
-            }
-
-            if ($env:GITHUB_STEP_SUMMARY) {
-              ($summaryLines -join "`n") | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
-            }
-
-            if ([int]$failures -gt 0) {
-              foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
-                $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop-win11.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
-              }
-            }
-          }
-
-      - name: Upload Pester Test Results & Coverage Artifact
-        if: always()
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+      - name: Cache PowerShell Modules
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
         with:
-            name: pester-results-powershell
-            path: test-results/
-            if-no-files-found: ignore
-
-      - name: Run Diagnostic System State Auditor
-        shell: powershell
-        run: |
-          ./scripts/Measure-SystemState.ps1
-
-  quality-gate-win10-core:
-    name: Quality Gate Win10 (PowerShell 7 Core)
-    runs-on: windows-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+          path: ~/Documents/PowerShell/Modules
+          key: windows-modules-${{ runner.os }}-pwsh-pester6-pssa-v1
+          restore-keys: |
+            windows-modules-${{ runner.os }}-pwsh-
 
       - name: Ensure Required Modules Available (Pester 6 & PSScriptAnalyzer)
         shell: pwsh
@@ -238,17 +68,17 @@ jobs:
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
-      - name: Run 7-Pillar Master Quality Gate (Win10)
+      - name: Run 7-Pillar Master Quality Gate
         shell: pwsh
         run: |
-          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -Strict -TestResultsPath "test-results/pester-win10-pwsh.xml" -CodeCoveragePath "test-results/coverage-win10-pwsh.xml"
+          ./scripts/Test-MasterGate.ps1 ${{ matrix.gate_args }} -Strict -TestResultsPath "test-results/pester-${{ matrix.target }}-pwsh.xml" -CodeCoveragePath "test-results/coverage-${{ matrix.target }}-pwsh.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
         shell: pwsh
         run: |
-          $xmlPath = "test-results/pester-win10-pwsh.xml"
-          $covPath = "test-results/coverage-win10-pwsh.xml"
+          $xmlPath = "test-results/pester-${{ matrix.target }}-pwsh.xml"
+          $covPath = "test-results/coverage-${{ matrix.target }}-pwsh.xml"
           if (Test-Path $xmlPath) {
             [xml]$xml = Get-Content $xmlPath
             $total = $xml.'test-results'.total
@@ -259,7 +89,7 @@ jobs:
             
             $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## Pester Unit Test Results: Win10 Target on PS7 Core ($status)",
+              "## Pester Unit Test Results: ${{ matrix.name }} ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -283,7 +113,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### Code Coverage: unslop-win10.ps1",
+                "### Code Coverage: ${{ matrix.engine }}",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -296,9 +126,20 @@ jobs:
             }
 
             if ([int]$failures -gt 0) {
+              $defaultTestFile = if ('${{ matrix.target }}' -eq 'win10') { 'tests/unslop-win10.Tests.ps1' } else { 'tests/unslop-win11.Tests.ps1' }
               foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
                 $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop-win10.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+                $testFile = if ($tc.file) {
+                  $tc.file
+                } elseif ($tc.ParentNode.name -match 'Tests\.ps1$') {
+                  $tc.ParentNode.name
+                } else {
+                  $defaultTestFile
+                }
+                if ($testFile -match 'tests[\\/][^\\/]+\.Tests\.ps1') {
+                  $testFile = $matches[0] -replace '\\', '/'
+                }
+                Write-Host "::error file=$testFile,title=Pester Test Failure::$($tc.name): $msg"
               }
             }
           }
@@ -307,18 +148,40 @@ jobs:
         if: always()
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
-          name: pester-results-win10-pwsh
+          name: ${{ matrix.artifact }}
           path: test-results/
           if-no-files-found: ignore
 
-  quality-gate-win10-desktop:
-    name: Quality Gate Win10 (Windows PowerShell 5.1)
+  quality-gate-desktop:
+    name: Quality Gate (${{ matrix.name }})
     runs-on: windows-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win11
+            gate_args: ""
+            name: "Win11 Desktop (PS5.1)"
+            artifact: "pester-results-powershell"
+            engine: "unslop-win11.ps1"
+          - target: win10
+            gate_args: "-Win10 -SkipBuildCheck"
+            name: "Win10 Desktop (PS5.1)"
+            artifact: "pester-results-win10-powershell"
+            engine: "unslop-win10.ps1"
     steps:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Cache PowerShell Modules
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        with:
+          path: ~/Documents/WindowsPowerShell/Modules
+          key: windows-modules-${{ runner.os }}-powershell-pester6-pssa-v1
+          restore-keys: |
+            windows-modules-${{ runner.os }}-powershell-
 
       - name: Ensure Required Modules Available (Pester 6 & PSScriptAnalyzer)
         shell: powershell
@@ -333,17 +196,17 @@ jobs:
             Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           }
 
-      - name: Run 7-Pillar Master Quality Gate (Win10)
+      - name: Run 7-Pillar Master Quality Gate
         shell: powershell
         run: |
-          ./scripts/Test-MasterGate.ps1 -Win10 -SkipBuildCheck -Strict -TestResultsPath "test-results/pester-win10-powershell.xml" -CodeCoveragePath "test-results/coverage-win10-powershell.xml"
+          ./scripts/Test-MasterGate.ps1 ${{ matrix.gate_args }} -Strict -TestResultsPath "test-results/pester-${{ matrix.target }}-powershell.xml" -CodeCoveragePath "test-results/coverage-${{ matrix.target }}-powershell.xml"
 
       - name: Publish Test Summary to GitHub Actions
         if: always()
         shell: powershell
         run: |
-          $xmlPath = "test-results/pester-win10-powershell.xml"
-          $covPath = "test-results/coverage-win10-powershell.xml"
+          $xmlPath = "test-results/pester-${{ matrix.target }}-powershell.xml"
+          $covPath = "test-results/coverage-${{ matrix.target }}-powershell.xml"
           if (Test-Path $xmlPath) {
             [xml]$xml = Get-Content $xmlPath
             $total = $xml.'test-results'.total
@@ -354,7 +217,7 @@ jobs:
             
             $status = if ([int]$failures -gt 0) { 'FAILED' } else { 'PASSED' }
             $summaryLines = @(
-              "## Pester Unit Test Results: Win10 Target on PowerShell 5.1 ($status)",
+              "## Pester Unit Test Results: ${{ matrix.name }} ($status)",
               "",
               "| Metric | Value |",
               "| :--- | :--- |",
@@ -378,7 +241,7 @@ jobs:
 
               $summaryLines += @(
                 "",
-                "### Code Coverage: unslop-win10.ps1",
+                "### Code Coverage: ${{ matrix.engine }}",
                 "| Metric | Covered | Total | Coverage % |",
                 "| :--- | :--- | :--- | :--- |",
                 "| **Lines** | $lineCov | $lineTotal | ${linePct}% |",
@@ -391,9 +254,20 @@ jobs:
             }
 
             if ([int]$failures -gt 0) {
+              $defaultTestFile = if ('${{ matrix.target }}' -eq 'win10') { 'tests/unslop-win10.Tests.ps1' } else { 'tests/unslop-win11.Tests.ps1' }
               foreach ($tc in $xml.SelectNodes("//test-case[@result='Failure']")) {
                 $msg = $tc.failure.message.Trim() -replace '\r?\n', ' '
-                Write-Host "::error file=tests/unslop-win10.Tests.ps1,title=Pester Test Failure::$($tc.name): $msg"
+                $testFile = if ($tc.file) {
+                  $tc.file
+                } elseif ($tc.ParentNode.name -match 'Tests\.ps1$') {
+                  $tc.ParentNode.name
+                } else {
+                  $defaultTestFile
+                }
+                if ($testFile -match 'tests[\\/][^\\/]+\.Tests\.ps1') {
+                  $testFile = $matches[0] -replace '\\', '/'
+                }
+                Write-Host "::error file=$testFile,title=Pester Test Failure::$($tc.name): $msg"
               }
             }
           }
@@ -402,15 +276,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
-          name: pester-results-win10-powershell
+          name: ${{ matrix.artifact }}
           path: test-results/
           if-no-files-found: ignore
 
   psscriptanalyzer:
     name: PSScriptAnalyzer
-    needs: [quality-gate-core, quality-gate-desktop, quality-gate-win10-core, quality-gate-win10-desktop]
+    needs: [doc-lint, quality-gate-core, quality-gate-desktop]
     runs-on: windows-latest
     steps:
       - name: Confirm Status Check
         shell: pwsh
-        run: Write-Host "PSScriptAnalyzer status check passed via quad quality-gate suite."
+        run: Write-Host "PSScriptAnalyzer status check passed via quality-gate matrix suite."
