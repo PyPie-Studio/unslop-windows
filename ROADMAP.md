@@ -33,6 +33,8 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 - [x] Flighting FeatureConfig telemetry task tree suppression (`\Microsoft\Windows\Flighting\FeatureConfig\*`).
 - [ ] **OneSettings Flighting DNS Hardening:** Block background telemetry endpoints downloaded via OneSettings config payloads.
 - [x] **Edge Sidebar & Background Policy:** Enforce GPO policies blocking Edge Copilot sidebar integration, startup boost and resident background workers without breaking WebView2.
+- [x] **Language-Invariant Firewall Hardening:** Dual-key rule resolution using immutable internal rule IDs with localized fallback.
+- [x] **Zero-Disk Auditing & Servicing Resilience:** In-place signature validation during dry-runs and granular Edge update servicing control (`-KeepEdgeUpdates`).
 - [ ] **Cumulative Update Invariant Verification:** Automated testing against novel 25H2/26H2 monthly CU rollouts to ensure zero `0x800f0922` update rollbacks.
 
 ---
@@ -60,4 +62,4 @@ All additions must follow the safety rules outlined in [README.md](README.md) an
 
 ## Architecture Decisions
 
-See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-037) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.
+See [docs/decisions.md](docs/decisions.md) for full Architectural Decision Records (ADR-001 through ADR-041) and [CONTRIBUTING.md](CONTRIBUTING.md) for core engineering rules and safety guidelines.

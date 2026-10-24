@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.1] - 2026-10-24
+
+### Security
+
+- **Enforced Zero-Disk Dry-Run & Reparse Point Defense in OneDrive Staging (ADR-041)**: Gated staging folder creation and binary copying strictly behind `if (-not $IsDryRun)` in Module 13 across `unslop-win11.ps1` and `unslop-win10.ps1`. In DryRun mode, Authenticode signatures are verified directly in-place on user binaries without disk modifications. Real execution inspects `[System.IO.FileAttributes]::ReparsePoint` on `C:\ProgramData\unslop-windows` to prevent junction redirection.
+- **Sanitized MDM CSP PolicyManager Paths (ADR-041)**: Purged all modifications to `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\...` (which corrupts OS CSP schema templates and triggers Intune event 809). Re-routed active device policies strictly to `PolicyManager\current\device\...` with clean `-removeOnUndo $true`.
+- **Enforced Third-Party Scheduled Task Scope Boundary (ADR-041 / ADR-026)**: Purged third-party `NVIDIA*SelfUpdate` auto-update tasks from engine scripts, completion banners, and tests.
+
+### Added
+
+- **Edge Updates Preservation Switch (`-KeepEdgeUpdates`) (ADR-041)**: Added `[switch]$KeepEdgeUpdates` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` (including argument whitelist, interactive toggles Option [6]/[5], and custom CLI flags). Preserves `EdgeUpdateTaskMachineCore` for continuous automated Chromium and WebView2 security patching.
+- **Language-Invariant Dual-Key Firewall Resolution (ADR-041)**: Mapped firewall rules to 8 immutable internal `-Name` IDs (`RemoteAssistance-SSDPSrv-Out-TCP-Active`, `CDPSvc-Out-UDP`, etc.) with `-DisplayName` fallback, enabling successful rule discovery and toggling across all non-English Windows display languages.
+- **Master Quality Gate Error Log Scanning (ADR-041)**: Hardened Steps 5 and 6 in `scripts/Test-MasterGate.ps1` to inspect engine output for `\b(FAIL|FAILED|ERROR):`, ensuring unexpected dry-run errors fail the quality gate even if the exit code is 0.
+
+### Fixed
+
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
+
+---
+
 ## [1.5.0] - 2026-10-23
 
 ### Security
@@ -677,6 +698,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.5.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.3...v1.4.4

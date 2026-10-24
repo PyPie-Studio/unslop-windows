@@ -54,6 +54,9 @@ The following components must remain functional and un-targeted:
 * **Strictly Offline-First:** Pull requests introducing dynamic script fetching (`Invoke-RestMethod`, `curl`, `Invoke-WebRequest`) will be rejected. The debloater must execute completely offline.
 * **Preserve Driver Security Updates:** Do not disable Windows Update driver/firmware patches (`ExcludeWUDriversInQualityUpdate`). Hardware CVE updates must flow freely.
 * **Symlink & Reparse Point Defenses:** Directories created for logs or output must verify they are not symlinks or junctions before writing files.
+* **Zero-Disk Dry-Run Auditing:** Non-elevated `-DryRun` mode must never create directories, write temporary files, or copy binaries to disk. Signature inspections and file audits must run entirely in-place.
+* **MDM PolicyManager Hygiene:** Never modify `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\...` (which corrupts OS CSP template dictionaries). Route device policies strictly to `PolicyManager\current\device\...` with `-removeOnUndo $true`.
+* **Language-Invariant Firewall Rules:** All firewall rules must be targeted via immutable internal `-Name` identifiers rather than localized `-DisplayName` strings.
 
 ### 8. Automated Test Enforcement
 

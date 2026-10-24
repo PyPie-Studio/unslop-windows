@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Pester Unit & Mocking Test Suite for unslop-windows (Windows 11 Edition).
@@ -1229,6 +1229,18 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         $LASTEXITCODE | Should -Be 0
         ($output -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length | Should -BeGreaterThan 0
     }
+
+    It '-KeepEdgeUpdates retains Edge automatic update scheduled tasks' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepEdgeUpdates 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "Edge automatic update tasks retained \(-KeepEdgeUpdates enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD DISABLE TASK\]:.*EdgeUpdateTaskMachineCore").Length | Should -Be 0
+    }
+
+    It '-WhatIf:$false does not enter dry-run inspection mode' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -Command "& { & '$script:targetScript' -WhatIf:`$false -DryRun:`$false -NoRestart 2>&1 }"
+        ($output -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE \(DRY-RUN PREVIEW\)").Length | Should -Be 0
+    }
 }
 
 Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -Tag 'Unit', 'Static', 'Symmetry' {
@@ -1436,6 +1448,55 @@ Describe 'unslop-windows: 100% Symmetrical Restoration Contract (AST Parity)' -T
     It 'Filters staged provisioned packages and installed app candidates in single-pass regex scans' {
         $script:ast.Extent.Text | Should -Match '\$stagedPackages\s*-and\s*\$bloatApps\.Count\s*-gt\s*0' -Because "Staged provisioned packages must be checked and filtered in a single pass"
         $script:ast.Extent.Text | Should -Match '\$candidateInstalled\s*=\s*if' -Because "Installed package candidates must be pre-filtered in a single pass"
+    }
+
+    It 'Firewall hardening resolves rules by language-invariant internal Name identifiers with display name fallback' {
+        $invariantRuleNames = @(
+            'RemoteAssistance-SSDPSrv-Out-TCP-Active',
+            'RemoteAssistance-SSDPSrv-Out-UDP-Active',
+            'RemoteAssistance-Out-TCP',
+            'Microsoft-Windows-DeviceManagement-CertificateInstall-TCP-Out',
+            'Microsoft-Windows-Enrollment-WinRT-TCP-Out',
+            'CDPSvc-WFD-Out-TCP',
+            'CDPSvc-Out-TCP',
+            'CDPSvc-Out-UDP'
+        )
+
+        foreach ($ruleName in $invariantRuleNames) {
+            $escaped = [regex]::Escape($ruleName)
+            $script:ast.Extent.Text | Should -Match $escaped -Because "Firewall hardening must reference invariant internal rule ID '$ruleName'"
+        }
+
+        $script:ast.Extent.Text | Should -Match 'Get-NetFirewallRule\s+-Name\s+\$ruleNames' -Because "Firewall rules must be queried by immutable Name identifier primary"
+        $script:ast.Extent.Text | Should -Match 'Get-NetFirewallRule\s+-DisplayName\s+\$ruleDisplays' -Because "Firewall rules must query localized DisplayName as fallback"
+    }
+
+    It 'Taskbar alignment restores to centered (TaskbarAl = 1) symmetrically on -Undo' {
+        $taskbarBlock = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.IfStatementAst] -and
+            $node.Extent.Text -match 'TaskbarAl'
+        }, $true) | Select-Object -First 1
+
+        $taskbarBlock | Should -Not -BeNullOrEmpty -Because "TaskbarAl logic must exist in AST"
+        $taskbarBlock.Extent.Text | Should -Match '(\$LeftTaskbar\s+-or\s+\$IsUndo|\$IsUndo\s+-or\s+\$LeftTaskbar)' -Because "TaskbarAl must be evaluated when -LeftTaskbar is active or on -Undo"
+        $taskbarBlock.Extent.Text | Should -Match '-debloatValue\s+0\s+-undoValue\s+1' -Because "TaskbarAl must specify debloatValue 0 (left) and undoValue 1 (centered default)"
+    }
+
+    It 'Declares -KeepEdgeUpdates parameter and conditionally wraps EdgeUpdateTaskMachineCore' {
+        $paramBlock = $script:ast.ParamBlock
+        $paramBlock | Should -Not -BeNullOrEmpty
+        $paramNames = $paramBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath }
+        $paramNames | Should -Contain 'KeepEdgeUpdates' -Because "Script must declare [switch]`$KeepEdgeUpdates"
+
+        $edgeUpdateBlock = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.IfStatementAst] -and
+            $node.Extent.Text -match 'EdgeUpdateTaskMachineCore'
+        }, $true)
+
+        $edgeUpdateBlock.Count | Should -BeGreaterThan 0 -Because "EdgeUpdateTaskMachineCore must be wrapped in a conditional block"
+        $edgeUpdateBlock[0].Extent.Text | Should -Match '-not\s+\$KeepEdgeUpdates' -Because "EdgeUpdateTaskMachineCore disablement must be skipped when -KeepEdgeUpdates is specified"
     }
 }
 
@@ -1755,6 +1816,93 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
                 $call.Extent.Text | Should -Not -Match "\b$app\b" -Because "Remove-StartupEntry must never target third-party application '$app'"
             }
         }
+    }
+
+    It 'Never modifies HKLM:\SOFTWARE\Microsoft\PolicyManager\default to avoid Intune event 809 and CSP template corruption' {
+        $policyManagerDefault = $script:ast.FindAll({
+            param($node)
+            ($node -is [System.Management.Automation.Language.StringConstantExpressionAst] -or
+             $node -is [System.Management.Automation.Language.ExpandableStringExpressionAst]) -and
+            $node.Extent.Text -match 'PolicyManager\\default'
+        }, $true)
+        $policyManagerDefault.Count | Should -Be 0 -Because "Writing to PolicyManager\default corrupts MDM schema templates and triggers event 809"
+    }
+
+    It 'Zero third-party vendor auto-update tasks (NVIDIA) exist in scheduled tasks' {
+        $nvidiaTasks = $script:ast.FindAll({
+            param($node)
+            ($node -is [System.Management.Automation.Language.StringConstantExpressionAst] -or
+             $node -is [System.Management.Automation.Language.ExpandableStringExpressionAst]) -and
+            $node.Extent.Text -match 'NVIDIA'
+        }, $true)
+        $nvidiaTasks.Count | Should -Be 0 -Because "Third-party tasks like NVIDIA violate ADR-026 scope boundaries and must not be managed"
+    }
+
+    It 'OneDrive staging and directory creation are strictly gated behind non-DryRun checks (Zero-Disk DryRun)' {
+        $stagingCmds = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            ($node.GetCommandName() -in @('New-Item', 'Copy-Item')) -and
+            ($node.Extent.Text -match 'stagingDir|stagedBinary')
+        }, $true)
+
+        $stagingCmds.Count | Should -BeGreaterThan 0 -Because "OneDrive binary staging operations must exist"
+        foreach ($cmd in $stagingCmds) {
+            $curr = $cmd.Parent
+            $guarded = $false
+            while ($curr) {
+                if ($curr -is [System.Management.Automation.Language.IfStatementAst]) {
+                    if ($curr.Clauses | Where-Object { $_.Item1.Extent.Text -match 'DryRun' }) {
+                        $guarded = $true
+                        break
+                    }
+                }
+                $curr = $curr.Parent
+            }
+            $guarded | Should -BeTrue -Because "Staging command must be enclosed in an If block checking DryRun"
+        }
+    }
+
+    It 'All destructive filesystem and firewall mutations are strictly gated behind non-DryRun checks' {
+        $mutatingCmdlets = @('Remove-Item', 'Stop-Process', 'Enable-NetFirewallRule', 'Disable-NetFirewallRule', 'Set-MpPreference', 'Start-Process')
+        $calls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $mutatingCmdlets -contains $node.GetCommandName()
+        }, $true)
+
+        $calls.Count | Should -BeGreaterThan 0 -Because "Script contains state-mutating commands"
+        $unguarded = @()
+        foreach ($c in $calls) {
+            $curr = $c.Parent
+            $guarded = $false
+            while ($curr) {
+                if ($curr -is [System.Management.Automation.Language.IfStatementAst]) {
+                    foreach ($clause in $curr.Clauses) {
+                        $condText = $clause.Item1.Extent.Text
+                        if ($condText -match 'DryRun') {
+                            if ($condText -match '(-not|!)\s*[$]?(Is)?DryRun') {
+                                if ($clause.Item2.Extent.StartOffset -le $c.Extent.StartOffset -and $clause.Item2.Extent.EndOffset -ge $c.Extent.EndOffset) {
+                                    $guarded = $true
+                                    break
+                                }
+                            } else {
+                                if ($curr.ElseClause -and $curr.ElseClause.Extent.StartOffset -le $c.Extent.StartOffset -and $curr.ElseClause.Extent.EndOffset -ge $c.Extent.EndOffset) {
+                                    $guarded = $true
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if ($guarded) { break }
+                }
+                $curr = $curr.Parent
+            }
+            if (-not $guarded) {
+                $unguarded += $c
+            }
+        }
+        $unguarded.Count | Should -Be 0 -Because "Every mutating cmdlet must be enclosed in a non-DryRun execution branch"
     }
 }
 

@@ -66,13 +66,13 @@ if not "%~1"=="" (
     :: Validate arguments against strict switch whitelist
     for %%A in (%*) do (
         set "ARG_VALID=0"
-        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck) do (
+        for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -KeepEdgeUpdates -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -RunDirect -FromMenu -Win11 -Win10 -SkipBuildCheck) do (
             if /i "%%~A"=="%%V" set "ARG_VALID=1"
         )
         if "!ARG_VALID!"=="0" (
             echo.
             echo [ERROR] Unrecognized or illegal parameter switch: "%%~A"
-            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -Win11, -Win10, -SkipBuildCheck
+            echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -KeepEdgeUpdates, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -Win11, -Win10, -SkipBuildCheck
             exit /b 1
         )
         if /i "%%~A"=="-Win10" (
@@ -180,7 +180,7 @@ if not "%~1"=="" (
 set "OVERRIDE_BUILD_CHECK=0"
 cls
 echo ============================================================
-echo   unslop-windows (v1.5.0) - PyPie Studio
+echo   unslop-windows (v1.5.1) - PyPie Studio
 echo   Universal Windows Unslopper, Debloater ^& Privacy Hardener
 echo ============================================================
 echo.
@@ -286,7 +286,7 @@ goto :os_select
 :menu_WIN11
 cls
 echo ============================================================
-echo   unslop-windows (v1.5.0) - PyPie Studio
+echo   unslop-windows (v1.5.1) - PyPie Studio
 echo   Universal Windows 11 (26H2 / 26H1 / 25H2 / 24H2 / 23H2 / 22H2 / 21H2) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -324,7 +324,7 @@ goto :menu_WIN11
 :menu_WIN10
 cls
 echo ============================================================
-echo   unslop-windows (v1.5.0) - PyPie Studio
+echo   unslop-windows (v1.5.1) - PyPie Studio
 echo   Universal Windows 10 (22H2 / 21H2 / Enterprise LTSC / Builds 10240-19045) Debloat ^& Privacy
 echo ============================================================
 echo.
@@ -357,6 +357,7 @@ timeout /t 2 >nul
 goto :menu_WIN10
 
 :: ------------------------------------------------------------
+:: ------------------------------------------------------------
 :: WIN 11 TOGGLES
 :: ------------------------------------------------------------
 :toggles_reset_WIN11
@@ -365,6 +366,7 @@ set "TOGGLE_ONEDRIVE=0"
 set "TOGGLE_TODOS=0"
 set "TOGGLE_CLASSIC=0"
 set "TOGGLE_PCMANAGER=0"
+set "TOGGLE_EDGEUPDATES=0"
 set "TOGGLE_DRYRUN=0"
 goto :toggles_menu_WIN11
 
@@ -375,6 +377,7 @@ if not defined TOGGLE_ONEDRIVE set "TOGGLE_ONEDRIVE=0"
 if not defined TOGGLE_TODOS set "TOGGLE_TODOS=0"
 if not defined TOGGLE_CLASSIC set "TOGGLE_CLASSIC=0"
 if not defined TOGGLE_PCMANAGER set "TOGGLE_PCMANAGER=0"
+if not defined TOGGLE_EDGEUPDATES set "TOGGLE_EDGEUPDATES=0"
 if not defined TOGGLE_DRYRUN set "TOGGLE_DRYRUN=0"
 cls
 set "ACTIVE_FLAGS="
@@ -383,6 +386,7 @@ if "!TOGGLE_ONEDRIVE!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepOneDrive"
 if "!TOGGLE_TODOS!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepTodos"
 if "!TOGGLE_CLASSIC!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -ClassicContextMenu"
 if "!TOGGLE_PCMANAGER!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepPCManager"
+if "!TOGGLE_EDGEUPDATES!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepEdgeUpdates"
 if "!TOGGLE_DRYRUN!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -DryRun"
 
 echo ============================================================
@@ -394,7 +398,8 @@ if "!TOGGLE_ONEDRIVE!"=="1" ( echo   [2] Preserve Microsoft OneDrive         : [
 if "!TOGGLE_TODOS!"=="1" ( echo   [3] Preserve Microsoft To-Do            : [ ON  ] ) else ( echo   [3] Preserve Microsoft To-Do            : [ OFF ] )
 if "!TOGGLE_CLASSIC!"=="1" ( echo   [4] Enable Classic Context Menu         : [ ON  ] ) else ( echo   [4] Enable Classic Context Menu         : [ OFF ] )
 if "!TOGGLE_PCMANAGER!"=="1" ( echo   [5] Preserve Microsoft PC Manager       : [ ON  ] ) else ( echo   [5] Preserve Microsoft PC Manager       : [ OFF ] )
-if "!TOGGLE_DRYRUN!"=="1" ( echo   [6] Dry-Run Inspection Mode (Read-Only) : [ ON  ] ) else ( echo   [6] Dry-Run Inspection Mode (Read-Only) : [ OFF ] )
+if "!TOGGLE_EDGEUPDATES!"=="1" ( echo   [6] Preserve Edge Background Updates    : [ ON  ] ) else ( echo   [6] Preserve Edge Background Updates    : [ OFF ] )
+if "!TOGGLE_DRYRUN!"=="1" ( echo   [7] Dry-Run Inspection Mode (Read-Only) : [ ON  ] ) else ( echo   [7] Dry-Run Inspection Mode (Read-Only) : [ OFF ] )
 echo.
 if defined ACTIVE_FLAGS (
     echo   Active Flags:!ACTIVE_FLAGS!
@@ -433,6 +438,10 @@ if /i "!tchoice!"=="5" (
     goto :toggles_menu_WIN11
 )
 if /i "!tchoice!"=="6" (
+    if "!TOGGLE_EDGEUPDATES!"=="1" ( set "TOGGLE_EDGEUPDATES=0" ) else ( set "TOGGLE_EDGEUPDATES=1" )
+    goto :toggles_menu_WIN11
+)
+if /i "!tchoice!"=="7" (
     if "!TOGGLE_DRYRUN!"=="1" ( set "TOGGLE_DRYRUN=0" ) else ( set "TOGGLE_DRYRUN=1" )
     goto :toggles_menu_WIN11
 )
@@ -450,6 +459,7 @@ set "TOGGLE_XBOX=0"
 set "TOGGLE_ONEDRIVE=0"
 set "TOGGLE_TODOS=0"
 set "TOGGLE_PCMANAGER=0"
+set "TOGGLE_EDGEUPDATES=0"
 set "TOGGLE_DRYRUN=0"
 goto :toggles_menu_WIN10
 
@@ -459,6 +469,7 @@ if not defined TOGGLE_XBOX set "TOGGLE_XBOX=0"
 if not defined TOGGLE_ONEDRIVE set "TOGGLE_ONEDRIVE=0"
 if not defined TOGGLE_TODOS set "TOGGLE_TODOS=0"
 if not defined TOGGLE_PCMANAGER set "TOGGLE_PCMANAGER=0"
+if not defined TOGGLE_EDGEUPDATES set "TOGGLE_EDGEUPDATES=0"
 if not defined TOGGLE_DRYRUN set "TOGGLE_DRYRUN=0"
 cls
 set "ACTIVE_FLAGS="
@@ -466,6 +477,7 @@ if "!TOGGLE_XBOX!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepXbox"
 if "!TOGGLE_ONEDRIVE!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepOneDrive"
 if "!TOGGLE_TODOS!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepTodos"
 if "!TOGGLE_PCMANAGER!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepPCManager"
+if "!TOGGLE_EDGEUPDATES!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -KeepEdgeUpdates"
 if "!TOGGLE_DRYRUN!"=="1" set "ACTIVE_FLAGS=!ACTIVE_FLAGS! -DryRun"
 
 echo ============================================================
@@ -476,7 +488,8 @@ if "!TOGGLE_XBOX!"=="1" ( echo   [1] Preserve Xbox ^& Gaming Services     : [ ON
 if "!TOGGLE_ONEDRIVE!"=="1" ( echo   [2] Preserve Microsoft OneDrive         : [ ON  ] ) else ( echo   [2] Preserve Microsoft OneDrive         : [ OFF ] )
 if "!TOGGLE_TODOS!"=="1" ( echo   [3] Preserve Microsoft To-Do            : [ ON  ] ) else ( echo   [3] Preserve Microsoft To-Do            : [ OFF ] )
 if "!TOGGLE_PCMANAGER!"=="1" ( echo   [4] Preserve Microsoft PC Manager       : [ ON  ] ) else ( echo   [4] Preserve Microsoft PC Manager       : [ OFF ] )
-if "!TOGGLE_DRYRUN!"=="1" ( echo   [5] Dry-Run Inspection Mode (Read-Only) : [ ON  ] ) else ( echo   [5] Dry-Run Inspection Mode (Read-Only) : [ OFF ] )
+if "!TOGGLE_EDGEUPDATES!"=="1" ( echo   [5] Preserve Edge Background Updates    : [ ON  ] ) else ( echo   [5] Preserve Edge Background Updates    : [ OFF ] )
+if "!TOGGLE_DRYRUN!"=="1" ( echo   [6] Dry-Run Inspection Mode (Read-Only) : [ ON  ] ) else ( echo   [6] Dry-Run Inspection Mode (Read-Only) : [ OFF ] )
 echo.
 if defined ACTIVE_FLAGS (
     echo   Active Flags:!ACTIVE_FLAGS!
@@ -511,6 +524,10 @@ if /i "!tchoice!"=="4" (
     goto :toggles_menu_WIN10
 )
 if /i "!tchoice!"=="5" (
+    if "!TOGGLE_EDGEUPDATES!"=="1" ( set "TOGGLE_EDGEUPDATES=0" ) else ( set "TOGGLE_EDGEUPDATES=1" )
+    goto :toggles_menu_WIN10
+)
+if /i "!tchoice!"=="6" (
     if "!TOGGLE_DRYRUN!"=="1" ( set "TOGGLE_DRYRUN=0" ) else ( set "TOGGLE_DRYRUN=1" )
     goto :toggles_menu_WIN10
 )
@@ -535,7 +552,7 @@ echo           -KeepPhoneLink -KeepMail
 echo           -LeftTaskbar -ExcludeWUDrivers
 echo           -KeepSpotify -KeepTeams
 echo           -KeepPCManager -KeepStoreAutoUpdate
-echo           -KeepTodos
+echo           -KeepEdgeUpdates -KeepTodos
 echo.
 set "ARGS="
 set /p "ARGS=Enter parameter flags: "
@@ -545,7 +562,7 @@ if "!ARGS!"=="" goto :menu_WIN11
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -KeepEdgeUpdates -ClassicContextMenu -LeftTaskbar -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -554,7 +571,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -KeepEdgeUpdates, -ClassicContextMenu, -LeftTaskbar, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN11
@@ -572,7 +589,7 @@ echo           -KeepPhoneLink -KeepMail
 echo           -KeepClock -ExcludeWUDrivers
 echo           -KeepSpotify -KeepTeams
 echo           -KeepPCManager -KeepStoreAutoUpdate
-echo           -KeepTodos
+echo           -KeepEdgeUpdates -KeepTodos
 echo.
 set "ARGS="
 set /p "ARGS=Enter parameter flags: "
@@ -582,7 +599,7 @@ if "!ARGS!"=="" goto :menu_WIN10
 set "ARGS_OK=1"
 for %%A in (!ARGS!) do (
     set "ARG_VALID=0"
-    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
+    for %%V in (-Undo -Restore -DryRun -WhatIf -KeepXbox -KeepOneDrive -KeepTodos -KeepSysMain -KeepSearch -KeepPhoneLink -KeepMail -KeepClock -KeepSpotify -KeepTeams -KeepPCManager -KeepStoreAutoUpdate -KeepEdgeUpdates -ExcludeWUDrivers -KeepDefenderDefaults -NoRestart -ForceRestart -SkipBuildCheck) do (
         if /i "%%~A"=="%%V" set "ARG_VALID=1"
     )
     if "!ARG_VALID!"=="0" (
@@ -591,7 +608,7 @@ for %%A in (!ARGS!) do (
     )
 )
 if "!ARGS_OK!"=="0" (
-    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
+    echo Allowed flags: -Undo, -DryRun, -WhatIf, -KeepXbox, -KeepOneDrive, -KeepTodos, -KeepSysMain, -KeepSearch, -KeepPhoneLink, -KeepMail, -KeepClock, -KeepSpotify, -KeepTeams, -KeepPCManager, -KeepStoreAutoUpdate, -KeepEdgeUpdates, -ExcludeWUDrivers, -KeepDefenderDefaults, -NoRestart, -ForceRestart, -SkipBuildCheck
     echo.
     pause
     goto :custom_WIN10

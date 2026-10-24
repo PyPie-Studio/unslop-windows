@@ -11,7 +11,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 [![Windows 10](https://img.shields.io/badge/Windows%2010-22H2%20%7C%2021H2%20%7C%20LTSC%20%7C%2010240--19045-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/PyPie-Studio/unslop-windows)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.5.0.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
+[Download](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.5.1.zip) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -19,7 +19,7 @@ Disables telemetry, removes junk apps, blocks Recall/Copilot and cleans up backg
 
 ```text
 ============================================================
-  unslop-windows (v1.5.0) - PyPie Studio
+  unslop-windows (v1.5.1) - PyPie Studio
   Windows 10 & 11 Debloater and Privacy Tool
 ============================================================
 
@@ -46,7 +46,7 @@ Select an option [0-2]:
 
 ### Direct Download (No Git Required)
 
-1. Download **[`unslop-windows-v1.5.0.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.5.0.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
+1. Download **[`unslop-windows-v1.5.1.zip`](https://github.com/PyPie-Studio/unslop-windows/releases/latest/download/unslop-windows-v1.5.1.zip)** from the [Latest Release](https://github.com/PyPie-Studio/unslop-windows/releases/latest).
 2. Extract the `.zip` to any folder.
 3. Right-click **`unslop.bat`** → **Run as administrator**.
 4. Pick your OS version, then pick a preset:
@@ -193,6 +193,7 @@ Pass these flags via CLI or enter them under Option `[7]` (Custom CLI Flags) in 
 | `-KeepTeams` | Both | Keep Microsoft Teams (Personal and Work/School) apps (`MicrosoftTeams`, `Microsoft.MSTeams`, `Microsoft.Teams`). |
 | `-KeepPCManager` | Both | Keep Microsoft PC Manager app (`Microsoft.MicrosoftPCManager`) and its background service (`PCManager Service Store`). |
 | `-KeepStoreAutoUpdate` | Both | Keep Microsoft Store automatic background app updates enabled. |
+| `-KeepEdgeUpdates` | Both | Keep Microsoft Edge automatic background update tasks (`EdgeUpdateTaskMachineCore`) enabled. |
 | `-LeftTaskbar` | Win11 | Align taskbar icons to the left instead of center. |
 | `-ExcludeWUDrivers` | Both | Prevent Windows Update from delivering hardware driver updates. |
 | `-KeepDefenderDefaults` | Both | Preserve default Microsoft Defender sample submission settings. |
@@ -213,7 +214,7 @@ This script takes a different approach:
 - **Pure PowerShell and Batch.** No compiled binaries, no GUI, no third-party dependencies. You can read every line.
 - **Never touches WinSxS or DISM manifests.** Monthly Cumulative Updates install cleanly without `0x800f0922` errors.
 - **De-provisions from the system image.** Bloatware doesn't come back for new user accounts or after feature updates.
-- **`-Undo` reverts everything.** Every registry key, service state, scheduled task and firewall rule has a matching reverse operation.
+- **`-Undo` reverts everything.** Every registry key, service state, scheduled task and firewall rule has a matching reverse operation. Staged packages are re-registered symmetrically (de-provisioned packages can be reinstalled via Microsoft Store or winget).
 - **`-DryRun` for inspection.** Run without admin rights to see every proposed change before committing.
 - **Delivery Optimization done right.** Disables P2P sharing via GPO (`DODownloadMode=0`) without killing `DoSvc`, so the Microsoft Store doesn't throw error `0x80d03805`.
 

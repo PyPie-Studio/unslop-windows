@@ -687,3 +687,26 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   4. *Dynamic File Attribution in Failure Annotations:* Updated the NUnit XML failure parser to inspect `$tc.file` and parent node names dynamically, eliminating file misattribution for Windows 10 tests.
   5. *Decoupled Lightweight Checks:* Moved `doc-lint` (markdownlint) and `PSScriptAnalyzer` branch protection status confirmation to lightweight jobs, while preserving `windows-latest` for all engine execution, test gates, and `publish-release` asset packaging to maintain 100% native Windows environment integrity.
 - **Consequences:** Completely closes the Windows 10 pre-push blindspot, eliminates test failure misattribution in GitHub Actions, cuts remote CI runner wall-clock duration by ~40%, and preserves 100% adherence to all Safe-Tier quality standards.
+
+---
+
+## ADR-041: Comprehensive Safe-Tier Hardening, Localization Resilience, Zero-Disk Audit Invariants, and Third-Party Scope Boundary Realignment (2026-10-24)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Live File Deletion under `-WhatIf` (Module 4):* Programmable Tiles cleanup inspected `if (-not $DryRun -and -not $Undo)`. Passing PowerShell's native `-WhatIf` left `$DryRun` false, executing file and manifest deletions live on disk.
+  2. *Auditing Disk Mutation & Reparse Point Redirection in OneDrive Module 13:* In non-elevated `-DryRun` mode, OneDrive uninstaller discovery staged files to `$env:ProgramData\unslop-windows\staging_*`, mutating filesystem state and failing unprivileged dry-runs. Furthermore, neither staging nor fallback log directory creation inspected whether `$env:ProgramData\unslop-windows` was a directory junction / reparse point.
+  3. *Third-Party Scope Drift & Edge Automatic Security Updates:* Hardcoded management of `NVIDIA*SelfUpdate` tasks in Module 8 and completion banners violated ADR-026 third-party boundaries. Additionally, unconditionally disabling `EdgeUpdateTaskMachineCore` in Module 14 suppressed automated Chromium and WebView2 security updates without user opt-in.
+  4. *Firewall Rule Localization Failure:* Module 18 queried firewall rules solely by localized `-DisplayName` strings (`@FirewallAPI.dll,-...`), failing to resolve and toggle rules on all non-English Windows installations.
+  5. *MDM PolicyManager Schema Dictionary Corruption:* Setting policies under `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\...` modified OS CSP schema templates rather than active policy state, triggering Intune event ID 809 and false compliance alerts.
+  6. *Taskbar Alignment Undo Asymmetry:* In `unslop-win11.ps1`, `TaskbarAl = 0` was configured under `if ($LeftTaskbar)` without an `-Undo` counterpart, leaving taskbars aligned to the left after restoration.
+  7. *Dry-Run Failure Masking in Quality Gates:* Steps 5 and 6 of `Test-MasterGate.ps1` evaluated exit codes and completion banners but ignored unexpected `FAIL:`, `FAILED:`, or `ERROR:` log lines during dry runs.
+- **Decision:**
+  1. *Native `-WhatIf` Alignment:* Replaced all occurrences of `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Module 4 and guarded all mutating commands.
+  2. *Zero-Disk Dry-Run & Reparse Point Guards:* Gated staging directory creation and binary copying strictly behind `if (-not $IsDryRun)`. In DryRun mode, verify Authenticode signatures directly in-place on user binaries without disk modifications. Verified `[System.IO.FileAttributes]::ReparsePoint` on `$env:ProgramData\unslop-windows` before staging or logging.
+  3. *Third-Party Scope Purge & `-KeepEdgeUpdates`:* Completely purged NVIDIA auto-update tasks from engine scripts, summary banners, and tests. Introduced `[switch]$KeepEdgeUpdates` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` (whitelists and interactive menus).
+  4. *Language-Invariant Dual-Key Firewall Resolution:* Mapped firewall rules to immutable internal `-Name` IDs (`RemoteAssistance-SSDPSrv-Out-TCP-Active`, `CDPSvc-Out-UDP`, etc.) with `-DisplayName` fallback, applying transitions via `-Name`.
+  5. *PolicyManager Hygiene:* Purged writes to `PolicyManager\default`, routing active MDM policies strictly to `PolicyManager\current\device\...` with `-removeOnUndo $true`.
+  6. *Symmetrical Taskbar Alignment:* Added `if ($LeftTaskbar -or $IsUndo)` restoring `TaskbarAl = 1` (centered default) on `-Undo`.
+  7. *Master Gate Error Log Scanning:* Step 5 and 6 scan engine output for `\b(FAIL:|FAILED:|ERROR:)\b`, failing closed if errors occur during dry-run audits.
+- **Consequences:** Eliminates live file mutation under `-WhatIf`, enforces true zero-disk dry-run auditing, ensures international firewall rule compatibility across all Windows display languages, eliminates Intune CSP template corruption, enforces 100% `-Undo` symmetry on taskbar alignment, realigns engine scope strictly to first-party Windows components, and hardens the Master Quality Gate.

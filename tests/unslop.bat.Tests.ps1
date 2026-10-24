@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Pester Unit & Integration Test Suite for unslop.bat.
@@ -47,7 +47,7 @@ Describe 'unslop.bat: Static Integrity & Syntax Invariants' -Tag 'Unit', 'Batch'
             '-Undo', '-Restore', '-DryRun', '-WhatIf', '-KeepXbox', '-KeepOneDrive',
             '-KeepTodos', '-KeepSysMain', '-KeepSearch', '-KeepPhoneLink', '-KeepMail',
             '-KeepClock', '-KeepSpotify', '-KeepTeams', '-KeepPCManager', '-KeepStoreAutoUpdate',
-            '-ClassicContextMenu', '-LeftTaskbar', '-ExcludeWUDrivers',
+            '-ClassicContextMenu', '-LeftTaskbar', '-ExcludeWUDrivers', '-KeepEdgeUpdates',
             '-KeepDefenderDefaults', '-NoRestart', '-ForceRestart', '-RunDirect',
             '-FromMenu', '-Win11', '-Win10', '-SkipBuildCheck'
         )

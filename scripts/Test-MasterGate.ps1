@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Local quality gate for unslop-windows developers.
@@ -419,8 +419,13 @@ if (-not $Fast) {
                 Write-Host "  FAILED: $curEngine -DryRun exited with code $dryExit" -ForegroundColor Red
                 Write-Host ($dryRunOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
             } else {
+                $failures = @($dryRunOut -match '\b(FAIL|FAILED|ERROR):')
                 $summaryFound = ($dryRunOut -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE").Length -gt 0
-                if ($summaryFound) {
+                if ($failures.Count -gt 0) {
+                    $fail = $true
+                    Write-Host "  FAILED: $curEngine -DryRun emitted $($failures.Count) error(s):" -ForegroundColor Red
+                    Write-Host ($failures | Select-Object -First 5 | Out-String) -ForegroundColor Red
+                } elseif ($summaryFound) {
                     Write-Host "  PASSED: $curEngine -DryRun completed successfully (code 0, all modules verified)." -ForegroundColor Green
                 } else {
                     $fail = $true
@@ -446,8 +451,13 @@ if (-not $Fast) {
                 Write-Host "  FAILED: $curEngine -Undo -DryRun exited with code $undoExit" -ForegroundColor Red
                 Write-Host ($undoOut | Select-Object -Last 15 | Out-String) -ForegroundColor Red
             } else {
+                $undoFailures = @($undoOut -match '\b(FAIL|FAILED|ERROR):')
                 $undoSummaryFound = ($undoOut -match "RESTORE / UNDO COMPLETE").Length -gt 0
-                if ($undoSummaryFound) {
+                if ($undoFailures.Count -gt 0) {
+                    $fail = $true
+                    Write-Host "  FAILED: $curEngine -Undo -DryRun emitted $($undoFailures.Count) error(s):" -ForegroundColor Red
+                    Write-Host ($undoFailures | Select-Object -First 5 | Out-String) -ForegroundColor Red
+                } elseif ($undoSummaryFound) {
                     Write-Host "  PASSED: $curEngine -Undo -DryRun completed successfully (code 0, symmetrical restore verified)." -ForegroundColor Green
                 } else {
                     $fail = $true

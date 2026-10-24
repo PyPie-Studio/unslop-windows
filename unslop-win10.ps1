@@ -1,4 +1,4 @@
-# unslop-windows: Windows 10 Debloater (v1.5.0)
+﻿# unslop-windows: Windows 10 Debloater (v1.5.1)
 # Targets Windows 10 22H2 (Build 19045), 21H2 (Build 19044), 21H1 (Build 19043), 20H2 (Build 19042),
 # 2004 (Build 19041), 1909 (Build 18363), 1903 (Build 18362), 1809 / LTSC 2019 (Build 17763),
 # 1607 / LTSB 2016 (Build 14393), 1507 / LTSB 2015 (Build 10240), Enterprise LTSC 2021 and IoT Enterprise LTSC
@@ -58,6 +58,9 @@
 .PARAMETER KeepStoreAutoUpdate
     Preserves automatic Microsoft Store background updates.
 
+.PARAMETER KeepEdgeUpdates
+    Preserves Microsoft Edge automatic background update tasks.
+
 .PARAMETER ExcludeWUDrivers
     Blocks Windows Update from installing third-party hardware drivers.
 
@@ -111,6 +114,7 @@ param(
     [switch]$KeepTeams,
     [switch]$KeepPCManager,
     [switch]$KeepStoreAutoUpdate,
+    [switch]$KeepEdgeUpdates,
     [switch]$ExcludeWUDrivers,
     [switch]$KeepDefenderDefaults,
     [switch]$SkipBuildCheck,
@@ -120,7 +124,7 @@ param(
 
 $ErrorActionPreference = "SilentlyContinue"
 $IsUndo = $Undo.IsPresent
-$IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf'))
+$IsDryRun = $DryRun.IsPresent -or ($PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf') -and [bool]$PSCmdlet.MyInvocation.BoundParameters['WhatIf']) -or [bool]$WhatIfPreference
 
 $global:FailCount = 0
 # List avoids += array copy overhead
@@ -479,7 +483,7 @@ $osTag = if ($build -ge 19045) { "22H2" } elseif ($build -ge 19044) { "21H2" } e
 $modeStr = if ($IsUndo) { "RESTORE / UNDO" } else { "DEBLOAT & PRIVACY HARDEN ($osTag)" }
 if ($IsDryRun) { $modeStr += " (DRY-RUN / AUDIT ONLY)" }
 
-Log "=== unslop-windows v1.5.0: Windows 10 $modeStr ==="
+Log "=== unslop-windows v1.5.1: Windows 10 $modeStr ==="
 Log ""
 
 # ============================================================
@@ -797,9 +801,10 @@ Log "--- 7. Network Security, LLMNR & Wi-Fi Sense ---"
 $dnsPolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient"
 Set-RegDwordSafe -path $dnsPolicy -name "EnableMulticast" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
-$wifiPolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\WiFi"
-Set-RegDwordSafe -path "$wifiPolicy\AllowWiFiHotSpotReporting" -name "value" -debloatValue 0 -undoValue 1
-Set-RegDwordSafe -path "$wifiPolicy\AllowAutoConnectToWiFiSenseHotspots" -name "value" -debloatValue 0 -undoValue 1
+# Wi-Fi Sense & Hotspot Reporting Telemetry (Current Device Policy)
+$wifiDevicePolicy = "HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\WiFi"
+Set-RegDwordSafe -path "$wifiDevicePolicy\AllowWiFiHotSpotReporting" -name "value" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+Set-RegDwordSafe -path "$wifiDevicePolicy\AllowAutoConnectToWiFiSenseHotspots" -name "value" -debloatValue 0 -undoValue 1 -removeOnUndo $true
 
 $wcmConfig = "HKLM:\SOFTWARE\Microsoft\WcmSvc\wifinetworkmanager\config"
 Set-RegDwordSafe -path $wcmConfig -name "AutoConnectAllowedOEM" -debloatValue 0 -undoValue 1
@@ -925,13 +930,6 @@ foreach ($t in $officeTasks) {
         Log "  SKIP: $t not found"
     } else {
         Set-TaskState -path "\Microsoft\Office\" -name $t
-    }
-}
-
-$nvTasks = Get-ScheduledTask -TaskName "NVIDIA*SelfUpdate" -ErrorAction SilentlyContinue
-if ($nvTasks) {
-    foreach ($task in $nvTasks) {
-        Set-TaskState -path $task.TaskPath -name $task.TaskName -TaskObject $task
     }
 }
 Log ""
@@ -1247,24 +1245,50 @@ if ($KeepOneDrive) {
         ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
         $stagingDir = $null
+        $userSetupUntrusted = $false
         if (-not $oneDriveUninstaller) {
             $userSetup = "$env:LOCALAPPDATA\Microsoft\OneDrive\OneDriveSetup.exe"
             if (Test-Path $userSetup) {
-                # Staged execution guard: isolate user binary to admin-only directory to eliminate TOCTOU and DLL hijacking
-                $stagingDir = Join-Path $env:ProgramData "unslop-windows\staging_$([System.IO.Path]::GetRandomFileName())"
-                try {
-                    New-Item -Path $stagingDir -ItemType Directory -Force | Out-Null
-                    $stagedBinary = Join-Path $stagingDir "OneDriveSetup.exe"
-                    Copy-Item -Path $userSetup -Destination $stagedBinary -Force
-
-                    $sig = Get-AuthenticodeSignature -FilePath $stagedBinary -ErrorAction SilentlyContinue
+                if ($IsDryRun) {
+                    $sig = Get-AuthenticodeSignature -FilePath $userSetup -ErrorAction SilentlyContinue
                     if ($sig -and $sig.Status -eq "Valid" -and $sig.SignerCertificate.Subject -match '^CN=Microsoft Corporation,') {
-                        $oneDriveUninstaller = $stagedBinary
+                        $oneDriveUninstaller = $userSetup
                     } else {
+                        $userSetupUntrusted = $true
                         Log "  [SECURITY WARNING]: Skipping unverified OneDriveSetup.exe in AppData (signature invalid or untrusted)"
                     }
-                } catch {
-                    Log "  [SECURITY WARNING]: Could not stage OneDriveSetup.exe for secure verification - $($_.Exception.Message)"
+                } else {
+                    # Staged execution guard: isolate user binary to admin-only directory to eliminate TOCTOU and DLL hijacking
+                    $baseProgramData = Join-Path $env:ProgramData "unslop-windows"
+                    $isJunction = $false
+                    if (Test-Path $baseProgramData) {
+                        $bpItem = Get-Item -Path $baseProgramData -ErrorAction SilentlyContinue
+                        if ($bpItem -and ($bpItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                            $isJunction = $true
+                        }
+                    }
+                    if ($isJunction) {
+                        $global:FailCount++
+                        Log "  [SECURITY WARNING]: $baseProgramData is a reparse point/junction. Aborting staged OneDrive execution." -Color "Red"
+                    } else {
+                        $stagingDir = Join-Path $baseProgramData "staging_$([System.IO.Path]::GetRandomFileName())"
+                        try {
+                            New-Item -Path $stagingDir -ItemType Directory -Force | Out-Null
+                            $stagedBinary = Join-Path $stagingDir "OneDriveSetup.exe"
+                            Copy-Item -Path $userSetup -Destination $stagedBinary -Force
+
+                            $sig = Get-AuthenticodeSignature -FilePath $stagedBinary -ErrorAction SilentlyContinue
+                            if ($sig -and $sig.Status -eq "Valid" -and $sig.SignerCertificate.Subject -match '^CN=Microsoft Corporation,') {
+                                $oneDriveUninstaller = $stagedBinary
+                            } else {
+                                $userSetupUntrusted = $true
+                                Log "  [SECURITY WARNING]: Skipping unverified OneDriveSetup.exe in AppData (signature invalid or untrusted)"
+                            }
+                        } catch {
+                            $global:FailCount++
+                            Log "  [SECURITY WARNING]: Could not stage OneDriveSetup.exe for secure verification - $($_.Exception.Message)"
+                        }
+                    }
                 }
             }
         }
@@ -1286,12 +1310,12 @@ if ($KeepOneDrive) {
                     Log "  FAILED: Could not execute OneDrive uninstaller - $($_.Exception.Message)"
                 }
             }
-        } else {
+        } elseif (-not $userSetupUntrusted) {
             Log "  SKIP: OneDriveSetup.exe not found (already uninstalled)"
         }
 
         # Clean up staging directory if used
-        if ($stagingDir -and (Test-Path $stagingDir)) {
+        if (-not $IsDryRun -and $stagingDir -and (Test-Path $stagingDir)) {
             Remove-Item -Path $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
         }
 
@@ -1324,13 +1348,17 @@ Remove-StartupEntry -pattern "MicrosoftEdge" -runKeys @("HKCU:\Software\Microsof
 $edgeBgPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
 Set-RegDwordSafe -path $edgeBgPath -name "Disabled" -debloatValue 1 -undoValue 0
 
-$edgeKey = "\Microsoft\Windows\EdgeUpdate\EdgeUpdateTaskMachineCore"
-if ($taskLookup -and $taskLookup.ContainsKey($edgeKey)) {
-    Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore" -TaskObject $taskLookup[$edgeKey]
-} elseif ($taskLookup) {
-    Log "  SKIP: EdgeUpdateTaskMachineCore not found"
+if (-not $KeepEdgeUpdates) {
+    $edgeKey = "\Microsoft\Windows\EdgeUpdate\EdgeUpdateTaskMachineCore"
+    if ($taskLookup -and $taskLookup.ContainsKey($edgeKey)) {
+        Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore" -TaskObject $taskLookup[$edgeKey]
+    } elseif ($taskLookup) {
+        Log "  SKIP: EdgeUpdateTaskMachineCore not found"
+    } else {
+        Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+    }
 } else {
-    Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+    Log "  KEEP: Edge automatic update tasks retained (-KeepEdgeUpdates enabled)"
 }
 
 # Edge Copilot & Sidebar Policy
@@ -1417,54 +1445,71 @@ Log ""
 # 18. FIREWALL RULES
 # ============================================================
 Log "--- 18. Firewall Rules ---"
-$fwRules = @(
-    "Remote Assistance (SSDP TCP-Out)"
-    "Remote Assistance (SSDP UDP-Out)"
-    "Remote Assistance (TCP-Out)"
-    "Windows Device Management Certificate Installer (TCP out)"
-    "Windows Device Management Enrollment Service (TCP out)"
-    "Connected Devices Platform - Wi-Fi Direct Transport (TCP-Out)"
-    "Connected Devices Platform (TCP-Out)"
-    "Connected Devices Platform (UDP-Out)"
+$targetFwRules = @(
+    @{ Name = "RemoteAssistance-SSDPSrv-Out-TCP-Active";                   DisplayName = "Remote Assistance (SSDP TCP-Out)";                     Group = "RemoteAssistance" }
+    @{ Name = "RemoteAssistance-SSDPSrv-Out-UDP-Active";                   DisplayName = "Remote Assistance (SSDP UDP-Out)";                     Group = "RemoteAssistance" }
+    @{ Name = "RemoteAssistance-Out-TCP";                                  DisplayName = "Remote Assistance (TCP-Out)";                          Group = "RemoteAssistance" }
+    @{ Name = "Microsoft-Windows-DeviceManagement-CertificateInstall-TCP-Out"; DisplayName = "Windows Device Management Certificate Installer (TCP out)"; Group = "MDM" }
+    @{ Name = "Microsoft-Windows-Enrollment-WinRT-TCP-Out";                    DisplayName = "Windows Device Management Enrollment Service (TCP out)";   Group = "MDM" }
+    @{ Name = "CDPSvc-WFD-Out-TCP";                                        DisplayName = "Connected Devices Platform - Wi-Fi Direct Transport (TCP-Out)"; Group = "CDP" }
+    @{ Name = "CDPSvc-Out-TCP";                                            DisplayName = "Connected Devices Platform (TCP-Out)";                 Group = "CDP" }
+    @{ Name = "CDPSvc-Out-UDP";                                            DisplayName = "Connected Devices Platform (UDP-Out)";                 Group = "CDP" }
 )
 if ($KeepPhoneLink) {
-    $fwRules = $fwRules | Where-Object { $_ -notmatch 'Connected Devices Platform' }
+    $targetFwRules = @($targetFwRules | Where-Object { $_.Group -ne 'CDP' })
     Log "  KEEP: Connected Devices Platform firewall rules retained (-KeepPhoneLink enabled)"
 }
-$existingRules = @(Get-NetFirewallRule -DisplayName $fwRules -ErrorAction SilentlyContinue)
+$ruleNames = @($targetFwRules | ForEach-Object { $_.Name })
+$ruleDisplays = @($targetFwRules | ForEach-Object { $_.DisplayName })
+$existingRulesByName = @(Get-NetFirewallRule -Name $ruleNames -ErrorAction SilentlyContinue)
+$existingRulesByDisplay = @(Get-NetFirewallRule -DisplayName $ruleDisplays -ErrorAction SilentlyContinue)
 $existingLookup = @{}
-foreach ($r in $existingRules) {
-    $existingLookup[$r.DisplayName] = $r
+foreach ($r in $existingRulesByName) {
+    if ($r.Name) { $existingLookup[$r.Name] = $r }
 }
-foreach ($rule in $fwRules) {
-    if ($existingLookup.ContainsKey($rule)) {
+foreach ($r in $existingRulesByDisplay) {
+    if ($r.DisplayName -and -not $existingLookup.ContainsKey($r.DisplayName)) {
+        $existingLookup[$r.DisplayName] = $r
+    }
+}
+foreach ($def in $targetFwRules) {
+    $rName = $def.Name
+    $rDisplay = $def.DisplayName
+    $matched = if ($existingLookup.ContainsKey($rName)) {
+        $existingLookup[$rName]
+    } elseif ($existingLookup.ContainsKey($rDisplay)) {
+        $existingLookup[$rDisplay]
+    } else { $null }
+
+    if ($matched) {
+        $targetId = if ($matched.Name) { $matched.Name } else { $rName }
         if ($IsUndo) {
             if ($IsDryRun) {
-                Log "  [WOULD ENABLE FIREWALL]: $rule"
+                Log "  [WOULD ENABLE FIREWALL]: $rDisplay"
             } else {
                 try {
-                    Enable-NetFirewallRule -DisplayName $rule -ErrorAction Stop
-                    Log "  ENABLED: $rule"
+                    Enable-NetFirewallRule -Name $targetId -ErrorAction Stop
+                    Log "  ENABLED: $rDisplay"
                 } catch {
                     $global:FailCount++
-                    Log "  FAILED: Could not enable firewall rule $rule - $($_.Exception.Message)"
+                    Log "  FAILED: Could not enable firewall rule $rDisplay - $($_.Exception.Message)"
                 }
             }
         } else {
             if ($IsDryRun) {
-                Log "  [WOULD BLOCK FIREWALL]: $rule"
+                Log "  [WOULD BLOCK FIREWALL]: $rDisplay"
             } else {
                 try {
-                    Disable-NetFirewallRule -DisplayName $rule -ErrorAction Stop
-                    Log "  BLOCKED: $rule"
+                    Disable-NetFirewallRule -Name $targetId -ErrorAction Stop
+                    Log "  BLOCKED: $rDisplay"
                 } catch {
                     $global:FailCount++
-                    Log "  FAILED: Could not block firewall rule $rule - $($_.Exception.Message)"
+                    Log "  FAILED: Could not block firewall rule $rDisplay - $($_.Exception.Message)"
                 }
             }
         }
     } else {
-        Log "  SKIP: Firewall rule '$rule' not found"
+        Log "  SKIP: Firewall rule '$rDisplay' not found"
     }
 }
 Log ""
@@ -1507,11 +1552,11 @@ if ($IsUndo) {
     Log "OneDrive:              Sync policy cleared, Explorer sidebar re-pinned"
     Log "Privacy settings:      Recommendations, Online Speech, Inking, Search History, Find My Device restored"
     Log "Activity & CDP:        Activity feed, Cross-Device experiences and CDP policies restored"
-    Log "Store & Delivery:       Store update and Delivery Optimization policies reverted"
+    Log "Store & Delivery:      Store update and Delivery Optimization policies reverted"
     Log "ConsentStore:          Targeted UWP capabilities set back to Allow"
     Log "Security & Network:    LLMNR and Wi-Fi Sense policies reverted"
     Log "Explorer & Taskbar:    News & Interests, People bar, Meet Now, File Extensions restored"
-    Log "Telemetry tasks:       CEIP, Office, NVIDIA, Diag, CloudExperienceHost enabled"
+    Log "Telemetry tasks:       CEIP, Office, Diag, CloudExperienceHost enabled"
     Log "Firewall rules:        8 rules re-enabled"
 } else {
     $act = if ($IsDryRun) { "Would disable" } else { "Disabled" }
@@ -1559,6 +1604,9 @@ if ($IsUndo) {
     if ($KeepStoreAutoUpdate) {
         Log "Store Updates:         Preserved (-KeepStoreAutoUpdate enabled)"
     }
+    if ($KeepEdgeUpdates) {
+        Log "Edge Updates:          Preserved (-KeepEdgeUpdates enabled)"
+    }
     if ($ExcludeWUDrivers) {
         Log "Driver Updates:        Blocked from Windows Update (-ExcludeWUDrivers enabled)"
     }
@@ -1567,7 +1615,7 @@ if ($IsUndo) {
     }
     Log "Privacy hardened:      Recommendations & Offers, Online Speech, Inking dictionary, Search History, Find My Device"
     Log "Activity & CDP:        Activity feed, Cross-Device (CDP) and Cloud Clipboard disabled"
-    Log "Store & Delivery:       Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
+    Log "Store & Delivery:      Store auto-updates throttled (AutoDownload=2), Delivery Optimization in CdnOnly mode"
     Log "ConsentStore:          9 capabilities blocked (Location, Diagnostics, Contacts, Tasks, etc.)"
     Log "Security & Network:    LLMNR disabled, Wi-Fi Sense blocked, driver updates preserved"
     Log "Explorer & Taskbar:    File extensions visible, News & Interests removed, People/Meet Now hidden"
@@ -1617,7 +1665,19 @@ if (Test-Path $parentDir) {
 }
 if ($isReparse) {
     # Reparse point detected: divert to an isolated directory under machine-wide ProgramData
-    $logDir = Join-Path $env:ProgramData "unslop-windows\logs"
+    $baseProgramData = Join-Path $env:ProgramData "unslop-windows"
+    $isPdReparse = $false
+    if (Test-Path $baseProgramData) {
+        $pdItem = Get-Item -Path $baseProgramData -ErrorAction SilentlyContinue
+        if ($pdItem -and ($pdItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+            $isPdReparse = $true
+        }
+    }
+    if ($isPdReparse) {
+        $logDir = Join-Path $env:TEMP "unslop-windows\logs"
+    } else {
+        $logDir = Join-Path $env:ProgramData "unslop-windows\logs"
+    }
     if (-not (Test-Path $logDir)) {
         New-Item -Path $logDir -ItemType Directory -Force | Out-Null
     }

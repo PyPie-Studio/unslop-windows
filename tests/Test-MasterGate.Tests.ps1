@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Pester Unit Test Suite for scripts/Test-MasterGate.ps1.
@@ -174,6 +174,19 @@ Describe 'Test-MasterGate: Scanner Logic Algorithms' -Tag 'Unit', 'MasterGate' {
         $goodShaMatch = [regex]::Match($goodWf, 'uses:\s*[\w\.\-]+/[\w\.\-]+@([a-fA-F0-9]+)')
         $goodShaMatch.Success | Should -Be $true
         ($goodShaMatch.Groups[1].Value.Length -eq 40) | Should -Be $true
+    }
+
+    It 'DryRun failure scanner detects FAILED, FAIL, and ERROR tokens correctly' {
+        $pattern = '\b(FAIL|FAILED|ERROR):'
+        "  FAILED: Could not remove file" | Should -Match $pattern
+        "  FAIL: Access denied" | Should -Match $pattern
+        "  ERROR: Service failed to start" | Should -Match $pattern
+
+        # Must NOT match clean operation lines
+        "  REMOVED: Sponsored shortcut" | Should -Not -Match $pattern
+        "  RESTORED: SysMain = Automatic" | Should -Not -Match $pattern
+        "  SKIP: Firewall rule not found" | Should -Not -Match $pattern
+        "  KEEP: Microsoft Store automatic updates retained" | Should -Not -Match $pattern
     }
 }
 
