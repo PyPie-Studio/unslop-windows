@@ -7,45 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.5.1] - 2026-10-24
+## [1.5.0] - 2026-10-24
 
 ### Security
 
 - **Enforced Zero-Disk Dry-Run & Reparse Point Defense in OneDrive Staging (ADR-041)**: Gated staging folder creation and binary copying strictly behind `if (-not $IsDryRun)` in Module 13 across `unslop-win11.ps1` and `unslop-win10.ps1`. In DryRun mode, Authenticode signatures are verified directly in-place on user binaries without disk modifications. Real execution inspects `[System.IO.FileAttributes]::ReparsePoint` on `C:\ProgramData\unslop-windows` to prevent junction redirection.
 - **Sanitized MDM CSP PolicyManager Paths (ADR-041)**: Purged all modifications to `HKLM:\SOFTWARE\Microsoft\PolicyManager\default\...` (which corrupts OS CSP schema templates and triggers Intune event 809). Re-routed active device policies strictly to `PolicyManager\current\device\...` with clean `-removeOnUndo $true`.
 - **Enforced Third-Party Scheduled Task Scope Boundary (ADR-041 / ADR-026)**: Purged third-party `NVIDIA*SelfUpdate` auto-update tasks from engine scripts, completion banners, and tests.
-
-### Added
-
-- **Edge Updates Preservation Switch (`-KeepEdgeUpdates`) (ADR-041)**: Added `[switch]$KeepEdgeUpdates` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` (including argument whitelist, interactive toggles Option [6]/[5], and custom CLI flags). Preserves `EdgeUpdateTaskMachineCore` for continuous automated Chromium and WebView2 security patching.
-- **Language-Invariant Dual-Key Firewall Resolution (ADR-041)**: Mapped firewall rules to 8 immutable internal `-Name` IDs (`RemoteAssistance-SSDPSrv-Out-TCP-Active`, `CDPSvc-Out-UDP`, etc.) with `-DisplayName` fallback, enabling successful rule discovery and toggling across all non-English Windows display languages.
-- **Master Quality Gate Error Log Scanning (ADR-041)**: Hardened Steps 5 and 6 in `scripts/Test-MasterGate.ps1` to inspect engine output for `\b(FAIL|FAILED|ERROR):`, ensuring unexpected dry-run errors fail the quality gate even if the exit code is 0.
-
-### Fixed
-
-- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
-- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
-
----
-
-## [1.5.0] - 2026-10-23
-
-### Security
-
 - **Eliminated Startup Persistence Local Privilege Escalation (SEC-01 / ADR-037)**: Dynamic hive separation in `Remove-StartupEntry` ensures machine-wide startup keys (`HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`) are archived strictly into admin-only `HKLM:\SOFTWARE\unslop-windows\StartupBackup`. Prevents low-privilege users from writing persistence into user `HKCU` that would be restored into `HKLM` on administrative `-Undo`.
 - **Admin-Isolated Binary Staging & TOCTOU Defense (SEC-02 / ADR-037)**: Isolated user-space `OneDriveSetup.exe` into an admin-protected folder (`$env:ProgramData\unslop-windows\staging_*`) before executing Authenticode cryptographic verification (`Get-AuthenticodeSignature`, matching `^CN=Microsoft Corporation,`) and execution, neutralizing Time-of-Check to Time-of-Use file swapping and DLL search-order preloading.
 - **Start Menu Junction Traversal Defense (SEC-03 / ADR-037)**: Hardened IrisService Start Menu manifest and asset removal (`ProgrammableTilesAssets`, `88000963`) by inspecting `[System.IO.FileAttributes]::ReparsePoint`. Safely unbinds and deletes the junction link directly (`.Delete()`) without traversing children.
 - **Batch Elevation Quoting Command Breakout Hardening (SEC-04 / ADR-037)**: Elevated execution in `unslop.bat` now routes through environment variable `UNSLOP_SELF` (`powershell.exe ... Start-Process -FilePath $env:UNSLOP_SELF ...`), eliminating single-quote command breakout in paths containing apostrophes (e.g. `C:\Users\O'Connor`).
 - **Parent Directory Reparse Point Audit on Log Initialization (SEC-08 / ADR-037)**: Log saving routines in `unslop-win11.ps1` and `unslop-win10.ps1` inspect both the log folder and its parent directory for `ReparsePoint`. If either is a junction, logs are redirected to machine-wide `$env:ProgramData\unslop-windows\logs`.
 
+### Added
+
+- **Edge Updates Preservation Switch (`-KeepEdgeUpdates`) (ADR-041)**: Added `[switch]$KeepEdgeUpdates` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `unslop.bat` (including argument whitelist, interactive toggles Option [6]/[5], and custom CLI flags). Preserves `EdgeUpdateTaskMachineCore` for continuous automated Chromium and WebView2 security patching.
+- **Language-Invariant Dual-Key Firewall Resolution (ADR-041)**: Mapped firewall rules to 8 immutable internal `-Name` IDs (`RemoteAssistance-SSDPSrv-Out-TCP-Active`, `CDPSvc-Out-UDP`, etc.) with `-DisplayName` fallback, enabling successful rule discovery and toggling across all non-English Windows display languages.
+- **Master Quality Gate Error Log Scanning (ADR-041)**: Hardened Steps 5 and 6 in `scripts/Test-MasterGate.ps1` to inspect engine output for `\b(FAIL|FAILED|ERROR):`, ensuring unexpected dry-run errors fail the quality gate even if the exit code is 0.
+- **Smart Auto-Default OS Selection (ADR-038)**: Pressing Enter at `:os_select` in `unslop.bat` now automatically proceeds with the detected host OS (`1` for Windows 11, `2` for Windows 10) instead of throwing an invalid selection error.
+
 ### Performance
 
-- **Chromium Edge Startup Boost & Background Tasks Neutralization (ADR-038)**: Deployed official machine-wide Group Policies (`StartupBoostEnabled = 0`, `BackgroundModeEnabled = 0`, with symmetrical `-Undo` removal) under `HKLM:\SOFTWARE\Policies\Microsoft\Edge` in Section 14 across `unslop-win11.ps1` and `unslop-win10.ps1`. Prevents modern Chromium Edge (`msedge.exe`) pre-loaders at startup and eliminates persistent background worker processes upon browser exit, reclaiming 150–300 MB of idle RAM.
+- **Chromium Edge Startup Boost & Background Tasks Neutralization (ADR-038)**: Deployed official machine-wide Group Policies (`StartupBoostEnabled = 0`, `BackgroundModeEnabled = 0`, with symmetrical `-Undo` removal) under `HKLM:\SOFTWARE\Policies\Microsoft\Edge` in Section 14 across `unslop-win11.ps1` and `unslop-win10.ps1`. Prevents modern Chromium Edge (`msedge.exe`) pre-loaders at startup and eliminates persistent background worker processes upon browser exit, reclaiming 150-300 MB of idle RAM.
 - **Decoupled Pester Unit Testing & Accelerated Gate (ADR-036)**: Decoupled fast unit tests from slow CLI subprocess execution in `scripts/Test-MasterGate.ps1`, filtering `-Tag 'Unit'` by default during Step [4/7]. Slashes unit test phase runtime from ~225s down to **6.8s** (~33x speedup). Added `-IncludeIntegration` switch to run full CLI subprocess tests on demand or in nightly CI workflows.
 - **Real-Time Output Streaming (ADR-036)**: Removed synchronous stdout buffering in `scripts/Test-MasterGate.ps1`, enabling real-time terminal progress streaming and eliminating the silent 4-minute frozen terminal symptom during gate runs and Git pre-push hooks.
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Windows 11 Custom Whitelist Fatal Parameter Crash (ADR-038)**: Removed `-KeepClock` from `:custom_WIN11` parameter whitelist and allowed flags display in `unslop.bat`, eliminating fatal `NamedParameterNotFound` terminating crashes when custom CLI flags are entered on Windows 11.
 - **Cross-OS Parameter Routing Validation (ADR-038)**: Implemented strict OS-exclusive switch validation in the root CLI argument loop of `unslop.bat`, rejecting `-KeepClock` on Windows 11 targets and rejecting `-ClassicContextMenu` / `-LeftTaskbar` on Windows 10 targets with clear error output prior to PowerShell execution.
 - **Batch Block Parser Dangling Block Bug**: Replaced unescaped parentheses with brackets `[...]` inside parenthesized block echo statements in `unslop.bat`, preventing premature block termination and `. was unexpected at this time` parser aborts.
@@ -63,20 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dynamic Batch Launcher OS Routing (ADR-036)**: Hardened `unslop.bat` to dynamically assign `OS_MODE` and `TARGET_SCRIPT` based on detected host OS (`!HOST_OS!`), preventing blank `OS_MODE` and `goto :menu_` syntax errors in CLI execution mode.
 - **Purged `$isApprovedException` (ADR-036)**: Refactored raw mutating registry calls (`Remove-ItemProperty -ErrorAction SilentlyContinue` and `Set-ItemProperty`) in `unslop-win11.ps1` and `unslop-win10.ps1` into safe helper routines (`Remove-RegValueSafe`, `Set-RegStringSafe`). Permanently deleted `$isApprovedException` from `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1`.
 - **Measure-SystemState Test Isolation (ADR-036)**: Tagged live snapshot subprocess execution in `tests/Measure-SystemState.Tests.ps1` with `-Tag 'Integration', 'CLI'`, preventing live host CIM and AppX querying during in-process unit test runs.
-
-### Added
-
-- **Smart Auto-Default OS Selection (ADR-038)**: Pressing Enter at `:os_select` in `unslop.bat` now automatically proceeds with the detected host OS (`1` for Windows 11, `2` for Windows 10) instead of throwing an invalid selection error.
-- **Cross-OS Parameter & Whitelist Test Coverage (ADR-038)**: Added automated test cases in `tests/unslop.bat.Tests.ps1` verifying `-KeepClock` exclusion from `:custom_WIN11` and testing cross-OS CLI argument rejection.
-- **Chromium Edge Startup Boost & Background Policy Tests (ADR-038)**: Added automated AST parity and symmetry unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying management of `StartupBoostEnabled` and `BackgroundModeEnabled`.
-- **Diagnostic Benchmark 12-Hour AM/PM Time Format Standard (ADR-038)**: Standardized snapshot timestamps and markdown benchmark headers in `scripts/Measure-SystemState.ps1` to `yyyy-MM-dd hh:mm:ss tt` per User Directive 4.
-- **Automated Security Invariant Unit & AST Parity Tests (SEC-07 / ADR-037)**: Added automated test coverage across `tests/unslop-win11.Tests.ps1`, `tests/unslop-win10.Tests.ps1`, and `tests/unslop.bat.Tests.ps1` enforcing SEC-01 through SEC-06, SEC-08, and third-party scope boundaries (ADR-026).
-- **Master Quality Gate Unit Test Suite (`tests/Test-MasterGate.Tests.ps1`)**: Added a comprehensive Pester 6+ test suite validating `scripts/Test-MasterGate.ps1` AST structure, CmdletBinding parameters, mutual exclusivity contracts (`-Win10` and `-Win11`), exclusion regex rules, test registration parity, and CRLF / merge conflict scanner logic.
-- **Safe-Tier Invariant 1 (DISM & WinSxS Inviolability / ADR-036)**: Added automated AST parity unit tests across `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` verifying zero invocations of `dism.exe` or tampering with `C:\Windows\WinSxS` in both string constants and expandable string expressions.
-- **Safe-Tier Invariant 9 (Offline-First Architecture / VULN-03 / ADR-036)**: Added automated AST parity unit tests verifying zero occurrences of network download cmdlets (`Invoke-WebRequest`, `Invoke-RestMethod`, `curl`, `curl.exe`, `wget`, `wget.exe`, `bitsadmin`, `Start-BitsTransfer`).
-- **Safe-Tier Invariant 5 (Reboot Lifecycle & Abort Safety Contracts / ADR-036)**: Added automated AST parity unit tests verifying declaration of `-NoRestart` and `-ForceRestart` parameters and proper propagation of reboot exit code `100`.
-- **Core Engine Helper Functions (`Remove-RegValueSafe`, `Set-RegStringSafe` / ADR-036)**: Implemented approved helper functions in `unslop-win11.ps1` and `unslop-win10.ps1` with defensive `try/catch` error handling and truthful failure accounting (`$global:FailCount++`).
-- **Batch Launcher Whitelist Completeness**: Added `-KeepPCManager` to whitelist verification in `tests/unslop.bat.Tests.ps1`.
 
 ---
 
@@ -103,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **OneDrive Uninstaller Path Quoting (LPE Defense)**: Wrapped `-FilePath "$oneDriveUninstaller"` in explicit quotes in `Start-Process` invocations across `unslop-win11.ps1` and `unslop-win10.ps1`. Prevents argument parsing ambiguity and path resolution issues on user profile directories containing spaces.
 - **AST Security Verification**: Added automated AST parity unit tests in `tests/unslop-win11.Tests.ps1` and `tests/unslop-win10.Tests.ps1` enforcing double-quoted `FilePath` arguments across all `Start-Process` calls.
 
@@ -132,6 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **PowerShell Automatic Variable Shadowing (`$matches`)**: Renamed `$matches` to `$matchedEntries` in `Remove-StartupEntry` across both `unslop-win11.ps1` and `unslop-win10.ps1`, preventing accidental corruption of PowerShell's built-in regex automatic variable.
 - **Empty Catch Block Suppression**: Replaced bare empty catch blocks in `Set-SvcState` and `Set-RegDwordSafe` across `unslop-win11.ps1`, `unslop-win10.ps1`, and `scripts/Measure-SystemState.ps1` with clean `$null = $_` assignment, satisfying `PSAvoidUsingEmptyCatchBlock`.
 - **Unused Variable Declarations**: Removed unused variable assignments in `scripts/Install-GitHooks.ps1`, `scripts/Measure-SystemState.ps1`, and `tests/Measure-SystemState.Tests.ps1`.
@@ -157,6 +138,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **UCPD Kernel Driver Policy Interception (`AllowNewsAndInterests`)**: Neutralized the User Choice Protection Driver (`UCPD.sys`) in Stage 1 Services (`Set-SvcState "UCPD" ... "Manual"`) and disabled the companion `\Microsoft\Windows\AppxDeploymentClient\UCPD velocity` scheduled task in Stage 11. In `Set-RegDwordSafe`, if a registry write to `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests` or `TaskbarDa` is intercepted by the active in-memory UCPD kernel filter driver before reboot, the policy is staged seamlessly via `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\unslop_<name>` for automatic post-restart application, eliminating `UnauthorizedAccessException` and false failure alerts.
 - **WindowsAI SYSTEM-Only Scheduled Tasks Access Denied**: Filtered out internal Click to Do, Recall, and Settings Agent tasks (`ModelCachingLimit`, `ModelCachingUpdate`, `PolicyConfiguration`, `Settings\InitialConfiguration`) from `\Microsoft\Windows\WindowsAI\*` dynamic scans. These tasks have hardened Security Descriptors granting write access exclusively to `NT AUTHORITY\SYSTEM` (`(A;;FRFX;;;BA)(A;;GA;;;SY)`) and are already fully inert due to GPO policies and `WSAIFabricSvc` service neutralization.
 - **Defensive ACL & Driver Service Handling**: Hardened `Set-SvcState` to set service startup type to `Disabled` first and gracefully catch stop errors on non-unloadable kernel filter drivers. Hardened `Set-TaskState` to detect tasks with SYSTEM-only SDDLs and skip them with informative logging rather than raising unhandled exceptions. Symmetrically aligned `unslop-win10.ps1` helper functions.
@@ -190,6 +173,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Build 26300 Misidentification**: Fixed an issue where Windows 11 26H2 hosts were misidentified as "25H2" because `$build -ge 26200` was evaluated prior to checking for Build 26300.
 
 ---
@@ -206,6 +191,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **CrossDeviceResume.exe Re-spawning**: Symmetrically managed `CDPSvc` (Connected Devices Platform Service) in Stage 1 and enforced `DisableCrossDeviceResume = 1` in both `default` and active device node `HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Connectivity`, preventing `sihost.exe` from re-spawning `Resume` after reboot.
 - **Microsoft PC Manager AppX File Locking**: Ensured `PCManager Service Store` background service and `MSPCManagerService` process are stopped prior to invoking `Remove-AppxPackage`, releasing binary file locks and allowing clean de-provisioning when `-KeepPCManager` is omitted.
 
@@ -237,6 +224,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **LinkedIn DISM Provisioned Package Survival**: Resolved an issue where LinkedIn was not de-provisioned from the Windows system image because `Get-AppxProvisionedPackage` reports `DisplayName` as `LinkedIn` while `PackageName` begins with `7EE7776C.LinkedInforWindows`. Updated DISM package filters across both engines to match against both `PackageName` and `DisplayName`.
 - **Copilot App & Provider Leakage**: Resolved an issue where the standalone Copilot app and background provider (`Microsoft.Windows.Ai.Copilot.Provider`) remained installed on clean installations of Windows 11 and Windows 10.
 - **Xbox Game Bar Retention on Full Debloat**: Resolved an issue where the Xbox Game Bar app and Game DVR background listeners persisted on fresh installs when running without `-KeepXbox`.
@@ -266,6 +255,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Windows 11 Pro Ghost App Injections**: Resolved an issue where sponsored partner tiles (like LinkedIn) were pushed dynamically onto the Start Menu pinned area post-reboot via IrisService and CDM placement `88000963`, bypassing `DisableWindowsConsumerFeatures`.
 
 ---
@@ -280,6 +271,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Divide-by-Zero Protection in Measure-SystemState.ps1**: Added a safe zero-check to `UsedRAM_Percent` calculation in `scripts/Measure-SystemState.ps1` to prevent arithmetic exceptions when querying systems with uninitialized or mocked memory metrics.
 - **Dot-Source Guard in Measure-SystemState.ps1**: Added procedural execution guard (`if ($MyInvocation.InvocationName -eq '.') { return }`) allowing external harnesses and Pester suites to safely import `Get-SystemMetrics` without triggering immediate live metric collection or output generation.
 
@@ -296,6 +289,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Fresh-Install Bloatware Leakage**: Fixed omissions in `unslop-win11.ps1` where Weather, Maps, personal Teams, Copilot standalone app, Sudoku, LinkedIn, and CrossDevice background host remained installed post-debloat.
 - **Task Manager "Mobile devices" Startup Item**: Resolved persistent "Mobile devices" startup registration by targeting `MicrosoftWindows.CrossDevice` alongside `Microsoft.YourPhone` in Section 12 (gated via `-KeepPhoneLink`).
 - **Classic Windows Mail & Calendar Parity**: Resolved Windows 10/11 disparity by targeting `Microsoft.WindowsCommunicationsApps` on Windows 11 alongside `Microsoft.OutlookForWindows` (both preserved when `-KeepMail` is passed).
@@ -312,6 +307,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Console Key Listener Exception Handling**: Added explicit exception variable handling to raw console key reads in the restart countdown loop, satisfying static analyzer rules.
 
 ### Added
@@ -353,6 +350,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **AppX Restoration Parameter Binding (`Add-AppxPackage`)**: Removed invalid `-AllUsers` parameter from `Add-AppxPackage -RegisterByFamilyName -MainPackage ...` in Stage 12 of `unslop-win11.ps1` and Stages 2 and 12 of `unslop-win10.ps1`. `Add-AppxPackage` does not support `-AllUsers` (only `Remove-AppxPackage` and `Get-AppxPackage` do), resolving 5 parameter binding exceptions during `-Undo` runs on provisioned packages (`aimgr`, `MicrosoftWindows.Client.WebExperience`, `Microsoft.Office.ActionsServer`, `Microsoft.OfficePushNotificationUtility`, `Microsoft.GamingApp`).
 - **Idempotent Registry Property Deletion (`Set-RegDwordSafe`)**: Updated `Set-RegDwordSafe`'s `-removeOnUndo` exception handler in both engines to recognize when a target registry property is already absent (`does not exist` or `PSArgumentException`), safely recording `SKIP: <name> not present in <path>` instead of emitting a hard `FAILED:` error and incrementing `$global:FailCount`. Real permission or mutation errors continue to be trapped and reported truthfully.
 
@@ -379,6 +378,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Windows Web Experience Pack (`WebExperience`) Package Typo**: Added `"MicrosoftWindows.Client.WebExperience"` to `$bloatApps` in `unslop-win11.ps1`, resolving a dot-notation mismatch that previously prevented Windows Widgets from being de-provisioned.
 
 ---
@@ -438,6 +439,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **AppX Multi-Architecture Parameter Binding (`unslop.ps1`)**: Handled multi-architecture AppX matches safely by iterating over matched packages (`foreach ($pkg in $match)`) rather than binding package arrays directly to `Add-AppxPackage -PackagePath`.
 - **Log Buffer Variable Scoping (`unslop.ps1`)**: Explicitly scoped `$script:log` in the log buffer export routine, guaranteeing complete log flushing even when called across nested scopes.
 
@@ -451,6 +454,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Widgets Policy Alignment & UCPD Defense (`unslop.ps1`)**: Switched Widgets disablement from user-mode `HKCU:\...\Advanced\TaskbarDa` to machine-wide Group Policy `HKLM:\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests = 0` (undo `1`, `removeOnUndo = $true`). This avoids `UnauthorizedAccessException` from the Windows 11 User Choice Protection Driver (`UCPD.sys`) introduced in 23H2/24H2 while cleanly disabling Widgets system-wide.
 - **SYSTEM-Restricted Task Cleanup (`unslop.ps1`)**: Removed `\Microsoft\Windows\Application Experience\SdbinstMergeDbTask` from debloat scheduled tasks list. This task is Windows' internal app compat shim DB merger (non-telemetry) and has an explicit SDDL descriptor restricting write access to `SYSTEM` (`BA` only has Read/Execute), which caused `Access is denied` under standard Administrator elevation.
 - **Inbox SystemApps Depuration & NonRemovable Filter (`unslop.ps1`)**: Removed protected inbox SystemApps (`MicrosoftWindows.Client.Photon`, `MicrosoftWindows.Client.CoreAI`, `MicrosoftWindows.UndockedDevKit`) from `$bloatApps` and added `-not $_.NonRemovable` filtering to `Get-AppxPackage` retrieval, preventing `0x80070032` (`ERROR_NOT_SUPPORTED`) deployment errors on immutable system components while keeping AI engines disabled via GPO and ConsentStore.
@@ -467,6 +472,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Defender Telemetry Invariant Alignment (`unslop.ps1`)**: Corrected Defender `SubmitSamplesConsent` from `0` (`AlwaysPrompt`, which caused interactive prompts) to `2` (`NeverSend`) in debloat mode and `1` (`SendSafeSamples`) in undo mode (BUG-01).
 - **Startup Entry Preservation & Restoration Symmetry (`unslop.ps1`)**: Upgraded `Remove-StartupEntry` to archive target startup entries under `HKCU:\Software\unslop-windows\StartupBackup` during debloat, enabling 100% lossless symmetrical restoration under `-Undo` (BUG-02).
 - **AppX Package List Depuration (`unslop.ps1`)**: Removed system-protected and non-removable packages (`CloudExperienceHost`, `PeopleExperienceHost`, `ParentalControls`, `NarratorQuickStart`, `ECApp`, `MicrosoftEdge.Stable`, `MicrosoftEdgeDevToolsClient`) from `$bloatApps`, preventing `0x80073CFA` de-provisioning errors (BUG-03).
@@ -526,6 +533,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Placebo Logging Elimination (`unslop.ps1`)**: Replaced silent error suppression across helper functions (`Set-RegDwordSafe`, `Set-SvcState`, `Set-TaskState`, `Set-ConsentCapability`, `Remove-StartupEntry`) with `try/catch` error trapping that logs honest `FAILED:` feedback when operations encounter locked hives or permissions errors.
 - **UAC Elevation Cancellation Handling (`unslop.bat`)**: Added explicit `%errorlevel%` checks after `Start-Process ... -Verb RunAs` to prevent the terminal window from silently vanishing when a user cancels or denies the UAC elevation prompt.
 
@@ -535,6 +544,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Windows PowerShell 5.1 Dual-Runtime Compatibility**:
   - Replaced Unicode em dashes (`—`, byte `0x94`) with standard hyphens in `unslop.ps1` service descriptions, preventing premature string-quote termination under Windows-1252 ANSI codepages.
   - Simplified mock service status in `tests/unslop.Tests.ps1` from .NET `[System.ServiceProcess.ServiceControllerStatus]` to string literals (`"Running"` / `"Stopped"`), preventing type resolution exceptions in environments where `System.ServiceProcess` is not preloaded.
@@ -547,6 +558,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **CI/CD Pipeline (`lint.yml`)**: Resolved GitHub Actions workflow parse failure caused by unsupported expression evaluation in the `shell` keyword (`shell: ${{ matrix.shell }}`). Split execution into two explicit, parallel jobs (`quality-gate-core` for PowerShell 7 and `quality-gate-desktop` for Windows PowerShell 5.1), with `PSScriptAnalyzer` gated on both.
 
 ---
@@ -555,6 +568,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Documentation**: Corrected reboot countdown timer from 60 seconds to 30 seconds in developer documentation and `docs/decisions.md` to match actual implementation.
 
 ---
@@ -607,6 +622,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **Helper Function Parameter Binding & Switch Scope Collisions (`unslop.ps1`)**: Fixed PowerShell parameter binding collisions where `-Undo` was interpreted as a partial prefix match for `-undoValue` by adding explicit `[switch]$Undo = $IsUndo, [switch]$DryRun = $IsDryRun` switches across all helper functions.
 
 ---
@@ -615,6 +632,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - **UAC Elevation Batch Syntax Crash (`unslop.bat`)**: Resolved an issue where nested `cmd.exe` quote escaping inside delayed expansion caused `\"'" was unexpected at this time.` syntax errors, crashing `unslop.bat` immediately upon launch. Replaced with clean, native PowerShell process elevation (`Start-Process -FilePath '%~f0' -Verb RunAs`).
 
 ### Added
@@ -648,6 +667,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Programmable Tiles Live File Deletion under `-WhatIf` (ADR-041)**: Replaced `$DryRun` / `$Undo` with `$IsDryRun` / `$IsUndo` in Start Menu Programmable Tiles asset and manifest deletion routines (`LocalState\88000963`), preventing live file deletion when PowerShell's native `-WhatIf` is passed.
+- **Taskbar Alignment 100% Symmetrical Restoration (ADR-041)**: Symmetrically reverted `TaskbarAl` to 1 (centered default) when `-Undo` is executed without `-LeftTaskbar` on Windows 11.
 - Resolved an issue where `unslop.bat` remained paused at `Press any key to continue . . .` after a reboot was initiated. The launcher now detects exit code `100` and automatically closes the terminal window so Windows can restart without hanging.
 
 ---
@@ -698,7 +719,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[1.5.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.3...v1.4.4
