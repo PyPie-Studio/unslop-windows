@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 <#
 .SYNOPSIS
     Pester Unit & Mocking Test Suite for unslop-windows (Windows 11 Edition).
@@ -1157,8 +1157,25 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
         $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -KeepPhoneLink 2>&1
         $LASTEXITCODE | Should -Be 0
         ($output -match "Phone Link retained \(-KeepPhoneLink enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "Connected Devices Platform service retained \(-KeepPhoneLink enabled\)").Length | Should -BeGreaterThan 0
+        ($output -match "Cross-Device Resume & CDP retained \(-KeepPhoneLink enabled\)").Length | Should -BeGreaterThan 0
         ($output -match "\[WOULD DE-PROVISION\]:.*Microsoft\.YourPhone").Length | Should -Be 0
         ($output -match "\[WOULD DE-PROVISION\]:.*MicrosoftWindows\.CrossDevice").Length | Should -Be 0
+        ($output -match "\[WOULD SET REG\]:.*Services\\CDPUserSvc").Length | Should -Be 0
+        ($output -match "\[WOULD SET REG\]:.*Image File Execution Options\\CrossDeviceResume\.exe").Length | Should -Be 0
+    }
+
+    It 'Targets CDPUserSvc template and CrossDeviceResume IFEO debugger redirection on debloat' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -DryRun -NoRestart 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "\[WOULD SET REG\]:.*Services\\CDPUserSvc\\Start = 4").Length | Should -BeGreaterThan 0
+        ($output -match "\[WOULD SET REG\]:.*Image File Execution Options\\CrossDeviceResume\.exe\\Debugger = 'systray\.exe'").Length | Should -BeGreaterThan 0
+    }
+
+    It 'Restores CDPUserSvc template to Automatic on -Undo' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Undo -DryRun -NoRestart 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "\[WOULD SET REG\]:.*Services\\CDPUserSvc\\Start = 2").Length | Should -BeGreaterThan 0
     }
 
     It '-KeepMail retains Outlook and Windows Mail apps' {
@@ -1640,6 +1657,46 @@ Describe 'unslop-windows: Security & Privilege Boundary Invariants' -Tag 'Securi
         $script:ast.Extent.Text | Should -Match 'DisableCrossDeviceResume' -Because "CrossDeviceResume MDM policy must be configured"
         $script:ast.Extent.Text | Should -Match 'EnableCdp' -Because "Connected Devices Platform policy must be configured"
         $script:ast.Extent.Text | Should -Match 'AutoDownload' -Because "Microsoft Store AutoDownload policy must be configured"
+    }
+
+    It 'Neutralizes CrossDeviceResume via IFEO debugger redirection and CDPUserSvc template symmetrically' {
+        $script:ast.Extent.Text | Should -Match 'Image File Execution Options\\CrossDeviceResume\.exe' -Because "IFEO key for CrossDeviceResume.exe must be targeted"
+        $script:ast.Extent.Text | Should -Match 'systray\.exe' -Because "systray.exe must be configured as debugger"
+        $script:ast.Extent.Text | Should -Match 'CDPUserSvc' -Because "CDPUserSvc service template must be managed"
+
+        $cdpCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegDwordSafe' -and
+            $node.Extent.Text -match 'CDPUserSvc'
+        }, $true)
+        $cdpCalls.Count | Should -Be 1 -Because "CDPUserSvc template must be managed via Set-RegDwordSafe"
+        $cdpCalls[0].Extent.Text | Should -Match 'debloatValue 4' -Because "CDPUserSvc must be disabled on debloat (4)"
+        $cdpCalls[0].Extent.Text | Should -Match 'undoValue 2' -Because "CDPUserSvc must be restored to Automatic (2)"
+
+        $ifeoCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Set-RegStringSafe' -and
+            ($node.Extent.Text -match 'ifeoResume' -or $node.Extent.Text -match 'Debugger')
+        }, $true)
+        $ifeoCalls.Count | Should -BeGreaterThan 0 -Because "IFEO debugger must be configured via Set-RegStringSafe"
+
+        $ifeoRemovals = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Remove-RegValueSafe' -and
+            ($node.Extent.Text -match 'ifeoResume' -or $node.Extent.Text -match 'Debugger')
+        }, $true)
+        $ifeoRemovals.Count | Should -BeGreaterThan 0 -Because "IFEO debugger must be removed via Remove-RegValueSafe on undo"
+
+        $ifeoKeyCleanups = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Remove-Item' -and
+            $node.Extent.Text -match 'ifeoResume'
+        }, $true)
+        $ifeoKeyCleanups.Count | Should -Be 1 -Because "Empty IFEO key must be cleaned up on undo via Remove-Item"
     }
 
     It 'Add-AppxPackage never binds invalid -AllUsers parameter' {

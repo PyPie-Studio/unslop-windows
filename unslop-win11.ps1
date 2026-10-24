@@ -544,9 +544,10 @@ Set-SvcState "PcaSvc"           "Program Compatibility Assistant Service" "Autom
 # 23H2+ / 24H2 / 25H2 / 26H2 User Choice Protection Driver (UCPD)
 Set-SvcState "UCPD"             "User Choice Protection Driver - blocks taskbar & widget policies" "Manual"
 
-# Connected Devices Platform (CDP) Service
+# Connected Devices Platform (CDP) Service & Per-User Service Template
 if ($IsUndo -or -not $KeepPhoneLink) {
     Set-SvcState "CDPSvc"       "Connected Devices Platform Service" "Automatic"
+    Set-RegDwordSafe -path "HKLM:\SYSTEM\CurrentControlSet\Services\CDPUserSvc" -name "Start" -debloatValue 4 -undoValue 2
 } else {
     Log "  KEEP: Connected Devices Platform service retained (-KeepPhoneLink enabled)"
 }
@@ -1619,6 +1620,23 @@ if ($IsUndo -or -not $KeepPhoneLink) {
     $resumeConfig = "HKCU:\Software\Microsoft\Windows\CurrentVersion\CrossDeviceResume\Configuration"
     Set-RegDwordSafe -path $resumeConfig -name "IsResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
     Set-RegDwordSafe -path $resumeConfig -name "IsOneDriveResumeAllowed" -debloatValue 0 -undoValue 1 -removeOnUndo $true
+
+    # Cross-Device Resume IFEO Debugger Redirection (Intercepts sihost execution at kernel loader level)
+    $ifeoResume = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\CrossDeviceResume.exe"
+    if ($IsUndo) {
+        Remove-RegValueSafe -path $ifeoResume -name "Debugger"
+        if (Test-Path $ifeoResume) {
+            $key = Get-Item -Path $ifeoResume -ErrorAction SilentlyContinue
+            $remaining = (Get-ItemProperty -Path $ifeoResume -ErrorAction SilentlyContinue).PSObject.Properties | Where-Object { $_.Name -notmatch '^(PSPath|PSParentPath|PSChildName|PSDrive|PSProvider)$' }
+            if (-not $remaining -and $key -and $key.SubKeyCount -eq 0) {
+                if (-not $IsDryRun) {
+                    Remove-Item -Path $ifeoResume -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    } else {
+        Set-RegStringSafe -path $ifeoResume -name "Debugger" -value "systray.exe"
+    }
 
     # 26H2 Start Menu Companions (Phone Link sidebar panel)
     $companionPhone = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Start\Companions\Microsoft.YourPhone_8wekyb3d8bbwe"
