@@ -357,6 +357,21 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Should -Invoke -CommandName Remove-ItemProperty -Times 0
         }
 
+        It 'Gracefully skips when Remove-ItemProperty throws non-existent property exception without incrementing FailCount' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Get-ItemProperty -MockWith { [PSCustomObject]@{ NonExistent = 1 } }
+            Mock -CommandName Remove-ItemProperty -MockWith {
+                throw [System.Management.Automation.PSArgumentException]::new("Property NonExistent does not exist at path HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Test.")
+            }
+
+            Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent"
+
+            $global:FailCount | Should-Be 0
+            $script:log[-1] | Should-Match "SKIP: NonExistent not present in HKLM:\\SOFTWARE\\Policies\\Test"
+        }
+
         It 'Traps unexpected Remove-ItemProperty exception, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             $script:log.Clear()
