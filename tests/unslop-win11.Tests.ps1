@@ -474,6 +474,19 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             ($script:log | Where-Object { $_ -match "DISABLED: DiagTrack \(Diagnostics Tracking\)" }).Count | Should -Be 1
         }
 
+        It 'Undo Mode: Re-enables service with Manual StartupType and attempts Start-Service' {
+            Mock -CommandName Get-Service -MockWith {
+                [PSCustomObject]@{ Name = "dmwappushservice"; Status = "Stopped" }
+            }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { }
+
+            Set-SvcState -name "dmwappushservice" -desc "WAP Push telemetry" -undoStartupType "Manual" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "dmwappushservice" -and $StartupType -eq "Manual" }
+            Should -Invoke -CommandName Start-Service -Times 1 -ParameterFilter { $Name -eq "dmwappushservice" }
+        }
+
         It 'Undo Mode: Re-enables service with specified StartupType and starts it' {
             $mockStoppedService = [PSCustomObject]@{
                 Name   = "DiagTrack"
@@ -963,6 +976,9 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             $script:log.Clear()
 
             Set-SvcState -name "TestSvc" -desc "Test service" -undoStartupType "Manual" -Undo:$true
+
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "TestSvc" -and $StartupType -eq "Manual" }
+            Should -Invoke -CommandName Start-Service -Times 1 -ParameterFilter { $Name -eq "TestSvc" }
 
             $global:FailCount | Should -Be 0
             ($script:log | Where-Object { $_ -match "RESTORED: TestSvc \(Startup: Manual\)" }).Count | Should -BeGreaterThan 0

@@ -448,6 +448,19 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             ($script:log | Where-Object { $_ -match "DISABLED: DiagTrack \(Telemetry Service\)" }).Count | Should -Be 1
         }
 
+        It 'Undo Mode: Re-enables service with Manual StartupType and attempts Start-Service' {
+            Mock -CommandName Get-Service -MockWith {
+                [PSCustomObject]@{ Name = "dmwappushservice"; Status = "Stopped" }
+            }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { }
+
+            Set-SvcState -name "dmwappushservice" -desc "WAP Push telemetry" -undoStartupType "Manual" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "dmwappushservice" -and $StartupType -eq "Manual" }
+            Should -Invoke -CommandName Start-Service -Times 1 -ParameterFilter { $Name -eq "dmwappushservice" }
+        }
+
         It 'Undo Mode: Re-enables service with specified StartupType and starts it' {
             Mock -CommandName Get-Service -MockWith {
                 [PSCustomObject]@{ Name = "DiagTrack"; Status = "Stopped" }
@@ -907,6 +920,9 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Mock -CommandName Start-Service -MockWith { throw [System.InvalidOperationException]::new("Service cannot start immediately") }
 
             Set-SvcState -name "LockedService" -desc "Failure Test" -undoStartupType "Manual" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "LockedService" -and $StartupType -eq "Manual" }
+            Should -Invoke -CommandName Start-Service -Times 1 -ParameterFilter { $Name -eq "LockedService" }
 
             $global:FailCount | Should -Be 0 -Because "Manual startup start failure is best-effort and ignored"
             $script:log[-1] | Should -Match "RESTORED: LockedService \(Startup: Manual\)"
