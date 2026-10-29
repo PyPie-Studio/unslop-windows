@@ -437,6 +437,20 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not set \(default\) in HKCU:\\Software\\Classes\\CLSID\\Test" }).Count | Should -BeGreaterThan 0
         }
+
+        It 'Traps unexpected New-Item creation exception when key missing, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied creating key.")
+            }
+
+            Set-RegStringSafe -path "HKCU:\Software\Classes\CLSID\Test" -name "(default)" -value "TestString"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set \(default\) in HKCU:\\Software\\Classes\\CLSID\\Test" }).Count | Should -BeGreaterThan 0
+        }
     }
 
     Context 'Set-SvcState' {
@@ -892,6 +906,30 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
 
             $global:FailCount | Should -Be 1
             ($script:log | Where-Object { $_ -match "FAILED: Could not restore TestVal in HKLM:\\SOFTWARE\\Policies\\NonExistent" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-RegStringSafe traps exceptions, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $true }
+            Mock -CommandName Set-ItemProperty -MockWith { throw "Access to registry is denied" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegStringSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "TestStringVal" -value "SampleData"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set TestStringVal in HKLM:\\SOFTWARE\\Policies\\Test" }).Count | Should -BeGreaterThan 0
+        }
+
+        It 'Set-RegStringSafe traps New-Item creation exceptions, increments FailCount and emits FAILED log' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { throw "Failed to create registry path" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-RegStringSafe -path "HKLM:\SOFTWARE\Policies\NonExistent" -name "TestStringVal" -value "SampleData"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set TestStringVal in HKLM:\\SOFTWARE\\Policies\\NonExistent" }).Count | Should -BeGreaterThan 0
         }
 
         It 'Set-RegDwordSafe traps RunOnce staging exceptions when UCPD is active, increments FailCount and emits FAILED log' {
