@@ -461,6 +461,23 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Should -Invoke -CommandName Start-Service -Times 1 -ParameterFilter { $Name -eq "DiagTrack" }
         }
 
+        It 'Undo Mode: Suppresses Start-Service exceptions for Manual startup type and successfully restores startup' {
+            Mock -CommandName Get-Service -MockWith {
+                [PSCustomObject]@{ Name = "DiagTrack"; Status = "Stopped" }
+            }
+            Mock -CommandName Set-Service -MockWith { }
+            Mock -CommandName Start-Service -MockWith { throw "Service cannot start immediately" }
+            $global:FailCount = 0
+            $script:log.Clear()
+
+            Set-SvcState -name "DiagTrack" -desc "Telemetry Service" -undoStartupType "Manual" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName Set-Service -Times 1 -ParameterFilter { $Name -eq "DiagTrack" -and $StartupType -eq "Manual" }
+            Should -Invoke -CommandName Start-Service -Times 1 -ParameterFilter { $Name -eq "DiagTrack" }
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "RESTORED: DiagTrack \(Startup: Manual\)" }).Count | Should -Be 1
+        }
+
         It 'Missing Service: Gracefully skips non-existent services without invoking mutating cmdlets' {
             Mock -CommandName Get-Service -MockWith { $null }
             Mock -CommandName Stop-Service -MockWith { }
