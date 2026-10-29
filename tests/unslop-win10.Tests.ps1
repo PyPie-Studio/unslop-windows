@@ -617,6 +617,23 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             }
         }
 
+        It 'Undo Mode: Creates consent path with New-Item when path does not exist' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName New-Item -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\location$"
+            }
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\location$" -and
+                $Name -eq "Value" -and
+                $Value -eq "Allow"
+            }
+        }
+
         It 'Undo Mode: Restores capability consent to Allow' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { }
