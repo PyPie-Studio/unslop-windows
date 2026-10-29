@@ -34,7 +34,7 @@ BeforeAll {
         function Get-AppxPackage { }
     }
     if (-not (Get-Command Get-AppxProvisionedPackage -ErrorAction SilentlyContinue)) {
-        function Get-AppxProvisionedPackage { param($Online) }
+        function Get-AppxProvisionedPackage { param([switch]$Online) }
     }
 
     # Dot-source script into session to test helper functions
@@ -195,6 +195,8 @@ Describe 'Measure-SystemState: Get-SystemMetrics Core Engine' -Tag 'Unit' {
 
             $metrics.AppxUserPackages | Should -Be 4
             $metrics.AppxProvisioned | Should -Be 2
+            Should -Invoke -CommandName Get-AppxPackage -Times 1
+            Should -Invoke -CommandName Get-AppxProvisionedPackage -Times 1 -ParameterFilter { $Online -eq $true }
         }
 
         It 'Handles non-elevated AppX provisioned package error gracefully' {
@@ -209,6 +211,24 @@ Describe 'Measure-SystemState: Get-SystemMetrics Core Engine' -Tag 'Unit' {
             $metrics = Get-SystemMetrics
 
             $metrics.AppxProvisioned | Should -Be "Unavailable (requires elevation)"
+            Should -Invoke -CommandName Get-AppxProvisionedPackage -Times 1 -ParameterFilter { $Online -eq $true }
+        }
+
+        It 'Handles null or empty AppX package responses gracefully' {
+            Mock Get-CimInstance { param($ClassName) $null }
+            Mock Get-ItemProperty { $null }
+            Mock Get-Process { $null }
+            Mock Get-Service { $null }
+            Mock Get-ScheduledTask { $null }
+            Mock Get-AppxPackage { $null }
+            Mock Get-AppxProvisionedPackage { $null }
+
+            $metrics = Get-SystemMetrics
+
+            $metrics.AppxUserPackages | Should -Be 0
+            $metrics.AppxProvisioned | Should -Be "Unavailable (requires elevation)"
+            Should -Invoke -CommandName Get-AppxPackage -Times 1
+            Should -Invoke -CommandName Get-AppxProvisionedPackage -Times 1
         }
     }
 }
