@@ -92,9 +92,19 @@ function Get-SystemMetrics {
         @{ Name = "Microsoft Compatibility Appraiser"; Path = "\Microsoft\Windows\Application Experience\" },
         @{ Name = "ProgramDataUpdater"; Path = "\Microsoft\Windows\Application Experience\" }
     )
+    $allTasks = Get-ScheduledTask -ErrorAction SilentlyContinue
+    $taskLookup = @{}
+    if ($allTasks) {
+        foreach ($task in $allTasks) {
+            $key = "$($task.TaskPath)$($task.TaskName)"
+            $taskLookup[$key] = $task
+        }
+    }
+
     $tasksData = @{}
     foreach ($t in $targetTasks) {
-        $taskObj = Get-ScheduledTask -TaskName $t.Name -TaskPath $t.Path -ErrorAction SilentlyContinue
+        $lookupKey = "$($t.Path)$($t.Name)"
+        $taskObj = if ($taskLookup.ContainsKey($lookupKey)) { $taskLookup[$lookupKey] } else { Get-ScheduledTask -TaskName $t.Name -TaskPath $t.Path -ErrorAction SilentlyContinue }
         $tasksData[$t.Name] = if ($taskObj) { $taskObj.State.ToString() } else { "NotFound" }
     }
 
