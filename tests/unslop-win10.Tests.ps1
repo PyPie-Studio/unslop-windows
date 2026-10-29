@@ -368,8 +368,8 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
 
             Remove-RegValueSafe -path "HKLM:\SOFTWARE\Policies\Test" -name "NonExistent"
 
-            $global:FailCount | Should-Be 0
-            $script:log[-1] | Should-Match "SKIP: NonExistent not present in HKLM:\\SOFTWARE\\Policies\\Test"
+            $global:FailCount | Should -Be 0
+            $script:log[-1] | Should -Match "SKIP: NonExistent not present in HKLM:\\SOFTWARE\\Policies\\Test"
         }
 
         It 'Traps unexpected Remove-ItemProperty exception, increments FailCount and emits FAILED log' {
