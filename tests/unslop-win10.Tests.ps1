@@ -402,6 +402,20 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             Should -Invoke -CommandName Set-ItemProperty -Times 0
         }
 
+        It 'Traps unexpected New-Item creation exception, increments FailCount and emits FAILED log' {
+            $global:FailCount = 0
+            $script:log.Clear()
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith {
+                throw [System.UnauthorizedAccessException]::new("Access is denied.")
+            }
+
+            Set-RegStringSafe -path "HKCU:\Software\Classes\CLSID\Test" -name "(default)" -value "TestString"
+
+            $global:FailCount | Should -Be 1
+            ($script:log | Where-Object { $_ -match "FAILED: Could not set \(default\) in HKCU:\\Software\\Classes\\CLSID\\Test" }).Count | Should -BeGreaterThan 0
+        }
+
         It 'Traps unexpected Set-ItemProperty exception, increments FailCount and emits FAILED log' {
             $global:FailCount = 0
             $script:log.Clear()
@@ -614,6 +628,23 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
                 $Path -match "ConsentStore\\location$" -and
                 $Name -eq "Value" -and
                 $Value -eq "Deny"
+            }
+        }
+
+        It 'Undo Mode: Creates consent path with New-Item when path does not exist' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-ConsentCapability -capability "location" -desc "Location Tracking" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName New-Item -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\location$"
+            }
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\location$" -and
+                $Name -eq "Value" -and
+                $Value -eq "Allow"
             }
         }
 
