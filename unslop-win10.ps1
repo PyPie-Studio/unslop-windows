@@ -1067,13 +1067,13 @@ if ($IsUndo) {
 
     foreach ($app in $bloatApps) {
         $appEscaped = [regex]::Escape($app)
-        $appPkgPattern = "^$appEscaped(_|$)"
-        $appDispPattern = "^$appEscaped($|\s)"
+        $appPkgRegex = [regex]"(?i)^$appEscaped(_|$)"
+        $appDispRegex = [regex]"(?i)^$appEscaped($|\s)"
         # Match against pre-filtered $matchedProvisioned to avoid scanning full provisioned list per app
         $match = if ($matchedProvisioned) {
             $matchedProvisioned.Where({
-                ($_.PackageName -match $appPkgPattern) -or
-                ($_.DisplayName -and $_.DisplayName -match $appDispPattern)
+                $appPkgRegex.IsMatch($_.PackageName) -or
+                ($_.DisplayName -and $appDispRegex.IsMatch($_.DisplayName))
             })
         } else { $null }
         if ($match) {
@@ -1161,11 +1161,11 @@ if ($IsUndo) {
 
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
-        $appPattern = "^$([regex]::Escape($app))"
+        $appRegex = [regex]"(?i)^$([regex]::Escape($app))"
         # Match against candidateInstalled to avoid scanning full installed package array repeatedly
         $installed = if ($candidateInstalled) {
             $candidateInstalled.Where({
-                $_.Name -match $appPattern -or ($_.PackageFamilyName -and $_.PackageFamilyName -match $appPattern)
+                $appRegex.IsMatch($_.Name) -or ($_.PackageFamilyName -and $appRegex.IsMatch($_.PackageFamilyName))
             })
         } else { $null }
 
