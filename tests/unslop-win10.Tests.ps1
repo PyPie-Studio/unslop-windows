@@ -498,6 +498,8 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             }
             Mock -CommandName Disable-ScheduledTask -MockWith { }
             Mock -CommandName Enable-ScheduledTask -MockWith { }
+            $script:log.Clear()
+            $global:FailCount = 0
 
             Set-TaskState -path "\Microsoft\Windows\Customer Experience Improvement Program\" -name "Consolidator" -Undo:$false -DryRun:$false
 
@@ -505,6 +507,8 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
                 $TaskName -eq "Consolidator" -and $TaskPath -eq "\Microsoft\Windows\Customer Experience Improvement Program\"
             }
             Should -Invoke -CommandName Enable-ScheduledTask -Times 0
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "DISABLED: Consolidator" }).Count | Should -Be 1
         }
 
         It 'Undo Mode: Enables scheduled task if present' {
@@ -513,6 +517,8 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
             }
             Mock -CommandName Disable-ScheduledTask -MockWith { }
             Mock -CommandName Enable-ScheduledTask -MockWith { }
+            $script:log.Clear()
+            $global:FailCount = 0
 
             Set-TaskState -path "\Microsoft\Windows\Customer Experience Improvement Program\" -name "Consolidator" -Undo:$true -DryRun:$false
 
@@ -520,6 +526,23 @@ Describe 'unslop-windows (Win10): Helper Function Unit Tests' -Tag 'Unit', 'Help
                 $TaskName -eq "Consolidator" -and $TaskPath -eq "\Microsoft\Windows\Customer Experience Improvement Program\"
             }
             Should -Invoke -CommandName Disable-ScheduledTask -Times 0
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "ENABLED: Consolidator" }).Count | Should -Be 1
+        }
+
+        It 'Missing Scheduled Task: Gracefully skips non-existent task without invoking mutating cmdlets' {
+            Mock -CommandName Get-ScheduledTask -MockWith { $null }
+            Mock -CommandName Disable-ScheduledTask -MockWith { }
+            Mock -CommandName Enable-ScheduledTask -MockWith { }
+            $script:log.Clear()
+            $global:FailCount = 0
+
+            Set-TaskState -path "\Microsoft\Windows\Customer Experience Improvement Program\" -name "NonExistentTask" -Undo:$false -DryRun:$false
+
+            Should -Invoke -CommandName Disable-ScheduledTask -Times 0
+            Should -Invoke -CommandName Enable-ScheduledTask -Times 0
+            $global:FailCount | Should -Be 0
+            ($script:log | Where-Object { $_ -match "SKIP: NonExistentTask not found" }).Count | Should -Be 1
         }
 
         It 'SYSTEM-only SDDL: Skips tasks with SYSTEM-only security descriptors on Access Denied without incrementing FailCount' {
