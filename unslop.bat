@@ -151,6 +151,7 @@ if not "%~1"=="" (
     net session >nul 2>&1
     if !errorlevel! neq 0 (
         echo Requesting Administrator privileges...
+        :: UNSLOP_SELF is passed to child powershell.exe via $env:UNSLOP_SELF to prevent single-quote path breakout (SEC-04 / ADR-037)
         set "UNSLOP_SELF=%~f0"
         powershell.exe -NoProfile -Command "Start-Process -FilePath $env:UNSLOP_SELF -ArgumentList '%*' -Verb RunAs"
         if !errorlevel! neq 0 (
@@ -664,6 +665,7 @@ if !errorlevel! neq 0 (
             set "UAC_ARGS=-Win11 -FromMenu"
         )
     )
+    :: UNSLOP_SELF is passed to child powershell.exe via $env:UNSLOP_SELF to prevent single-quote path breakout (SEC-04 / ADR-037)
     set "UNSLOP_SELF=%~f0"
     powershell.exe -NoProfile -Command "Start-Process -FilePath $env:UNSLOP_SELF -ArgumentList '!UAC_ARGS!' -Verb RunAs"
     if !errorlevel! neq 0 (
