@@ -1065,17 +1065,38 @@ if ($IsUndo) {
         })
     } else { $null }
 
+    $appProvisionedMap = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.List[psobject]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    if ($matchedProvisioned) {
+        foreach ($pkg in $matchedProvisioned) {
+            $pkgName = $pkg.PackageName
+            $dispName = $pkg.DisplayName
+            foreach ($app in $bloatApps) {
+                $appLen = $app.Length
+                $isPkgMatch = $false
+                if ($pkgName -and $pkgName.StartsWith($app, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    if ($pkgName.Length -eq $appLen -or $pkgName[$appLen] -eq "_") {
+                        $isPkgMatch = $true
+                    }
+                }
+                $isDispMatch = $false
+                if (-not $isPkgMatch -and $dispName -and $dispName.StartsWith($app, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    if ($dispName.Length -eq $appLen -or [char]::IsWhiteSpace($dispName[$appLen])) {
+                        $isDispMatch = $true
+                    }
+                }
+                if ($isPkgMatch -or $isDispMatch) {
+                    if (-not $appProvisionedMap.ContainsKey($app)) {
+                        $appProvisionedMap[$app] = [System.Collections.Generic.List[psobject]]::new()
+                    }
+                    $appProvisionedMap[$app].Add($pkg)
+                }
+            }
+        }
+    }
+
     foreach ($app in $bloatApps) {
-        $appEscaped = [regex]::Escape($app)
-        $appPkgPattern = "^$appEscaped(_|$)"
-        $appDispPattern = "^$appEscaped($|\s)"
-        # Match against pre-filtered $matchedProvisioned to avoid scanning full provisioned list per app
-        $match = if ($matchedProvisioned) {
-            $matchedProvisioned.Where({
-                ($_.PackageName -match $appPkgPattern) -or
-                ($_.DisplayName -and $_.DisplayName -match $appDispPattern)
-            })
-        } else { $null }
+        # Match against pre-indexed $appProvisionedMap to avoid scanning full provisioned list per app
+        $match = if ($appProvisionedMap.ContainsKey($app)) { $appProvisionedMap[$app] } else { $null }
         if ($match) {
             foreach ($pkg in $match) {
                 $pkgTitle = if ($pkg.DisplayName) { $pkg.DisplayName } else { $pkg.PackageName }
@@ -1159,15 +1180,28 @@ if ($IsUndo) {
         })
     } else { $null }
 
+    $appInstalledMap = [System.Collections.Generic.Dictionary[string, System.Collections.Generic.List[psobject]]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    if ($candidateInstalled) {
+        foreach ($pkg in $candidateInstalled) {
+            $name = $pkg.Name
+            $family = $pkg.PackageFamilyName
+            foreach ($app in $bloatApps) {
+                $isNameMatch = $name -and $name.StartsWith($app, [System.StringComparison]::OrdinalIgnoreCase)
+                $isFamilyMatch = -not $isNameMatch -and $family -and $family.StartsWith($app, [System.StringComparison]::OrdinalIgnoreCase)
+                if ($isNameMatch -or $isFamilyMatch) {
+                    if (-not $appInstalledMap.ContainsKey($app)) {
+                        $appInstalledMap[$app] = [System.Collections.Generic.List[psobject]]::new()
+                    }
+                    $appInstalledMap[$app].Add($pkg)
+                }
+            }
+        }
+    }
+
     $skippedAppsCount = 0
     foreach ($app in $bloatApps) {
-        $appPattern = "^$([regex]::Escape($app))"
-        # Match against candidateInstalled to avoid scanning full installed package array repeatedly
-        $installed = if ($candidateInstalled) {
-            $candidateInstalled.Where({
-                $_.Name -match $appPattern -or ($_.PackageFamilyName -and $_.PackageFamilyName -match $appPattern)
-            })
-        } else { $null }
+        # Match against pre-indexed $appInstalledMap to avoid scanning candidateInstalled array repeatedly
+        $installed = if ($appInstalledMap.ContainsKey($app)) { $appInstalledMap[$app] } else { $null }
 
         if ($installed) {
             foreach ($pkg in $installed) {
