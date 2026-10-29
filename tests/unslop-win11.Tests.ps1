@@ -653,6 +653,23 @@ Describe 'unslop-windows: Helper Function Unit Tests' -Tag 'Unit', 'Helpers' {
             }
         }
 
+        It 'Undo Mode: Creates consent path with New-Item when path does not exist' {
+            Mock -CommandName Test-Path -MockWith { $false }
+            Mock -CommandName New-Item -MockWith { }
+            Mock -CommandName Set-ItemProperty -MockWith { }
+
+            Set-ConsentCapability "foregroundTextAccess" "Screen text analysis" "Deny" "Allow" -Undo:$true -DryRun:$false
+
+            Should -Invoke -CommandName New-Item -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\foregroundTextAccess$"
+            }
+            Should -Invoke -CommandName Set-ItemProperty -Times 1 -ParameterFilter {
+                $Path -match "ConsentStore\\foregroundTextAccess$" -and
+                $Name -eq "Value" -and
+                $Value -eq "Allow"
+            }
+        }
+
         It 'Undo Mode: Restores capability consent to Allow' {
             Mock -CommandName Test-Path -MockWith { $true }
             Mock -CommandName Set-ItemProperty -MockWith { }
