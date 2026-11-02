@@ -727,3 +727,22 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   3. *100% Symmetrical Restoration (`-Undo`):* On `-Undo`, remove the `Debugger` value via `Remove-RegValueSafe`, and if no remaining properties or subkeys exist, clean up the empty IFEO key safely gated behind `if (-not $IsDryRun)`.
   4. *Defense-in-Depth & Whitelist Invariant:* Retain MDM `DisableCrossDeviceResume` and `EnableCdp` policies and active process termination for defense-in-depth. Preserve both `CDPUserSvc` and IFEO redirection when `-KeepPhoneLink` is passed.
 - **Consequences:** Permanently neutralizes `CrossDeviceResume.exe` across reboots and logons without touching system manifests or deleting protected files, reclaims GPU and memory resources, guarantees 100% reversible state via `.\unslop-win11.ps1 -Undo`, and preserves complete functionality when `-KeepPhoneLink` is explicitly requested.
+
+---
+
+## ADR-047: Master Quality Gate In-Console Code Coverage Profiling and Configurable Threshold Enforcement (2026-11-03)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Code Coverage Opacity during Standard Gate Runs:* `scripts/Test-MasterGate.ps1` previously enabled Pester code coverage profiling strictly when `-CodeCoveragePath` was passed to emit a JaCoCo XML artifact. Standard developer runs omitted `-CodeCoveragePath` to avoid disk I/O, resulting in `$res.CodeCoverage` evaluating to `$null` and hiding code coverage metrics from the console.
+  2. *Lack of Enforceable Threshold Gate:* Developers had no real-time feedback or automated threshold check in local terminal runs. If test coverage regressed, the gate still passed with exit code 0 as long as `$res.FailedCount -eq 0`.
+  3. *Monolithic Engine Command Coverage Baseline (ADR-036):* Debloater scripts (`unslop-win11.ps1` and `unslop-win10.ps1`) employ dot-source guards (`if ($MyInvocation.InvocationName -eq '.') { return }`), allowing unit tests to execute ~220 helper function commands out of ~1,400 total commands (~16.2% command coverage). The remaining commands are procedural debloat operations audited by dry-run smoke tests in Steps 5, 6, and 7. Thus, an opt-in threshold baseline (e.g. 15.0%) is appropriate, while defaulting to 0.0 (reporting-only) prevents false gate blocks when testing single components.
+- **Decision:**
+  1. *Parameter Declarations:* Added `[switch]$ShowCoverage` and `[ValidateRange(0.0, 100.0)][double]$CoverageThreshold = 0` to `scripts/Test-MasterGate.ps1`.
+  2. *Automatic Profiler Activation:* Resolved `$enableCoverage = [bool]($ShowCoverage -or ($CoverageThreshold -gt 0) -or $CodeCoveragePath)`. When `$enableCoverage` is `$true`, Pester configuration dynamically sets `$cfg.CodeCoverage.Enabled = $true` and targets the active engine(s) via `$cfg.CodeCoverage.Path`.
+  3. *In-Console Metric Reporting:* Formatted and displayed `Code Coverage: $pct% ($CommandsExecutedCount/$CommandsAnalyzedCount commands)` in Cyan in console output.
+  4. *Deterministic Fail-Closed Threshold Enforcement:*
+     - If `$CoverageThreshold -gt 0` and `$pct -lt $CoverageThreshold`: emit `FAILED: Code coverage ($pct%) is below required threshold ($CoverageThreshold%)` in Red and exit with code 1.
+     - If `$CoverageThreshold -gt 0` and `$pct -ge $CoverageThreshold`: emit `PASSED: Code coverage ($pct%) meets threshold ($CoverageThreshold%)` in Green.
+     - If `$CoverageThreshold -gt 0` and no coverage data was generated, emit `FAILED: Code coverage threshold ($CoverageThreshold%) specified, but no coverage data was generated.` in Red and exit with code 1.
+- **Consequences:** Eliminates coverage opacity, delivers immediate terminal feedback on unit test command coverage during local development, and provides an enforceable, automated threshold gate against test coverage regressions without requiring intermediate file exports.

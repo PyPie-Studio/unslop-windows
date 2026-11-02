@@ -44,6 +44,8 @@ Describe 'Test-MasterGate: AST & Static Structure Invariants' -Tag 'Unit', 'Mast
             'Both',
             'SkipBuildCheck',
             'LintDocs',
+            'ShowCoverage',
+            'CoverageThreshold',
             'TestResultsPath',
             'CodeCoveragePath'
         )
@@ -53,10 +55,11 @@ Describe 'Test-MasterGate: AST & Static Structure Invariants' -Tag 'Unit', 'Mast
         }
     }
 
-    It 'Declares appropriate types for switch and string parameters' {
+    It 'Declares appropriate types for switch, double, and string parameters' {
         $params = $script:ast.ParamBlock.Parameters
-        $switchParams = @('Fast', 'SkipAnalyzer', 'SkipUnitTests', 'IncludeIntegration', 'Strict', 'Win11', 'Win10', 'Both', 'SkipBuildCheck', 'LintDocs')
+        $switchParams = @('Fast', 'SkipAnalyzer', 'SkipUnitTests', 'IncludeIntegration', 'Strict', 'Win11', 'Win10', 'Both', 'SkipBuildCheck', 'LintDocs', 'ShowCoverage')
         $stringParams = @('TestResultsPath', 'CodeCoveragePath')
+        $doubleParams = @('CoverageThreshold')
 
         foreach ($p in $params) {
             $name = $p.Name.VariablePath.UserPath
@@ -64,8 +67,18 @@ Describe 'Test-MasterGate: AST & Static Structure Invariants' -Tag 'Unit', 'Mast
                 $p.StaticType.Name | Should -Be 'SwitchParameter' -Because "-$name should be [switch]"
             } elseif ($name -in $stringParams) {
                 $p.StaticType.Name | Should -Be 'String' -Because "-$name should be [string]"
+            } elseif ($name -in $doubleParams) {
+                $p.StaticType.Name | Should -Be 'Double' -Because "-$name should be [double]"
             }
         }
+    }
+
+    It 'CoverageThreshold defaults to 0 and declares ValidateRange(0.0, 100.0)' {
+        $covParam = $script:ast.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'CoverageThreshold' }
+        $covParam | Should -Not -BeNullOrEmpty
+        $covParam.DefaultValue.Extent.Text | Should -Be '0'
+        $rangeAttr = $covParam.Attributes | Where-Object { $_.TypeName.Name -eq 'ValidateRange' }
+        $rangeAttr | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -207,5 +220,74 @@ Describe 'Test-MasterGate: Execution & Exit Code Contracts' -Tag 'Unit', 'Master
     It 'Executes -Fast gate successfully with exit code 0' {
         $proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-Fast" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
         $proc.ExitCode | Should -Be 0
+    }
+
+    It 'Enforces ValidateRange when -CoverageThreshold is negative' {
+        $proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-Fast", "-CoverageThreshold", "-5" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
+        $proc.ExitCode | Should -Be 1
+    }
+
+    It 'Enforces ValidateRange when -CoverageThreshold exceeds 100' {
+        $proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-Fast", "-CoverageThreshold", "105" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
+        $proc.ExitCode | Should -Be 1
+    }
+}
+
+Describe 'Test-MasterGate: Code Coverage Threshold Evaluator' -Tag 'Unit', 'MasterGate' {
+    BeforeAll {
+        $script:evalCoverage = {
+            param($coveragePercent, [double]$covThreshold)
+            if ($coveragePercent -ne $null) {
+                $pct = [math]::Round($coveragePercent, 1)
+                if ($covThreshold -gt 0) {
+                    if ($pct -lt $covThreshold) {
+                        return @{ Passed = $false; Reason = "Below threshold" }
+                    } else {
+                        return @{ Passed = $true; Reason = "Meets threshold" }
+                    }
+                }
+                return @{ Passed = $true; Reason = "Coverage displayed without threshold" }
+            } elseif ($covThreshold -gt 0) {
+                return @{ Passed = $false; Reason = "No coverage generated" }
+            }
+            return @{ Passed = $true; Reason = "Coverage disabled" }
+        }
+    }
+
+    It 'Passes when coverage exceeds threshold' {
+        $result = & $script:evalCoverage 16.2 15.0
+        $result.Passed | Should -Be $true
+    }
+
+    It 'Passes when coverage exactly equals threshold' {
+        $result = & $script:evalCoverage 15.0 15.0
+        $result.Passed | Should -Be $true
+    }
+
+    It 'Fails when coverage falls below threshold' {
+        $result = & $script:evalCoverage 14.9 15.0
+        $result.Passed | Should -Be $false
+    }
+
+    It 'Passes when threshold is 0 (informational only)' {
+        $result = & $script:evalCoverage 16.2 0
+        $result.Passed | Should -Be $true
+    }
+
+    It 'Fails when threshold is positive but coverage is null' {
+        $result = & $script:evalCoverage $null 15.0
+        $result.Passed | Should -Be $false
+    }
+}
+
+Describe 'Test-MasterGate: Coverage Threshold Integration Contract' -Tag 'Integration', 'MasterGate' {
+    It 'Passes when -ShowCoverage and -CoverageThreshold 10.0 is provided' {
+        $proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-ShowCoverage", "-CoverageThreshold", "10.0" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
+        $proc.ExitCode | Should -Be 0
+    }
+
+    It 'Fails when -ShowCoverage and -CoverageThreshold 95.0 is provided' {
+        $proc = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$script:gateScript`"", "-ShowCoverage", "-CoverageThreshold", "95.0" -NoNewWindow -PassThru -Wait -RedirectStandardError "nul"
+        $proc.ExitCode | Should -Be 1
     }
 }

@@ -30,6 +30,12 @@
 .PARAMETER CodeCoveragePath
     Optional file path to export Pester code coverage metrics in JaCoCo XML format.
 
+.PARAMETER ShowCoverage
+    Calculates and displays in-console code coverage percentage and command metrics during Pester unit testing.
+
+.PARAMETER CoverageThreshold
+    Minimum required code coverage percentage (0.0 to 100.0). Fails the quality gate with exit code 1 if coverage falls below this threshold. Automatically enables coverage calculation.
+
 .PARAMETER Both
     Runs local quality gate verification against both Windows 11 and Windows 10 engines.
 
@@ -55,6 +61,9 @@ param(
     [switch]$Both,
     [switch]$SkipBuildCheck,
     [switch]$LintDocs,
+    [switch]$ShowCoverage,
+    [ValidateRange(0.0, 100.0)]
+    [double]$CoverageThreshold = 0,
     [string]$TestResultsPath,
     [string]$CodeCoveragePath
 )
@@ -334,20 +343,23 @@ if (-not $Fast) {
                     }
                     $targetCovXml = ""
                     $covFile = ""
-                    if ($CodeCoveragePath) {
-                        $targetCovXml = if ([System.IO.Path]::IsPathRooted($CodeCoveragePath)) {
-                            $CodeCoveragePath
-                        } else {
-                            Join-Path $root $CodeCoveragePath
-                        }
-                        $covDir = Split-Path -Parent $targetCovXml
-                        if ($covDir -and -not (Test-Path $covDir)) {
-                            New-Item -ItemType Directory -Path $covDir -Force | Out-Null
+                    $enableCoverage = [bool]($ShowCoverage -or ($CoverageThreshold -gt 0) -or $CodeCoveragePath)
+                    if ($enableCoverage) {
+                        if ($CodeCoveragePath) {
+                            $targetCovXml = if ([System.IO.Path]::IsPathRooted($CodeCoveragePath)) {
+                                $CodeCoveragePath
+                            } else {
+                                Join-Path $root $CodeCoveragePath
+                            }
+                            $covDir = Split-Path -Parent $targetCovXml
+                            if ($covDir -and -not (Test-Path $covDir)) {
+                                New-Item -ItemType Directory -Path $covDir -Force | Out-Null
+                            }
                         }
                         $covFile = ($targetsToTest | ForEach-Object { Join-Path $root $_.Engine }) -join ";"
                     }
                     $pesterBlock = {
-                        param($testPath, $xmlOut, $covOut, $covTarget, [bool]$incIntegration)
+                        param($testPath, $xmlOut, $covOut, $covTarget, [bool]$incIntegration, [bool]$enableCov, [double]$covThreshold)
                         Import-Module Pester -MinimumVersion 6.0.0
                         $cfg = New-PesterConfiguration
                         $cfg.Run.Path = $testPath -split ";"
@@ -361,21 +373,34 @@ if (-not $Fast) {
                             $cfg.TestResult.OutputFormat = 'NUnitXml'
                             $cfg.TestResult.OutputPath = $xmlOut
                         }
-                        if ($covOut -and $covTarget) {
+                        if ($enableCov -and $covTarget) {
                             $cfg.CodeCoverage.Enabled = $true
                             $cfg.CodeCoverage.Path = $covTarget -split ";"
-                            $cfg.CodeCoverage.OutputFormat = 'JaCoCo'
-                            $cfg.CodeCoverage.OutputPath = $covOut
+                            if ($covOut) {
+                                $cfg.CodeCoverage.OutputFormat = 'JaCoCo'
+                                $cfg.CodeCoverage.OutputPath = $covOut
+                            }
                         }
                         $res = Invoke-Pester -Configuration $cfg
                         if ($res.CodeCoverage) {
                             $pct = [math]::Round($res.CodeCoverage.CoveragePercent, 1)
                             Write-Host "  Code Coverage: $pct% ($($res.CodeCoverage.CommandsExecutedCount)/$($res.CodeCoverage.CommandsAnalyzedCount) commands)" -ForegroundColor Cyan
+                            if ($covThreshold -gt 0) {
+                                if ($pct -lt $covThreshold) {
+                                    Write-Host "  FAILED: Code coverage ($pct%) is below required threshold ($covThreshold%)" -ForegroundColor Red
+                                    exit 1
+                                } else {
+                                    Write-Host "  PASSED: Code coverage ($pct%) meets threshold ($covThreshold%)" -ForegroundColor Green
+                                }
+                            }
+                        } elseif ($covThreshold -gt 0) {
+                            Write-Host "  FAILED: Code coverage threshold ($covThreshold%) specified, but no coverage data was generated." -ForegroundColor Red
+                            exit 1
                         }
                         if ($res.FailedCount -gt 0) { exit 1 }
                     }
                     $testPathStr = $testScripts -join ";"
-                    & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testPathStr, $targetXml, $targetCovXml, $covFile, ([bool]$IncludeIntegration)
+                    & $psExec -NoProfile -ExecutionPolicy Bypass -Command $pesterBlock -args $testPathStr, $targetXml, $targetCovXml, $covFile, ([bool]$IncludeIntegration), $enableCoverage, $CoverageThreshold
                     $pesterExit = $LASTEXITCODE
                     if ($pesterExit -ne 0) {
                         $fail = $true

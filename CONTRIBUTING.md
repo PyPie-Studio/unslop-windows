@@ -111,6 +111,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Strict
 
 # Rapid lint mode (skips dry-run execution and Pester tests; AST, Analyzer & CRLF only):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -Fast
+
+# Full 7-pillar gate with in-console code coverage profiling:
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -ShowCoverage
+
+# Full 7-pillar gate with minimum code coverage threshold enforcement (e.g. 15%):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -ShowCoverage -CoverageThreshold 15.0
 ```
 
 ### 3. Git Hook Lifecycle (`pre-commit` & `pre-push`)
