@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.1] - 2026-11-03
+
+### Security
+
+- **Batch Elevation Quoting Command Breakout Documentation (SEC-04 / ADR-037)**: Documented `UNSLOP_SELF` environment variable export for child `powershell.exe` in `unslop.bat` to prevent single-quote command breakout vulnerabilities when paths contain apostrophes.
+
+### Fixed
+
+- **Defensive OS Version Registry Querying (`Measure-SystemState.ps1`)**: Wrapped `(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"...).DisplayVersion` inside a safe `try/catch` block to prevent unhandled `RuntimeException` crashes if HKLM is inaccessible or corrupt.
+- **AppX Switch Parameter Binding (`Measure-SystemState.Tests.ps1`)**: Corrected stub parameter definition to `param([switch]$Online)` ensuring cross-platform switch parameter binding for `Get-AppxProvisionedPackage`.
+
+### Added
+
+- **Symmetrical Engine Helper Unit Test Suite Parity**:
+  - Added `Remove-RegValueSafe` non-existent property exception handling test verifying graceful skip and zero `FailCount` on `PSArgumentException` (ADR-025 idempotency).
+  - Added `Set-RegStringSafe` error path and missing key creation unit tests across Windows 10 and 11.
+  - Added `Set-TaskState` `DISABLED`/`ENABLED` success logging assertions, zero `FailCount` verification, and missing task skip test coverage.
+  - Added `Set-ConsentCapability` Undo `New-Item` path creation unit tests.
+  - Added `Set-SvcState` `Manual` startup mode happy path test coverage and strengthened invocation assertions on existing exception suppression tests.
+
+---
 ## [1.5.0] - 2026-10-24
 
 ### Security
@@ -721,6 +742,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.5.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.3...v1.4.4

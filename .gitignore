@@ -23,6 +23,7 @@ Desktop.ini
 .DS_Store
 
 # Video & Media Exports
+capture/
 videos/
 *.mp4
 
