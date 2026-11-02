@@ -111,9 +111,15 @@ function Get-SystemMetrics {
         # Non-elevated execution safe fallback if provisioned packages cannot be queried
     }
 
+    $osVersion = try {
+        (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue).DisplayVersion
+    } catch {
+        $null
+    }
+
     [PSCustomObject]@{
         Timestamp          = (Get-Date).ToString("yyyy-MM-dd hh:mm:ss tt")
-        OSVersion          = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -ErrorAction SilentlyContinue).DisplayVersion
+        OSVersion          = $osVersion
         OSBuild            = [System.Environment]::OSVersion.Version.ToString()
         TotalRAM_GB        = [math]::Round($totalRamBytes / 1GB, 2)
         UsedRAM_GB         = [math]::Round($usedRamBytes / 1GB, 2)

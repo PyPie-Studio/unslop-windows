@@ -104,6 +104,34 @@ Describe 'Measure-SystemState: Get-SystemMetrics Core Engine' -Tag 'Unit' {
             $metrics.ProcessCount | Should -Be 0
             $metrics.ThreadCount | Should -Be 0
         }
+
+        It 'Handles Get-ItemProperty throwing exception gracefully for OSVersion' {
+            Mock Get-CimInstance { param($ClassName) $null }
+            Mock Get-ItemProperty { throw "Registry key HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion does not exist" }
+            Mock Get-Process { $null }
+            Mock Get-Service { $null }
+            Mock Get-ScheduledTask { $null }
+            Mock Get-AppxPackage { $null }
+            Mock Get-AppxProvisionedPackage { $null }
+
+            $metrics = Get-SystemMetrics
+
+            $metrics.OSVersion | Should -BeNullOrEmpty
+        }
+
+        It 'Handles Get-ItemProperty returning null gracefully for OSVersion' {
+            Mock Get-CimInstance { param($ClassName) $null }
+            Mock Get-ItemProperty { $null }
+            Mock Get-Process { $null }
+            Mock Get-Service { $null }
+            Mock Get-ScheduledTask { $null }
+            Mock Get-AppxPackage { $null }
+            Mock Get-AppxProvisionedPackage { $null }
+
+            $metrics = Get-SystemMetrics
+
+            $metrics.OSVersion | Should -BeNullOrEmpty
+        }
     }
 
     Context 'Processes & Threads Aggregation' {
