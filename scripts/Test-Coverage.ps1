@@ -322,7 +322,7 @@ if (-not $NoMarkdown) {
     $mdLines += "## 1. Summary Metrics"
     $mdLines += ""
     $mdLines += "| Metric | Value |"
-    $mdLines += "|---|---|"
+    $mdLines += "| :--- | :--- |"
     $mdLines += "| **Platform Target** | $platformTitle |"
     $mdLines += "| **Total Codebase Coverage** | **$($covData.TotalPercent)%** |"
     $mdLines += "| **Commands Executed** | $($covData.TotalExecuted) / $($covData.TotalCommands) |"
@@ -332,7 +332,7 @@ if (-not $NoMarkdown) {
     $mdLines += "## 2. Per-Script Coverage Breakdown"
     $mdLines += ""
     $mdLines += "| File | Architectural Role | Executed Commands | Total Commands | Coverage % | Status |"
-    $mdLines += "|---|---|---|---|---|---|"
+    $mdLines += "| :--- | :--- | :--- | :--- | :--- | :--- |"
 
     foreach ($f in $covData.Files) {
         $fName = $f.FileName
