@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-11-03
+
+### Security
+
+- **Activated Batch Security Suite in Default Quality Gate (ADR-049)**: Added `'Unit'` tag to `tests/unslop.bat.Tests.ps1` line 117, ensuring SEC-04 (elevation quoting injection defense), SEC-05 (whitelist synchronization), and SEC-06 (KeepClock omission) execute during standard local quality gate runs without requiring `-IncludeIntegration`.
+
+### Fixed
+
+- **OneDrive Startup Entry Restoration Symmetry (ADR-049)**: Resolved an active restoration asymmetry where `Remove-StartupEntry` for OneDrive was previously nested inside the non-Undo debloat branch, orphaning archived startup keys in `StartupBackup` on `-Undo`. Hoisted startup entry, policy, CLSID unpinning, and scheduled task handling symmetrically outside `if ($IsUndo)` across `unslop-win11.ps1` and `unslop-win10.ps1`.
+- **Start Menu Shortcut False Preview Logging on Undo (ADR-049)**: Wrapped IrisService programmable tiles and sponsored Start menu shortcut removal routines in `if (-not $IsUndo)` across both engines, eliminating deceptive `[PREVIEW] Would remove...` log emissions during live restoration passes.
+
+### Changed
+
+- **Eliminated Dead `$taskLookup` Fallback Code (ADR-049)**: Removed unreachable `else { Set-TaskState ... }` fallback blocks across 6 call sites in Modules 11 and 14 across both Windows 11 and 10 engines where truthy PowerShell hashtable evaluation (`[bool]@{} -eq $true`) permanently blocked the `else` branch.
+- **Consolidated Classic Context Menu Handling (ADR-049)**: Unified duplicate CLSID unpinning logic on `$IsUndo` in `unslop-win11.ps1` Module 9, eliminating redundant branches.
+- **Optimized Master Quality Gate Test Targets (ADR-049)**: Consolidated triplicated custom target PSObjects in `scripts/Test-MasterGate.ps1` into reusable `$targetW11` and `$targetW10` instances, cutting 25 lines of duplicate boilerplate.
+- **Scope Sanitization & Directory Hoisting (ADR-049)**: Moved `$allRunKeys` below the dot-source guard to prevent scope leakage during test execution, hoisted `New-Item -Path $logDir` post-reparse resolution, and hoisted `FINAL_ARGS` initialization in `:run` in `unslop.bat`.
+
 ### Added
 
 - **Multi-Script Code Coverage Profiling & Threshold Enforcement (ADR-047, ADR-048)**:
@@ -754,6 +772,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[Unreleased]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.5...v1.5.0
 [1.4.5]: https://github.com/PyPie-Studio/unslop-windows/compare/v1.4.4...v1.4.5

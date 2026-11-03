@@ -768,7 +768,6 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
   3. *Automated Unit Testing & Parity:* Created `tests/Test-Coverage.Tests.ps1` verifying AST validity, parameter bindings, mutual exclusivity, `ValidateRange` bounds, and markdown report structure. Registered the new test suite in `Test-MasterGate.ps1` Step [4/7].
 - **Consequences:** Delivers complete codebase coverage visibility, elevates measured command coverage across utility scripts, enables automated documentation generation, and provides developers with a dedicated, high-speed coverage analysis tool.
 
-
 ---
 
 ## ADR-049: Elimination of Dead Code, Unreachable Fallbacks, and Symmetrical OneDrive Startup Restoration (2026-11-03)
