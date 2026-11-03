@@ -94,49 +94,29 @@ if (($Win11 -and $Win10) -or ($Both -and ($Win11 -or $Win10))) {
 }
 
 $isWin11Host = [System.Environment]::OSVersion.Version.Build -ge 22000
-$targetsToTest = @()
-if ($Both) {
-    $w11ExtraArgs = if ($SkipBuildCheck -or -not $isWin11Host) { @("-SkipBuildCheck") } else { @() }
-    $w11BatArgs = if ($SkipBuildCheck -or -not $isWin11Host) { "-DryRun -Win11 -SkipBuildCheck" } else { "-DryRun -Win11" }
-    $targetsToTest += [pscustomobject]@{
-        Name = "Windows 11"
-        Engine = "unslop-win11.ps1"
-        Tests = "tests\unslop-win11.Tests.ps1"
-        ExtraArgs = $w11ExtraArgs
-        BatArgs = $w11BatArgs
-    }
+$targetW11 = [pscustomobject]@{
+    Name      = "Windows 11"
+    Engine    = "unslop-win11.ps1"
+    Tests     = "tests\unslop-win11.Tests.ps1"
+    ExtraArgs = if ($SkipBuildCheck -or -not $isWin11Host) { @("-SkipBuildCheck") } else { @() }
+    BatArgs   = if ($SkipBuildCheck -or -not $isWin11Host) { "-DryRun -Win11 -SkipBuildCheck" } else { "-DryRun -Win11" }
+}
+$targetW10 = [pscustomobject]@{
+    Name      = "Windows 10"
+    Engine    = "unslop-win10.ps1"
+    Tests     = "tests\unslop-win10.Tests.ps1"
+    ExtraArgs = if ($SkipBuildCheck -or $isWin11Host) { @("-SkipBuildCheck") } else { @() }
+    BatArgs   = if ($SkipBuildCheck -or $isWin11Host) { "-DryRun -Win10 -SkipBuildCheck" } else { "-DryRun -Win10" }
+}
 
-    $w10ExtraArgs = if ($SkipBuildCheck -or $isWin11Host) { @("-SkipBuildCheck") } else { @() }
-    $w10BatArgs = if ($SkipBuildCheck -or $isWin11Host) { "-DryRun -Win10 -SkipBuildCheck" } else { "-DryRun -Win10" }
-    $targetsToTest += [pscustomobject]@{
-        Name = "Windows 10"
-        Engine = "unslop-win10.ps1"
-        Tests = "tests\unslop-win10.Tests.ps1"
-        ExtraArgs = $w10ExtraArgs
-        BatArgs = $w10BatArgs
-    }
+if ($Both) {
+    $targetsToTest = @($targetW11, $targetW10)
     $targetPlatformTitle = "Dual Target (Win11 + Win10)"
 } elseif ($Win10) {
-    $w10ExtraArgs = if ($SkipBuildCheck -or $isWin11Host) { @("-SkipBuildCheck") } else { @() }
-    $w10BatArgs = if ($SkipBuildCheck -or $isWin11Host) { "-DryRun -Win10 -SkipBuildCheck" } else { "-DryRun -Win10" }
-    $targetsToTest += [pscustomobject]@{
-        Name = "Windows 10"
-        Engine = "unslop-win10.ps1"
-        Tests = "tests\unslop-win10.Tests.ps1"
-        ExtraArgs = $w10ExtraArgs
-        BatArgs = $w10BatArgs
-    }
+    $targetsToTest = @($targetW10)
     $targetPlatformTitle = "Windows 10 Target"
 } else {
-    $w11ExtraArgs = if ($SkipBuildCheck -or -not $isWin11Host) { @("-SkipBuildCheck") } else { @() }
-    $w11BatArgs = if ($SkipBuildCheck -or -not $isWin11Host) { "-DryRun -Win11 -SkipBuildCheck" } else { "-DryRun -Win11" }
-    $targetsToTest += [pscustomobject]@{
-        Name = "Windows 11"
-        Engine = "unslop-win11.ps1"
-        Tests = "tests\unslop-win11.Tests.ps1"
-        ExtraArgs = $w11ExtraArgs
-        BatArgs = $w11BatArgs
-    }
+    $targetsToTest = @($targetW11)
     $targetPlatformTitle = "Windows 11 Target"
 }
 
@@ -317,6 +297,8 @@ if (-not $Fast) {
         if (Test-Path $measureTestScript) { $testScripts += $measureTestScript }
         $gateTestScript = Join-Path $root "tests\Test-MasterGate.Tests.ps1"
         if (Test-Path $gateTestScript) { $testScripts += $gateTestScript }
+        $coverageTestScript = Join-Path $root "tests\Test-Coverage.Tests.ps1"
+        if (Test-Path $coverageTestScript) { $testScripts += $coverageTestScript }
 
         if ($testScripts.Count -gt 0) {
             $pesterVer = if ($psExec -eq "pwsh" -and $PSVersionTable.PSEdition -eq 'Desktop') {
@@ -356,7 +338,21 @@ if (-not $Fast) {
                                 New-Item -ItemType Directory -Path $covDir -Force | Out-Null
                             }
                         }
-                        $covFile = ($targetsToTest | ForEach-Object { Join-Path $root $_.Engine }) -join ";"
+                        $covTargets = @()
+                        foreach ($tgt in $targetsToTest) {
+                            $covTargets += Join-Path $root $tgt.Engine
+                        }
+                        $supportScripts = @(
+                            "scripts\Measure-SystemState.ps1",
+                            "scripts\Install-GitHooks.ps1",
+                            "scripts\Test-MasterGate.ps1",
+                            "scripts\Test-Coverage.ps1"
+                        )
+                        foreach ($s in $supportScripts) {
+                            $fullPath = Join-Path $root $s
+                            if (Test-Path $fullPath) { $covTargets += $fullPath }
+                        }
+                        $covFile = $covTargets -join ";"
                     }
                     $pesterBlock = {
                         param($testPath, $xmlOut, $covOut, $covTarget, [bool]$incIntegration, [bool]$enableCov, [double]$covThreshold)
@@ -385,6 +381,16 @@ if (-not $Fast) {
                         if ($res.CodeCoverage) {
                             $pct = [math]::Round($res.CodeCoverage.CoveragePercent, 1)
                             Write-Host "  Code Coverage: $pct% ($($res.CodeCoverage.CommandsExecutedCount)/$($res.CodeCoverage.CommandsAnalyzedCount) commands)" -ForegroundColor Cyan
+                            $executedByFile = $res.CodeCoverage.CommandsExecuted | Group-Object File -AsHashTable -AsString
+                            $missedByFile = $res.CodeCoverage.CommandsMissed | Group-Object File -AsHashTable -AsString
+                            foreach ($f in $res.CodeCoverage.FilesAnalyzed) {
+                                $ex = if ($executedByFile.ContainsKey($f)) { $executedByFile[$f].Count } else { 0 }
+                                $ms = if ($missedByFile.ContainsKey($f)) { $missedByFile[$f].Count } else { 0 }
+                                $tot = $ex + $ms
+                                $fPct = if ($tot -gt 0) { [math]::Round(100.0 * $ex / $tot, 1) } else { 0.0 }
+                                $leaf = Split-Path -Leaf $f
+                                Write-Host "    - $($leaf.PadRight(26)): $fPct% ($ex/$tot commands)" -ForegroundColor DarkGray
+                            }
                             if ($covThreshold -gt 0) {
                                 if ($pct -lt $covThreshold) {
                                     Write-Host "  FAILED: Code coverage ($pct%) is below required threshold ($covThreshold%)" -ForegroundColor Red

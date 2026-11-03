@@ -114,7 +114,7 @@ Describe 'unslop.bat: Interactive Menu Structure' -Tag 'Unit', 'Batch' {
     }
 }
 
-Describe 'unslop.bat: Security & Privilege Escalation Defenses' -Tag 'Security', 'Batch' {
+Describe 'unslop.bat: Security & Privilege Escalation Defenses' -Tag 'Security', 'Batch', 'Unit' {
     It 'Enforces environment variable quoting on UAC elevation to eliminate single-quote injection (SEC-04)' {
         $script:batContent | Should -Match 'set "UNSLOP_SELF=%~f0"'
         $script:batContent | Should -Match 'Start-Process -FilePath \$env:UNSLOP_SELF'

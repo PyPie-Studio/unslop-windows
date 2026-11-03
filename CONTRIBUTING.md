@@ -117,6 +117,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -ShowCove
 
 # Full 7-pillar gate with minimum code coverage threshold enforcement (e.g. 15%):
 powershell -ExecutionPolicy Bypass -File .\scripts\Test-MasterGate.ps1 -ShowCoverage -CoverageThreshold 15.0
+
+# Standalone code coverage profiler & markdown report generator (docs/coverage-report.md):
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-Coverage.ps1
+
+# Coverage profiler with detailed unexercised commands and threshold enforcement:
+powershell -ExecutionPolicy Bypass -File .\scripts\Test-Coverage.ps1 -Detailed -Threshold 15.0
 ```
 
 ### 3. Git Hook Lifecycle (`pre-commit` & `pre-push`)

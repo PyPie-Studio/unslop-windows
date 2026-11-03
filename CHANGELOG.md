@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Multi-Script Code Coverage Profiling & Threshold Enforcement (ADR-047, ADR-048)**:
+  - Added `-ShowCoverage` and `-CoverageThreshold <double>` parameters to `scripts/Test-MasterGate.ps1`, aggregating command-level coverage across core engines (`unslop-win11.ps1`, `unslop-win10.ps1`) and support utility scripts (`scripts/Measure-SystemState.ps1`, `scripts/Install-GitHooks.ps1`, `scripts/Test-MasterGate.ps1`, `scripts/Test-Coverage.ps1`).
+  - Added standalone code coverage profiler and reporter (`scripts/Test-Coverage.ps1`) generating formatted console tables, unexercised command diagnostics (`-Detailed`), and automated documentation reports at `docs/coverage-report.md`.
+  - Added comprehensive Pester test suite (`tests/Test-Coverage.Tests.ps1`) covering AST syntax, parameter bindings, mutual exclusivity contracts, ValidateRange boundary enforcement, and markdown generation structures.
+
+---
+
 ## [1.5.1] - 2026-11-03
 
 ### Security

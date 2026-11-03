@@ -436,12 +436,6 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
     }
 }
 
-$allRunKeys = @(
-    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
-    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
-    "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
-)
-
 # ------------------------------------------------------------
 # Dot-Source Guard: If script is being dot-sourced (e.g. Pester test harness),
 # return immediately so functions are exported without executing the debloat payload.
@@ -449,6 +443,12 @@ $allRunKeys = @(
 if ($MyInvocation.InvocationName -eq '.') {
     return
 }
+
+$allRunKeys = @(
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+)
 
 # Verify Administrator Privileges (enforced unless -DryRun)
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -727,25 +727,27 @@ $oobePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngageme
 Set-RegDwordSafe -path $oobePath -name "ScoobeSystemSettingEnabled" -debloatValue 0 -undoValue 1
 
 # Purge sponsored Start Menu stub & web app shortcuts (LinkedIn, Copilot)
-$stubShortcutDirs = @(
-    "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
-    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
-    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Edge Apps"
-)
-foreach ($sDir in $stubShortcutDirs) {
-    if (Test-Path $sDir) {
-        $stubFiles = Get-ChildItem -Path $sDir -Recurse -File -Include "*LinkedIn*.lnk", "*LinkedIn*.url", "*Copilot*.lnk" -ErrorAction SilentlyContinue
-        foreach ($sf in $stubFiles) {
-            if (-not $IsDryRun -and -not $IsUndo) {
-                try {
-                    Remove-Item -Path $sf.FullName -Force -ErrorAction Stop
-                    Log "  REMOVED: Sponsored shortcut ($($sf.Name))"
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not remove $($sf.FullName) - $($_.Exception.Message)" "Red"
+if (-not $IsUndo) {
+    $stubShortcutDirs = @(
+        "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
+        "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
+        "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Edge Apps"
+    )
+    foreach ($sDir in $stubShortcutDirs) {
+        if (Test-Path $sDir) {
+            $stubFiles = Get-ChildItem -Path $sDir -Recurse -File -Include "*LinkedIn*.lnk", "*LinkedIn*.url", "*Copilot*.lnk" -ErrorAction SilentlyContinue
+            foreach ($sf in $stubFiles) {
+                if ($IsDryRun) {
+                    Log "  [PREVIEW] Would remove sponsored shortcut ($($sf.Name))" "Cyan"
+                } else {
+                    try {
+                        Remove-Item -Path $sf.FullName -Force -ErrorAction Stop
+                        Log "  REMOVED: Sponsored shortcut ($($sf.Name))"
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove $($sf.FullName) - $($_.Exception.Message)" "Red"
+                    }
                 }
-            } else {
-                Log "  [PREVIEW] Would remove sponsored shortcut ($($sf.Name))" "Cyan"
             }
         }
     }
@@ -824,13 +826,8 @@ if ($ExcludeWUDrivers) {
 } else {
     # Windows Update driver & firmware updates are preserved to ensure hardware CVEs and patches install cleanly.
     # Proactively clear any legacy ExcludeWUDriversInQualityUpdate policy from older unslop versions:
-    if (Test-Path $wuPolicy) {
-        $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
-        if ($wuProp) {
-            Remove-RegValueSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate"
-        } else {
-            Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
-        }
+    if (Test-Path $wuPolicy -and (Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue)) {
+        Remove-RegValueSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate"
     } else {
         Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
     }
@@ -905,10 +902,8 @@ foreach ($task in $tasksToToggle) {
     $key = "$path$name"
     if ($taskLookup -and $taskLookup.ContainsKey($key)) {
         Set-TaskState -path $path -name $name -TaskObject $taskLookup[$key]
-    } elseif ($taskLookup) {
-        Log "  SKIP: $name not found"
     } else {
-        Set-TaskState -path $path -name $name
+        Log "  SKIP: $name not found"
     }
 }
 
@@ -926,10 +921,8 @@ foreach ($t in $officeTasks) {
     $key = "\Microsoft\Office\$t"
     if ($taskLookup -and $taskLookup.ContainsKey($key)) {
         Set-TaskState -path "\Microsoft\Office\" -name $t -TaskObject $taskLookup[$key]
-    } elseif ($taskLookup) {
-        Log "  SKIP: $t not found"
     } else {
-        Set-TaskState -path "\Microsoft\Office\" -name $t
+        Log "  SKIP: $t not found"
     }
 }
 Log ""
@@ -1213,20 +1206,6 @@ if ($KeepOneDrive) {
     Log "  KEEP: OneDrive retained (-KeepOneDrive enabled)"
 } else {
     if ($IsUndo) {
-        $oneDrivePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
-        Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
-
-        $odClsidPaths = @(
-            "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
-            "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-        )
-        foreach ($odPath in $odClsidPaths) {
-            Set-RegDwordSafe -path $odPath -name "System.IsPinnedToNameSpaceTree" -debloatValue 0 -undoValue 1
-        }
-
-        Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
-        }
         Log "  INFO: To reinstall OneDrive if uninstalled, run: winget install Microsoft.OneDrive"
     } else {
         $odProc = Get-Process -Name "OneDrive" -ErrorAction SilentlyContinue
@@ -1318,24 +1297,24 @@ if ($KeepOneDrive) {
         if (-not $IsDryRun -and $stagingDir -and (Test-Path $stagingDir)) {
             Remove-Item -Path $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
         }
-
-        $odClsidPaths = @(
-            "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
-            "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-        )
-        foreach ($odPath in $odClsidPaths) {
-            Set-RegDwordSafe -path $odPath -name "System.IsPinnedToNameSpaceTree" -debloatValue 0 -undoValue 1
-        }
-
-        $oneDrivePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
-        Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
-
-        Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
-        }
-
-        Remove-StartupEntry -pattern "OneDrive" -runKeys $allRunKeys
     }
+
+    $odClsidPaths = @(
+        "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
+        "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
+    )
+    foreach ($odPath in $odClsidPaths) {
+        Set-RegDwordSafe -path $odPath -name "System.IsPinnedToNameSpaceTree" -debloatValue 0 -undoValue 1
+    }
+
+    $oneDrivePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
+    Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
+    Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
+        Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
+    }
+
+    Remove-StartupEntry -pattern "OneDrive" -runKeys $allRunKeys
 }
 Log ""
 
@@ -1352,10 +1331,8 @@ if (-not $KeepEdgeUpdates) {
     $edgeKey = "\Microsoft\Windows\EdgeUpdate\EdgeUpdateTaskMachineCore"
     if ($taskLookup -and $taskLookup.ContainsKey($edgeKey)) {
         Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore" -TaskObject $taskLookup[$edgeKey]
-    } elseif ($taskLookup) {
-        Log "  SKIP: EdgeUpdateTaskMachineCore not found"
     } else {
-        Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+        Log "  SKIP: EdgeUpdateTaskMachineCore not found"
     }
 } else {
     Log "  KEEP: Edge automatic update tasks retained (-KeepEdgeUpdates enabled)"
@@ -1678,10 +1655,9 @@ if ($isReparse) {
     } else {
         $logDir = Join-Path $env:ProgramData "unslop-windows\logs"
     }
-    if (-not (Test-Path $logDir)) {
-        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
-    }
-} elseif (-not (Test-Path $logDir)) {
+}
+
+if (-not (Test-Path $logDir)) {
     New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 }
 

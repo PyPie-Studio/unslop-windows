@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Pester Unit & Mocking Test Suite for unslop-windows (Windows 11 Edition).
@@ -1366,6 +1366,35 @@ Describe 'unslop-windows: Parameter Flags & Whitelist Invariants' -Tag 'Integrat
     It '-WhatIf:$false does not enter dry-run inspection mode' {
         $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -Command "& { & '$script:targetScript' -WhatIf:`$false -DryRun:`$false -NoRestart 2>&1 }"
         ($output -match "UNSLOP-WINDOWS: DEBLOAT & HARDEN COMPLETE \(DRY-RUN PREVIEW\)").Length | Should -Be 0
+    }
+
+    It '-Undo -DryRun suppresses sponsored shortcut and programmable tile preview removal logs' {
+        $output = & $script:psCli -NoProfile -ExecutionPolicy Bypass -File $script:targetScript -Undo -DryRun 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($output -match "\[PREVIEW\] Would remove (programmable|sponsored)").Length | Should -Be 0
+    }
+
+    It 'Executes Remove-StartupEntry symmetrically for OneDrive on -Undo (AST Parity)' {
+        $odCalls = $script:ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Remove-StartupEntry' -and
+            $node.Extent.Text -match 'OneDrive'
+        }, $true)
+
+        $odCalls.Count | Should -BeGreaterThan 0
+        foreach ($call in $odCalls) {
+            $curr = $call.Parent
+            $inElseBranch = $false
+            while ($curr) {
+                if ($curr -is [System.Management.Automation.Language.IfStatementAst] -and $curr.Extent.Text -match 'winget install Microsoft.OneDrive') {
+                    $inElseBranch = $true
+                    break
+                }
+                $curr = $curr.Parent
+            }
+            $inElseBranch | Should -BeFalse -Because "Remove-StartupEntry for OneDrive must execute symmetrically outside undo/debloat if-else branches"
+        }
     }
 }
 

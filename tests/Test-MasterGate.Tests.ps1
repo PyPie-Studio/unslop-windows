@@ -121,6 +121,14 @@ Describe 'Test-MasterGate: Test Registration Parity' -Tag 'Unit', 'MasterGate' {
         $script:gateContent | Should -Match 'tests\\Install-GitHooks\.Tests\.ps1'
         $script:gateContent | Should -Match 'tests\\Measure-SystemState\.Tests\.ps1'
         $script:gateContent | Should -Match 'tests\\Test-MasterGate\.Tests\.ps1'
+        $script:gateContent | Should -Match 'tests\\Test-Coverage\.Tests\.ps1'
+    }
+
+    It 'Monitors all support utility scripts in code coverage profiling' {
+        $script:gateContent | Should -Match 'scripts\\Measure-SystemState\.ps1'
+        $script:gateContent | Should -Match 'scripts\\Install-GitHooks\.ps1'
+        $script:gateContent | Should -Match 'scripts\\Test-MasterGate\.ps1'
+        $script:gateContent | Should -Match 'scripts\\Test-Coverage\.ps1'
     }
 }
 

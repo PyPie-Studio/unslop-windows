@@ -467,12 +467,6 @@ function Remove-StartupEntry($pattern, $runKeys, [switch]$Undo = $IsUndo, [switc
     }
 }
 
-$allRunKeys = @(
-    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
-    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
-    "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
-)
-
 # ------------------------------------------------------------
 # Dot-Source Guard: If script is being dot-sourced (e.g. Pester test harness),
 # return immediately so functions are exported without executing the debloat payload.
@@ -480,6 +474,12 @@ $allRunKeys = @(
 if ($MyInvocation.InvocationName -eq '.') {
     return
 }
+
+$allRunKeys = @(
+    "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run",
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+)
 
 # Verify Administrator Privileges (enforced unless -DryRun)
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -732,96 +732,98 @@ Set-RegDwordSafe -path $explorerAdv -name "ShowSyncProviderNotifications" -deblo
 $oobePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement"
 Set-RegDwordSafe -path $oobePath -name "ScoobeSystemSettingEnabled" -debloatValue 0 -undoValue 1
 
-# Purge IrisService Programmable Tiles cloud manifests (sponsored Start menu pins)
-$startMenuLocalState = "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState"
-if (Test-Path $startMenuLocalState) {
-    $manifest88 = Join-Path $startMenuLocalState "88000963"
-    if (Test-Path $manifest88) {
-        $manItem = Get-Item -Path $manifest88 -ErrorAction SilentlyContinue
-        if ($manItem -and ($manItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-            if (-not $IsDryRun -and -not $IsUndo) {
-                try {
-                    if ($PSCmdlet.ShouldProcess($manifest88, "Remove junction link")) {
-                        $manItem.Delete()
-                        Log "  REMOVED: Programmable tiles cloud manifest junction link (reparse point safely unbound)"
-                    }
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not remove junction $manifest88 - $($_.Exception.Message)"
-                }
-            } else {
-                Log "  [PREVIEW] Would remove programmable tiles cloud manifest junction ($manifest88)" -Color "Cyan"
-            }
-        } else {
-            if (-not $IsDryRun -and -not $IsUndo) {
-                try {
-                    Remove-Item -Path $manifest88 -Force -ErrorAction Stop
-                    Log "  REMOVED: Programmable tiles cloud manifest ($manifest88)"
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not remove $manifest88 - $($_.Exception.Message)"
-                }
-            } else {
-                Log "  [PREVIEW] Would remove programmable tiles cloud manifest ($manifest88)" -Color "Cyan"
-            }
-        }
-    }
-    $progAssets = Join-Path $startMenuLocalState "ProgrammableTilesAssets"
-    if (Test-Path $progAssets) {
-        $progItem = Get-Item -Path $progAssets -ErrorAction SilentlyContinue
-        if ($progItem -and ($progItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
-            if (-not $IsDryRun -and -not $IsUndo) {
-                try {
-                    if ($PSCmdlet.ShouldProcess($progAssets, "Remove junction link")) {
-                        $progItem.Delete()
-                        Log "  REMOVED: Programmable tiles assets junction link (reparse point safely unbound)"
-                    }
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not remove junction $progAssets - $($_.Exception.Message)"
-                }
-            } else {
-                Log "  [PREVIEW] Would remove programmable tiles assets junction ($progAssets)" -Color "Cyan"
-            }
-        } else {
-            $assetFiles = Get-ChildItem -Path $progAssets -File -ErrorAction SilentlyContinue
-            foreach ($file in $assetFiles) {
-                if (-not $IsDryRun -and -not $IsUndo) {
+if (-not $IsUndo) {
+    # Purge IrisService Programmable Tiles cloud manifests (sponsored Start menu pins)
+    $startMenuLocalState = "$env:LOCALAPPDATA\Packages\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\LocalState"
+    if (Test-Path $startMenuLocalState) {
+        $manifest88 = Join-Path $startMenuLocalState "88000963"
+        if (Test-Path $manifest88) {
+            $manItem = Get-Item -Path $manifest88 -ErrorAction SilentlyContinue
+            if ($manItem -and ($manItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                if ($IsDryRun) {
+                    Log "  [PREVIEW] Would remove programmable tiles cloud manifest junction ($manifest88)" -Color "Cyan"
+                } else {
                     try {
-                        Remove-Item -Path $file.FullName -Force -ErrorAction Stop
-                        Log "  REMOVED: Programmable tile asset ($($file.Name))"
+                        if ($PSCmdlet.ShouldProcess($manifest88, "Remove junction link")) {
+                            $manItem.Delete()
+                            Log "  REMOVED: Programmable tiles cloud manifest junction link (reparse point safely unbound)"
+                        }
                     } catch {
                         $global:FailCount++
-                        Log "  FAILED: Could not remove $($file.FullName) - $($_.Exception.Message)"
+                        Log "  FAILED: Could not remove junction $manifest88 - $($_.Exception.Message)"
                     }
+                }
+            } else {
+                if ($IsDryRun) {
+                    Log "  [PREVIEW] Would remove programmable tiles cloud manifest ($manifest88)" -Color "Cyan"
                 } else {
-                    Log "  [PREVIEW] Would remove programmable tile asset ($($file.Name))" -Color "Cyan"
+                    try {
+                        Remove-Item -Path $manifest88 -Force -ErrorAction Stop
+                        Log "  REMOVED: Programmable tiles cloud manifest ($manifest88)"
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove $manifest88 - $($_.Exception.Message)"
+                    }
+                }
+            }
+        }
+        $progAssets = Join-Path $startMenuLocalState "ProgrammableTilesAssets"
+        if (Test-Path $progAssets) {
+            $progItem = Get-Item -Path $progAssets -ErrorAction SilentlyContinue
+            if ($progItem -and ($progItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+                if ($IsDryRun) {
+                    Log "  [PREVIEW] Would remove programmable tiles assets junction ($progAssets)" -Color "Cyan"
+                } else {
+                    try {
+                        if ($PSCmdlet.ShouldProcess($progAssets, "Remove junction link")) {
+                            $progItem.Delete()
+                            Log "  REMOVED: Programmable tiles assets junction link (reparse point safely unbound)"
+                        }
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove junction $progAssets - $($_.Exception.Message)"
+                    }
+                }
+            } else {
+                $assetFiles = Get-ChildItem -Path $progAssets -File -ErrorAction SilentlyContinue
+                foreach ($file in $assetFiles) {
+                    if ($IsDryRun) {
+                        Log "  [PREVIEW] Would remove programmable tile asset ($($file.Name))" -Color "Cyan"
+                    } else {
+                        try {
+                            Remove-Item -Path $file.FullName -Force -ErrorAction Stop
+                            Log "  REMOVED: Programmable tile asset ($($file.Name))"
+                        } catch {
+                            $global:FailCount++
+                            Log "  FAILED: Could not remove $($file.FullName) - $($_.Exception.Message)"
+                        }
+                    }
                 }
             }
         }
     }
-}
 
-# Purge sponsored Start Menu stub & web app shortcuts (LinkedIn, Copilot)
-$stubShortcutDirs = @(
-    "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
-    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
-    "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Edge Apps"
-)
-foreach ($sDir in $stubShortcutDirs) {
-    if (Test-Path $sDir) {
-        $stubFiles = Get-ChildItem -Path $sDir -Recurse -File -Include "*LinkedIn*.lnk", "*LinkedIn*.url", "*Copilot*.lnk" -ErrorAction SilentlyContinue
-        foreach ($sf in $stubFiles) {
-            if (-not $IsDryRun -and -not $IsUndo) {
-                try {
-                    Remove-Item -Path $sf.FullName -Force -ErrorAction Stop
-                    Log "  REMOVED: Sponsored shortcut ($($sf.Name))"
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not remove $($sf.FullName) - $($_.Exception.Message)" "Red"
+    # Purge sponsored Start Menu stub & web app shortcuts (LinkedIn, Copilot)
+    $stubShortcutDirs = @(
+        "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
+        "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
+        "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Edge Apps"
+    )
+    foreach ($sDir in $stubShortcutDirs) {
+        if (Test-Path $sDir) {
+            $stubFiles = Get-ChildItem -Path $sDir -Recurse -File -Include "*LinkedIn*.lnk", "*LinkedIn*.url", "*Copilot*.lnk" -ErrorAction SilentlyContinue
+            foreach ($sf in $stubFiles) {
+                if ($IsDryRun) {
+                    Log "  [PREVIEW] Would remove sponsored shortcut ($($sf.Name))" "Cyan"
+                } else {
+                    try {
+                        Remove-Item -Path $sf.FullName -Force -ErrorAction Stop
+                        Log "  REMOVED: Sponsored shortcut ($($sf.Name))"
+                    } catch {
+                        $global:FailCount++
+                        Log "  FAILED: Could not remove $($sf.FullName) - $($_.Exception.Message)" "Red"
+                    }
                 }
-            } else {
-                Log "  [PREVIEW] Would remove sponsored shortcut ($($sf.Name))" "Cyan"
             }
         }
     }
@@ -906,13 +908,8 @@ if ($ExcludeWUDrivers) {
 } else {
     # Windows Update driver & firmware updates are preserved to ensure hardware CVEs and patches install cleanly.
     # Proactively clear any legacy ExcludeWUDriversInQualityUpdate policy from older unslop versions:
-    if (Test-Path $wuPolicy) {
-        $wuProp = Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue
-        if ($wuProp) {
-            Remove-RegValueSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate"
-        } else {
-            Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
-        }
+    if (Test-Path $wuPolicy -and (Get-ItemProperty -Path $wuPolicy -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue)) {
+        Remove-RegValueSafe -path $wuPolicy -name "ExcludeWUDriversInQualityUpdate"
     } else {
         Log "  PRESERVED: Windows Update driver and firmware delivery enabled" -DryRun:$DryRun
     }
@@ -940,26 +937,8 @@ if ($LeftTaskbar -or $IsUndo) {
 
 # Optional Classic Right-Click Context Menu (Windows 10 style, no "Show more options")
 $classicMenuPath = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
-if ($ClassicContextMenu) {
-    if ($IsUndo) {
-        if (Test-Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}") {
-            if ($IsDryRun) {
-                Log "  [WOULD RESTORE]: Default Windows 11 context menu (remove classic CLSID)"
-            } else {
-                try {
-                    Remove-Item -Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -ErrorAction Stop
-                    Log "  RESTORED: Default Windows 11 context menu"
-                } catch {
-                    $global:FailCount++
-                    Log "  FAILED: Could not restore default context menu - $($_.Exception.Message)"
-                }
-            }
-        }
-    } else {
-        Set-RegStringSafe -path $classicMenuPath -name "(default)" -value ""
-    }
-} else {
-    if ($IsUndo -and (Test-Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}")) {
+if ($IsUndo) {
+    if (Test-Path "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}") {
         if ($IsDryRun) {
             Log "  [WOULD RESTORE]: Default Windows 11 context menu (remove classic CLSID)"
         } else {
@@ -972,6 +951,8 @@ if ($ClassicContextMenu) {
             }
         }
     }
+} elseif ($ClassicContextMenu) {
+    Set-RegStringSafe -path $classicMenuPath -name "(default)" -value ""
 }
 Log ""
 
@@ -1053,10 +1034,8 @@ foreach ($task in $tasksToToggle) {
     $key = "$path$name"
     if ($taskLookup -and $taskLookup.ContainsKey($key)) {
         Set-TaskState -path $path -name $name -TaskObject $taskLookup[$key]
-    } elseif ($taskLookup) {
-        Log "  SKIP: $name not found"
     } else {
-        Set-TaskState -path $path -name $name
+        Log "  SKIP: $name not found"
     }
 }
 
@@ -1097,10 +1076,8 @@ foreach ($t in $officeTasks) {
     $key = "\Microsoft\Office\$t"
     if ($taskLookup -and $taskLookup.ContainsKey($key)) {
         Set-TaskState -path "\Microsoft\Office\" -name $t -TaskObject $taskLookup[$key]
-    } elseif ($taskLookup) {
-        Log "  SKIP: $t not found"
     } else {
-        Set-TaskState -path "\Microsoft\Office\" -name $t
+        Log "  SKIP: $t not found"
     }
 }
 Log ""
@@ -1408,21 +1385,6 @@ if ($KeepOneDrive) {
     Log "  KEEP: OneDrive retained (-KeepOneDrive enabled)"
 } else {
     if ($IsUndo) {
-        # Restore OneDrive sync policy and explorer sidebar pin
-        $oneDrivePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
-        Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
-
-        $odClsidPaths = @(
-            "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
-            "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-        )
-        foreach ($odPath in $odClsidPaths) {
-            Set-RegDwordSafe -path $odPath -name "System.IsPinnedToNameSpaceTree" -debloatValue 0 -undoValue 1
-        }
-
-        Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
-        }
         Log "  INFO: To reinstall OneDrive if uninstalled, run: winget install Microsoft.OneDrive"
     } else {
         # 1. Kill running process
@@ -1516,28 +1478,28 @@ if ($KeepOneDrive) {
         if (-not $IsDryRun -and $stagingDir -and (Test-Path $stagingDir)) {
             Remove-Item -Path $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
         }
-
-        # 3. Unpin OneDrive from File Explorer sidebar
-        $odClsidPaths = @(
-            "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
-            "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
-        )
-        foreach ($odPath in $odClsidPaths) {
-            Set-RegDwordSafe -path $odPath -name "System.IsPinnedToNameSpaceTree" -debloatValue 0 -undoValue 1
-        }
-
-        # 4. GPO policy to prevent file syncing
-        $oneDrivePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
-        Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
-
-        # 5. Disable scheduled update tasks
-        Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
-        }
-
-        # 6. Remove Run registry keys
-        Remove-StartupEntry -pattern "OneDrive" -runKeys $allRunKeys
     }
+
+    # 3. Unpin OneDrive from File Explorer sidebar (symmetrical)
+    $odClsidPaths = @(
+        "HKLM:\SOFTWARE\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}",
+        "HKCU:\Software\Classes\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}"
+    )
+    foreach ($odPath in $odClsidPaths) {
+        Set-RegDwordSafe -path $odPath -name "System.IsPinnedToNameSpaceTree" -debloatValue 0 -undoValue 1
+    }
+
+    # 4. GPO policy to prevent file syncing (symmetrical)
+    $oneDrivePolicy = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\OneDrive"
+    Set-RegDwordSafe -path $oneDrivePolicy -name "DisableFileSyncNGSC" -debloatValue 1 -undoValue 0 -removeOnUndo $true
+
+    # 5. Scheduled update tasks (symmetrical)
+    Get-ScheduledTask -TaskPath "\Microsoft\Windows\OneDrive\*" -ErrorAction SilentlyContinue | ForEach-Object {
+        Set-TaskState -path $_.TaskPath -name $_.TaskName -TaskObject $_
+    }
+
+    # 6. Symmetrical Run registry keys backup and restoration
+    Remove-StartupEntry -pattern "OneDrive" -runKeys $allRunKeys
 }
 Log ""
 
@@ -1554,10 +1516,8 @@ if (-not $KeepEdgeUpdates) {
     $edgeKey = "\Microsoft\Windows\EdgeUpdate\EdgeUpdateTaskMachineCore"
     if ($taskLookup -and $taskLookup.ContainsKey($edgeKey)) {
         Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore" -TaskObject $taskLookup[$edgeKey]
-    } elseif ($taskLookup) {
-        Log "  SKIP: EdgeUpdateTaskMachineCore not found"
     } else {
-        Set-TaskState -path "\Microsoft\Windows\EdgeUpdate\" -name "EdgeUpdateTaskMachineCore"
+        Log "  SKIP: EdgeUpdateTaskMachineCore not found"
     }
 } else {
     Log "  KEEP: Edge automatic update tasks retained (-KeepEdgeUpdates enabled)"
@@ -1926,10 +1886,9 @@ if ($isReparse) {
     } else {
         $logDir = Join-Path $env:ProgramData "unslop-windows\logs"
     }
-    if (-not (Test-Path $logDir)) {
-        New-Item -Path $logDir -ItemType Directory -Force | Out-Null
-    }
-} elseif (-not (Test-Path $logDir)) {
+}
+
+if (-not (Test-Path $logDir)) {
     New-Item -Path $logDir -ItemType Directory -Force | Out-Null
 }
 

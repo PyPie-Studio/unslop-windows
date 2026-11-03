@@ -646,12 +646,12 @@ goto :menu_!OS_MODE!
 :: LIVE EXECUTION (Elevated)
 :: ------------------------------------------------------------
 :run
+set "FINAL_ARGS=!ARGS!"
+if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
 net session >nul 2>&1
 if !errorlevel! neq 0 (
     echo.
     echo Administrator privileges required. Prompting for UAC elevation...
-    set "FINAL_ARGS=!ARGS!"
-    if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
     if "!OS_MODE!"=="WIN10" (
         if defined FINAL_ARGS (
             set "UAC_ARGS=-Win10 -FromMenu !FINAL_ARGS!"
@@ -680,8 +680,6 @@ if !errorlevel! neq 0 (
 )
 
 echo.
-set "FINAL_ARGS=!ARGS!"
-if "!OVERRIDE_BUILD_CHECK!"=="1" set "FINAL_ARGS=!FINAL_ARGS! -SkipBuildCheck"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0!TARGET_SCRIPT!" !FINAL_ARGS!
 if !errorlevel! equ 100 exit /b 0
 echo.

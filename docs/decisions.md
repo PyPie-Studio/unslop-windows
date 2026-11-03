@@ -746,3 +746,55 @@ Format: `ADR-XXX: Title (Date) -> Status -> Context -> Decision -> Consequences`
      - If `$CoverageThreshold -gt 0` and `$pct -ge $CoverageThreshold`: emit `PASSED: Code coverage ($pct%) meets threshold ($CoverageThreshold%)` in Green.
      - If `$CoverageThreshold -gt 0` and no coverage data was generated, emit `FAILED: Code coverage threshold ($CoverageThreshold%) specified, but no coverage data was generated.` in Red and exit with code 1.
 - **Consequences:** Eliminates coverage opacity, delivers immediate terminal feedback on unit test command coverage during local development, and provides an enforceable, automated threshold gate against test coverage regressions without requiring intermediate file exports.
+
+---
+
+## ADR-048: Standalone Code Coverage Profiler (`scripts/Test-Coverage.ps1`), Multi-Script Coverage Telemetry, and Automated Markdown Reporting (2026-11-03)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Limited Profiler Scope in Master Quality Gate:* `scripts/Test-MasterGate.ps1` previously profiled only the active monolithic engine (`unslop-win11.ps1` or `unslop-win10.ps1`). Supporting utilities (`scripts/Measure-SystemState.ps1`, `scripts/Install-GitHooks.ps1`, `scripts/Test-MasterGate.ps1`, `scripts/Test-Coverage.ps1`) were covered by unit tests in `tests/`, but omitted from coverage telemetry.
+  2. *Absence of Dedicated Coverage Diagnostic Tool:* Developers and CI pipelines lacked a standalone coverage analysis tool (comparable to NodeRadar Pro's `Test-Coverage.ps1`) that could display structured console tables with architectural role descriptions, output detailed unexercised command lines (`-Detailed`), enforce coverage thresholds, and generate persistent Markdown reports (`docs/coverage-report.md`) without executing slow multi-step dry-run smoke audits.
+  3. *NodeRadar Pro Architectural Alignment:* Adapted NodeRadar Pro's multi-project coverage model to unslop-windows while respecting PowerShell's zero-dependency safe-tier constraints, dot-source guards, and non-elevated testing boundaries.
+- **Decision:**
+  1. *Multi-Script Coverage Telemetry in Master Quality Gate:* Updated Step [4/7] of `scripts/Test-MasterGate.ps1` to aggregate command coverage across all repository scripts (`unslop-win11.ps1`, `scripts/Measure-SystemState.ps1`, `scripts/Install-GitHooks.ps1`, `scripts/Test-MasterGate.ps1`, `scripts/Test-Coverage.ps1`). Enhanced console reporting to display both overall percentage and per-file command ratios.
+  2. *Dedicated Diagnostic Tool (`scripts/Test-Coverage.ps1`):* Implemented a pure PowerShell coverage runner supporting:
+     - Formatted terminal table output with architectural role classifications and color-coded status tiers.
+     - `-Detailed` switch displaying line numbers, functions, and command text for unexercised commands.
+     - `-ReportPath` (defaulting to `docs/coverage-report.md`) generating Markdown documentation with summary metrics, per-file breakdowns, and Safe-Tier Verification Methodology notes.
+     - Deterministic `-Threshold` enforcement (0.0 to 100.0) failing closed with exit code 1 if coverage falls below threshold.
+     - Dual-target platform support (`-Win11`, `-Win10`, `-Both`).
+     - Safe IPC via temporary JSON file to isolate telemetry data from arbitrary test output chatter.
+  3. *Automated Unit Testing & Parity:* Created `tests/Test-Coverage.Tests.ps1` verifying AST validity, parameter bindings, mutual exclusivity, `ValidateRange` bounds, and markdown report structure. Registered the new test suite in `Test-MasterGate.ps1` Step [4/7].
+- **Consequences:** Delivers complete codebase coverage visibility, elevates measured command coverage across utility scripts, enables automated documentation generation, and provides developers with a dedicated, high-speed coverage analysis tool.
+
+
+---
+
+## ADR-049: Elimination of Dead Code, Unreachable Fallbacks, and Symmetrical OneDrive Startup Restoration (2026-11-03)
+
+- **Status:** Accepted
+- **Context:**
+  1. *Unreachable `$taskLookup` Fallback Code:* In Module 11 and Module 14 across both engines (6 call sites), `$taskLookup = @{}` evaluated to `$true` in PowerShell, rendering the fallback `else { Set-TaskState ... }` branch permanently dead and unreachable.
+  2. *False `[PREVIEW]` Logging and Dead Deletion Logic on `-Undo`:* In Module 4 across both engines, shortcut and programmable tile deletions tested `if (-not $IsDryRun -and -not $IsUndo) { ... } else { Log "[PREVIEW] Would remove..." }`. During an `-Undo` pass, `-not $IsUndo` evaluated to `$false`, triggering false `[PREVIEW]` logs indicating shortcuts would be removed while performing restoration.
+  3. *Module 13 (OneDrive) Duplication & Asymmetrical Restore Bug:* Policy registry keys, CLSID unpinning, and scheduled tasks were duplicated across both `if ($IsUndo)` and `else` branches. Crucially, `Remove-StartupEntry` was only called inside `else`, orphaning archived OneDrive startup entries in `StartupBackup` on `-Undo`.
+  4. *Module 9 (Classic Context Menu) Full Duplication:* In `unslop-win11.ps1`, the CLSID removal logic on `$IsUndo` was duplicated identically across both `$ClassicContextMenu` and `else` branches.
+  5. *Redundant Nested Registry Queries in Module 8:* `Remove-RegValueSafe` already contains internal `Test-Path` and `Get-ItemProperty` checks. Surrounding it with nested `if (Test-Path)` and repeating identical log messages created dead boilerplate.
+  6. *Reparse Directory Creation Duplication:* `New-Item -Path $logDir` was duplicated across both branches of `if ($isReparse)`.
+  7. *Leaked Global `$allRunKeys` Scope:* `$allRunKeys` was defined before the dot-source guard, leaking into the caller scope when dot-sourced by test runners.
+  8. *Batch Launcher Variable Hoisting in `unslop.bat`:* In `:run`, `FINAL_ARGS` initialization was duplicated before UAC elevation and in the elevated branch.
+  9. *Target Triplication in `Test-MasterGate.ps1`:* Custom PSObjects defining Windows 11 and Windows 10 test targets were triplicated across `$Both`, `$Win10`, and default `$Win11` branches.
+  10. *Untagged Security Tests in `tests/unslop.bat.Tests.ps1`:* Line 117 omitted the `'Unit'` tag, causing 4 critical security defense assertions (SEC-04 through SEC-06) to be skipped during standard quality gate runs.
+- **Decision:**
+  1. Option A: Removed unreachable `else` branches across all 6 call sites of `$taskLookup` in `unslop-win11.ps1` and `unslop-win10.ps1`.
+  2. Guarded Module 4 shortcut purges with `if (-not $IsUndo)`, eliminating false `[PREVIEW]` logs during restoration passes.
+  3. Hoisted shared OneDrive policies, CLSID unpinning, task state handling, and `Remove-StartupEntry` symmetrically outside `if ($IsUndo)` in both engines, ensuring archived startup entries are restored on `-Undo`.
+  4. Consolidated Classic Context Menu CLSID handling in `unslop-win11.ps1`.
+  5. Flattened Module 8 `ExcludeWUDriversInQualityUpdate` checks.
+  6. Hoisted `New-Item -Path $logDir` in both engines.
+  7. Moved `$allRunKeys` below the dot-source guard.
+  8. Hoisted `FINAL_ARGS` in `:run` of `unslop.bat`.
+  9. Refactored `Test-MasterGate.ps1` target definitions into reusable objects `$targetW11` and `$targetW10`.
+  10. Added `'Unit'` tag to `tests/unslop.bat.Tests.ps1` line 117, activating SEC-04 through SEC-06 in default quality gate runs.
+  11. Added Pester tests to verify zero false `[PREVIEW]` logs on `-Undo` and AST parity for symmetrical OneDrive `Remove-StartupEntry`.
+- **Consequences:** Eliminates ~120 lines of redundant and dead code, restores 100% startup symmetry for OneDrive, prevents misleading restoration logs, and expands active unit test assertions without altering runtime safety boundaries or breaking backward compatibility.
